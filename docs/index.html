@@ -182,6 +182,9 @@
   .prod.owned{opacity:.62}
   .prod.owned .pi b{text-decoration:line-through;text-decoration-color:var(--tip)}
   .invsum{color:var(--muted);font-size:.85em;font-weight:700;margin:2px 0 6px}
+  .envchips{display:inline-flex;flex-wrap:wrap;gap:6px;vertical-align:middle}
+  .envchip{display:inline-flex;align-items:center;gap:4px;background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:3px 10px;font-size:.78em;font-weight:800}
+  .hero .envchips{margin-top:10px}
 
   /* chat */
   #chatlog{display:flex;flex-direction:column;gap:12px}
@@ -201,6 +204,7 @@
   .field{margin:12px 0}
   .field label{display:block;font-weight:700;margin-bottom:6px;font-size:.92em}
   .field input{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:16px}
+  .field select{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:16px;font-family:inherit}
   .field textarea{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:15px;font-family:inherit;resize:vertical;line-height:1.45}
   .gbtns{display:flex;gap:8px;justify-content:center;margin-top:14px}
   .pill2{background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:9px 15px;font-weight:800;font-size:.84em;cursor:pointer}
@@ -412,19 +416,55 @@ const DIAGRAMS = {
 
 /* ================= TOOLS & PARTS (Amazon search links) ================= */
 const AMZ = q => "https://www.amazon.com/s?k=" + encodeURIComponent(q);
+
+/* Standardized tool library. Every guide (built-in, imported, or Claude-generated)
+   references these by stable `id` so ownership tracks reliably across guides — a
+   torque wrench you own stays "I have it" no matter which repair names it. New Repair
+   is told to reuse these ids. A guide may override the description (`d`) for context. */
+const TOOL_LIB = [
+  {id:"socket-set-metric",  cat:"Sockets & wrenches", n:"Metric socket set + ratchet (8–19 mm)", d:"General fastener work", q:"metric socket set 1/4 3/8 drive ratchet"},
+  {id:"deep-sockets",       cat:"Sockets & wrenches", n:"Deep sockets (metric)", d:"Sensors and recessed bolts", q:"metric deep impact socket set 3/8"},
+  {id:"combo-wrench-metric",cat:"Sockets & wrenches", n:"Combination wrench set (metric)", d:"Where a socket won't fit", q:"metric combination wrench set"},
+  {id:"breaker-bar",        cat:"Sockets & wrenches", n:'1/2" breaker bar', d:"Loosen stubborn/seized fasteners", q:"1/2 inch breaker bar 18 inch"},
+  {id:"hex-torx-set",       cat:"Sockets & wrenches", n:"Hex & Torx bit socket set", d:"Covers, brackets, interior", q:"hex allen torx bit socket set"},
+  {id:"torque-wrench-inlb", cat:"Torque",             n:'1/4" torque wrench (inch-lb)', d:"Low-torque flanges & fittings", q:"1/4 inch drive torque wrench inch pound"},
+  {id:"torque-wrench-ftlb", cat:"Torque",             n:'3/8" torque wrench (ft-lb)', d:"Mount & bracket bolts", q:"3/8 drive torque wrench ft-lb"},
+  {id:"torque-wrench-half", cat:"Torque",             n:'1/2" torque wrench (ft-lb)', d:"High-torque: axles, lugs, suspension", q:"1/2 inch drive torque wrench ft-lb"},
+  {id:"screwdriver-set",    cat:"Hand tools",         n:"Screwdriver set (Phillips/flat)", d:"General fasteners", q:"screwdriver set phillips flathead"},
+  {id:"pliers-set",         cat:"Hand tools",         n:"Pliers set (needle-nose, slip-joint)", d:"Grip, clamps, clips", q:"pliers set needle nose slip joint"},
+  {id:"trim-tools",         cat:"Body & trim",        n:"Trim / panel clip removal tool set", d:"Pop clips without breakage", q:"trim clip removal tool kit fastener remover"},
+  {id:"jack-and-stands",    cat:"Lifting",            n:"3-ton jack + jack stands (pair)", d:"Lift the vehicle safely", q:"3 ton jack stands pair"},
+  {id:"wheel-chocks",       cat:"Lifting",            n:"Wheel chocks", d:"Block wheels before lifting", q:"wheel chocks pair"},
+  {id:"jack-pad",           cat:"Lifting",            n:"Jack pad / puck", d:"Protect pinch welds", q:"jack pad puck frame rail"},
+  {id:"drain-pan",          cat:"Fluids",             n:"Drain pan", d:"Catch fluids", q:"low profile oil drain pan"},
+  {id:"measuring-cup-ml",   cat:"Fluids",             n:"Graduated measuring cup (mL)", d:"Measure fluids precisely", q:"graduated measuring cup ml beaker"},
+  {id:"funnel-set",         cat:"Fluids",             n:"Funnel set", d:"Clean fluid fills", q:"automotive funnel set"},
+  {id:"coolant-funnel",     cat:"Fluids",             n:"No-spill coolant funnel kit", d:"Fill & bleed cooling systems", q:"no spill coolant funnel kit"},
+  {id:"ac-cap-plug-kit",    cat:"A/C",                n:"A/C line cap & plug kit", d:"Cap open A/C lines instantly", q:"AC line cap plug kit r1234yf assortment"},
+  {id:"multimeter",         cat:"Electrical",         n:"Digital multimeter", d:"Electrical diagnosis", q:"digital multimeter automotive"},
+  {id:"obd2-scanner",       cat:"Electrical",         n:"OBD-II scanner", d:"Read & clear trouble codes", q:"obd2 scanner bluetooth"},
+  {id:"work-light",         cat:"Shop",               n:"LED work light", d:"See what you're doing", q:"rechargeable led work light magnetic"},
+  {id:"shop-rags",          cat:"Shop",               n:"Shop rags / paper towels", d:"Cleanup", q:"shop rags blue paper towels"},
+  {id:"penetrating-oil",    cat:"Chemicals",          n:"Penetrating oil", d:"Free seized fasteners", q:"pb blaster penetrating oil"},
+  {id:"gloves-glasses",     cat:"Safety",             n:"Nitrile gloves + safety glasses", d:"Basic PPE", q:"nitrile gloves safety glasses combo"},
+];
+const LIB = Object.fromEntries(TOOL_LIB.map(t=>[t.id,t]));
+/* Build a guide tool from a library id, with optional per-guide overrides. */
+const libTool = (id, over) => Object.assign({}, LIB[id], over||{}, {id});
+
 const TOOLS = [
-  {n:"Metric socket set + ratchet (8–19 mm)", d:"Splash shield, bumper, compressor bolts", q:"metric socket set 1/4 3/8 drive ratchet"},
-  {n:"Deep sockets — 17 mm & 19 mm", d:"ECT2 sensor: measure the flats, bring both", q:"17mm 19mm deep impact socket 3/8"},
-  {n:'1/4" torque wrench (inch-lb)', d:"A/C line flanges ≈7–9 lb-ft", q:"1/4 inch drive torque wrench inch pound"},
-  {n:'3/8" torque wrench (ft-lb)', d:"Compressor mount bolts ≈18 lb-ft", q:"3/8 drive torque wrench ft-lb"},
-  {n:"3-ton jack + jack stands (pair)", d:"Lift the front safely", q:"3 ton jack stands pair"},
-  {n:"Wheel chocks", d:"Chock the rear before lifting", q:"wheel chocks pair"},
-  {n:"A/C line cap & plug kit", d:"Cap every open line instantly", q:"AC line cap plug kit r1234yf assortment"},
-  {n:"Trim / panel clip removal tool set", d:"Bumper push-clips without breakage", q:"trim clip removal tool kit fastener remover"},
-  {n:"Drain pans (×2)", d:"Coolant + old compressor oil", q:"low profile oil drain pan"},
-  {n:"Graduated measuring cup (mL)", d:"Measure the old compressor oil", q:"graduated measuring cup ml oil measuring beaker"},
-  {n:"No-spill coolant funnel kit", d:"Fill/bleed the cooling system cleanly", q:"no spill coolant funnel kit"},
-  {n:"Nitrile gloves + safety glasses", d:"Refrigerant residue & debris", q:"nitrile gloves safety glasses combo"},
+  libTool("socket-set-metric", {d:"Splash shield, bumper, compressor bolts"}),
+  libTool("deep-sockets",      {n:"Deep sockets — 17 mm & 19 mm", d:"ECT2 sensor: measure the flats, bring both", q:"17mm 19mm deep impact socket 3/8"}),
+  libTool("torque-wrench-inlb",{d:"A/C line flanges ≈7–9 lb-ft"}),
+  libTool("torque-wrench-ftlb",{d:"Compressor mount bolts ≈18 lb-ft"}),
+  libTool("jack-and-stands",   {d:"Lift the front safely"}),
+  libTool("wheel-chocks",      {d:"Chock the rear before lifting"}),
+  libTool("ac-cap-plug-kit",   {d:"Cap every open line instantly"}),
+  libTool("trim-tools",        {d:"Bumper push-clips without breakage"}),
+  libTool("drain-pan",         {n:"Drain pans (×2)", d:"Coolant + old compressor oil"}),
+  libTool("measuring-cup-ml",  {d:"Measure the old compressor oil"}),
+  libTool("coolant-funnel",    {d:"Fill/bleed the cooling system cleanly"}),
+  libTool("gloves-glasses",    {d:"Refrigerant residue & debris"}),
 ];
 const PARTS = [
   {g:"A/C", items:[
@@ -445,11 +485,16 @@ const PARTS = [
 ];
 
 /* ================= GUIDES (built-in + Claude-generated) ================= */
+/* Environment tags — where the repair is done. */
+const ENVS={ shop:{n:"Shop",icon:"🏭"}, garage:{n:"Garage",icon:"🔧"}, driveway:{n:"Driveway",icon:"🏠"}, roadside:{n:"Roadside",icon:"🛣️"} };
+const ENV_KEYS=Object.keys(ENVS);
+const cleanEnv=e=>Array.isArray(e)?e.filter(x=>ENV_KEYS.includes(x)).filter((v,i,a)=>a.indexOf(v)===i):[];
+const envChips=g=>{ const e=cleanEnv(g&&g.env); return e.length?`<span class="envchips">${e.map(k=>`<span class="envchip">${ENVS[k].icon} ${ENVS[k].n}</span>`).join("")}</span>`:""; };
 const GKEY="crv-guides";
 const userGuides=()=>{ try{return JSON.parse(localStorage.getItem(GKEY))||[]}catch(e){return[]} };
 const saveUserGuides=a=>localStorage.setItem(GKEY,JSON.stringify(a));
 const BUILTIN={ id:"crv-s1", builtin:true, title:"2018 Honda CR-V 1.5T",
-  subtitle:"Session 1 · A/C + condenser, ECT2, HG-1.",
+  subtitle:"Session 1 · A/C + condenser, ECT2, HG-1.", env:["driveway","garage"],
   safety:"1) Never open A/C under pressure. 2) Cap every open line instantly. 3) New oiled O-ring at every fitting. 4) Hand-rotate the new compressor. 5) HG-1 cold, ½ bottle.",
   phases:PHASES, tools:TOOLS, parts:PARTS };
 const allGuides=()=>[BUILTIN,...userGuides()];
@@ -462,8 +507,11 @@ const INV_TOOLS="crv-owned-tools", INV_PARTS="crv-owned-parts";
 const loadInv=k=>{ try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return {}} };
 const nk=s=>String(s==null?"":s).toLowerCase().replace(/\s+/g," ").trim();
 let ownedTools=loadInv(INV_TOOLS), ownedParts=loadInv(INV_PARTS);
-const hasTool=t=>!!ownedTools[nk(t.n)];
-const setTool=(t,v)=>{ if(v) ownedTools[nk(t.n)]=1; else delete ownedTools[nk(t.n)]; localStorage.setItem(INV_TOOLS,JSON.stringify(ownedTools)); };
+/* Prefer the stable library id so the same tool tracks across guides even when a
+   guide phrases its name differently; fall back to the normalized name. */
+const toolKey=t=>(t&&t.id&&LIB[t.id])?("id:"+t.id):nk(t&&t.n);
+const hasTool=t=>!!ownedTools[toolKey(t)];
+const setTool=(t,v)=>{ const k=toolKey(t); if(v) ownedTools[k]=1; else delete ownedTools[k]; localStorage.setItem(INV_TOOLS,JSON.stringify(ownedTools)); };
 const partKey=p=>ACTIVE.id+"::"+nk(p.n);
 const hasPart=p=>!!ownedParts[partKey(p)];
 const setPart=(p,v)=>{ if(v) ownedParts[partKey(p)]=1; else delete ownedParts[partKey(p)]; localStorage.setItem(INV_PARTS,JSON.stringify(ownedParts)); };
@@ -496,6 +544,12 @@ function load(){ try{return JSON.parse(localStorage.getItem(LS))||{}}catch(e){re
 function saveState(){ localStorage.setItem(LS, JSON.stringify(state)); }
 let state=load(); state.checks=state.checks||{}; state.done=state.done||{}; state.apiKey=state.apiKey||"";
 state.wakeWord=state.wakeWord||"hey claude"; if(state.voiceReplies===undefined) state.voiceReplies=true;
+const MODELS=[
+  {id:"claude-sonnet-5", n:"Sonnet 5", d:"Balanced quality & cost — recommended"},
+  {id:"claude-opus-4-8", n:"Opus 4.8", d:"Most capable, highest cost"},
+  {id:"claude-haiku-4-5-20251001", n:"Haiku 4.5", d:"Fastest & cheapest"},
+];
+if(!MODELS.some(m=>m.id===state.model)) state.model="claude-sonnet-5";
 
 /* ================= IndexedDB media ================= */
 let db;
@@ -540,6 +594,7 @@ function renderHome(){
       <div class="ring" style="--v:${p}"><b>${p}%</b><small>complete</small></div>
       <h1>${esc(ACTIVE.title)}</h1>
       <p class="lead" style="margin:.3em 0 0">${esc(ACTIVE.subtitle||"")}<br>Tap a phase to start.</p>
+      ${envChips(ACTIVE)}
       <div class="gbtns"><button class="pill2" id="guidesBtn">⇄ Guides</button><button class="pill2" id="newBtn">＋ New Repair</button></div>
     </div>
     <div class="tiles">
@@ -730,17 +785,20 @@ function helperSystem(){
   let s=`You are the in-app assistant for a DIY repair guide: "${ACTIVE.title}". ${ACTIVE.subtitle||""}\nThe guide's phases and steps:\n`;
   ACTIVE.phases.forEach(ph=>{ s+=`- ${ph.name}: `+ph.steps.map(st=>st.t).join("; ")+"\n"; });
   if(ACTIVE.safety) s+=`Safety notes: ${ACTIVE.safety}\n`;
-  s+=`Help a person in a driveway with a phone. Be concise, lead with the answer, prioritize safety, and tell them to verify torque and fluid specs against the factory service manual for their exact vehicle. If they attach a photo, say whether it looks correct and flag risks. You are not a substitute for a professional.`;
+  const ev=cleanEnv(ACTIVE.env); if(ev.length) s+=`Work setting: ${ev.map(k=>ENVS[k].n).join(" / ").toLowerCase()}.\n`;
+  s+=`Help a person working on their own vehicle with a phone. Be concise, lead with the answer, prioritize safety, and tell them to verify torque and fluid specs against the factory service manual for their exact vehicle. If they attach a photo, say whether it looks correct and flag risks. You are not a substitute for a professional.`;
   return s;
 }
 let chatHistory=[], pendingImage=null;
 
 function openKey(){
   const cur=state.apiKey||"";
-  sheet("Claude API key",`<div class="field"><label>Anthropic API key</label><input id="keyIn" type="password" placeholder="sk-ant-..." value="${cur.replace(/"/g,'&quot;')}"></div>
-    <p class="fine">Stored only in this browser and sent directly to api.anthropic.com from your device. Uses model <b>claude-opus-4-8</b> with vision. Get a key at console.anthropic.com; API usage is billed to your account.</p>
+  const opts=MODELS.map(m=>`<option value="${m.id}" ${m.id===state.model?"selected":""}>${m.n} — ${m.d}</option>`).join("");
+  sheet("Claude settings",`<div class="field"><label>Anthropic API key</label><input id="keyIn" type="password" placeholder="sk-ant-..." value="${cur.replace(/"/g,'&quot;')}"></div>
+    <div class="field"><label>Model</label><select id="modelIn">${opts}</select></div>
+    <p class="fine">Stored only in this browser and sent directly to api.anthropic.com from your device. The model is used for <b>Ask Claude</b>, hands-free voice, and <b>New Repair</b> (all support vision). Get a key at console.anthropic.com; API usage is billed to your account — Opus costs the most, Haiku the least.</p>
     <div class="btnrow"><button class="btn" id="kc">Cancel</button><button class="btn pri" id="ks">Save</button></div>`,
-  (b)=>{ b.querySelector("#ks").onclick=()=>{ state.apiKey=b.querySelector("#keyIn").value.trim(); saveState(); closeSheet(); }; b.querySelector("#kc").onclick=closeSheet; });
+  (b)=>{ b.querySelector("#ks").onclick=()=>{ state.apiKey=b.querySelector("#keyIn").value.trim(); state.model=b.querySelector("#modelIn").value; saveState(); closeSheet(); }; b.querySelector("#kc").onclick=closeSheet; });
 }
 
 function openChat(attachImg){
@@ -773,7 +831,7 @@ function pushUser(text,img){
 async function completeClaude(ctx){
   const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
     headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-    body:JSON.stringify({model:"claude-opus-4-8",max_tokens:1024,system:helperSystem()+"\n\n"+(ctx||""),messages:chatHistory.map(m=>({role:m.role,content:m.content}))})});
+    body:JSON.stringify({model:state.model,max_tokens:1024,system:helperSystem()+"\n\n"+(ctx||""),messages:chatHistory.map(m=>({role:m.role,content:m.content}))})});
   if(!res.ok) throw new Error("API "+res.status+": "+(await res.text()).slice(0,300));
   const data=await res.json();
   if(data.stop_reason==="refusal"){ const r="I can't help with that. For safety-critical steps, please confirm with a professional."; chatHistory.push({role:"assistant",content:[{type:"text",text:r}]}); return r; }
@@ -808,8 +866,9 @@ function resetProgress(){ sheet("Reset progress?", `<p>Clears all checkmarks and
 const BOILERPLATE = `Create a DIY repair guide for:
 Vehicle: <year make model engine — e.g. 2015 Subaru Outback 2.5i>
 Job(s): <what to repair — e.g. replace front brake pads and rotors>
+Where: <shop / garage / driveway / roadside — where I'll be working>
 
-Audience: someone in their driveway with common hand tools, reading on a phone.
+Audience: someone with common hand tools, reading on a phone.
 Requirements:
 - Break it into clear phases: prep & safety first, then the job, then reassembly and a final verification/checklist phase.
 - One action per step. Put critical safety warnings inline as callouts.
@@ -824,6 +883,7 @@ JSON shape:
   "title": "string — vehicle + job",
   "subtitle": "string — one short line",
   "safety": "string — the 1-2 most important safety rules (optional)",
+  "env": ["array — where the job is realistically done; any of: shop, garage, driveway, roadside"],
   "phases": [
     { "name": "string — e.g. \\"Phase 1 · Lift & Wheels\\"",
       "color": "string — hex like \\"#4a86c5\\"",
@@ -839,11 +899,14 @@ JSON shape:
             {"type":"spec","text":"string","verify":"string"},
             {"type":"note","text":"string"}
           ] } ] } ],
-  "tools": [ {"n":"name","d":"why it's needed","q":"amazon search terms"} ],
+  "tools": [ {"id":"library id if one fits (see below), else omit","n":"name","d":"why it's needed","q":"amazon search terms"} ],
   "parts": [ {"g":"group name","items":[ {"n":"name","d":"note","q":"amazon search terms"} ]} ]
 }
 
 Block types: "steps" = numbered sub-steps; "check" = a checklist (these count toward progress — include at least one, e.g. a final "before you drive" list); "danger" = critical safety; "crit" = easy to get wrong; "tip" = helpful; "spec" = a torque/fluid value with a "verify" note; "note" = a plain paragraph.
+
+Standard Tool Library — reuse these by their exact "id" whenever one fits, so the app can track tools the user already owns across guides. You may still set "d" to a job-specific note. Only invent a tool (an object with "n"/"q" and NO "id") when nothing here fits:
+${TOOL_LIB.map(t=>`  ${t.id} = ${t.n}`).join("\n")}
 
 Rules:
 - Wrap emphasis in **double asterisks** for bold.
@@ -851,13 +914,15 @@ Rules:
 - Give real torque and fluid specs where they matter. If a number is model-specific or you are not certain, still give a typical value but add a "spec" block whose "verify" note tells the user to confirm it against the factory service manual for their VIN. Never present an invented number as certain.
 - Keep each step to one action; keep text concise for a phone.
 - 3-8 phases, safety/prep first and a verification phase last.
-- Fill tools and parts with useful Amazon search terms.
+- Set "env" to where the job is realistically done (shop / garage / driveway / roadside).
+- For tools, prefer library "id"s; fill parts with useful Amazon search terms.
 - Output valid JSON only.`;
 
 const SCHEMA_EXAMPLE = `{
   "title": "2015 Subaru Outback 2.5i — Front Brakes",
   "subtitle": "Front pads + rotors",
   "safety": "Chock the wheels and use jack stands — never rely on the jack alone.",
+  "env": ["driveway", "garage"],
   "phases": [
     { "name": "Phase 1 · Lift & Wheels", "color": "#4a86c5",
       "steps": [
@@ -882,25 +947,30 @@ const SCHEMA_EXAMPLE = `{
             {"type":"spec","text":"Caliper bracket bolts ~80 ft-lb; lug nuts ~65 ft-lb.","verify":"Verify against the factory service manual for your VIN."}
           ] } ] }
   ],
-  "tools": [ {"n":"Torque wrench (ft-lb)","d":"Caliper & lug torque","q":"1/2 inch drive torque wrench ft-lb"} ],
+  "tools": [ {"id":"torque-wrench-half","d":"Caliper & lug torque"}, {"id":"jack-and-stands"}, {"n":"Brake caliper piston tool","d":"Compress the piston","q":"brake caliper piston compression tool"} ],
   "parts": [ {"g":"Brakes","items":[ {"n":"Front brake pads","d":"Match your trim","q":"2015 Subaru Outback front brake pads"} ]} ]
 }`;
 
 function extractJson(txt){ let s=(txt||"").trim(); const a=s.indexOf("{"), b=s.lastIndexOf("}"); if(a>=0&&b>a) s=s.slice(a,b+1); return JSON.parse(s); }
 function validGuide(o){ return o&&typeof o.title==="string"&&Array.isArray(o.phases)&&o.phases.length&&o.phases.every(p=>p&&Array.isArray(p.steps)&&p.steps.length); }
+/* Canonicalize a tool: if it names a library id, rebuild from the library (keeping any
+   per-guide description) so ownership tracks by id; otherwise sanitize to strings. */
+const cleanTool=t=>{ if(t&&t.id&&LIB[t.id]) return libTool(t.id, (t.d!=null&&t.d!=="")?{d:String(t.d)}:{});
+  return { n:String((t&&t.n)||"Tool"), d:String((t&&t.d)||""), q:String((t&&t.q)||(t&&t.n)||"") }; };
 function createGuide(o){
   const id="g"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
-  const g={ id, builtin:false, title:o.title, subtitle:o.subtitle||"", safety:o.safety||"",
+  const g={ id, builtin:false, title:o.title, subtitle:o.subtitle||"", safety:o.safety||"", env:cleanEnv(o.env),
     phases:(o.phases||[]).map((p,i)=>({ id:"ph"+i, name:String(p.name||("Phase "+(i+1))),
       color:/^#[0-9a-fA-F]{3,8}$/.test(p.color)?p.color:"#8a8a80",
       steps:(p.steps||[]).map(s=>({ t:String(s.t||"Step"), allowMedia:s.allowMedia!==false, body:Array.isArray(s.body)?s.body:[] })) })),  // never trust s.html on import
-    tools:Array.isArray(o.tools)?o.tools:[], parts:Array.isArray(o.parts)?o.parts:[] };
+    tools:(Array.isArray(o.tools)?o.tools:[]).map(cleanTool),
+    parts:(Array.isArray(o.parts)?o.parts:[]).map(gp=>({ g:String((gp&&gp.g)||"Parts"), items:(Array.isArray(gp&&gp.items)?gp.items:[]).map(p=>({ n:String((p&&p.n)||"Part"), d:String((p&&p.d)||""), q:String((p&&p.q)||(p&&p.n)||"") })) })) };
   const arr=userGuides(); arr.push(g); saveUserGuides(arr); return g;
 }
 function exportGuide(g){
-  return { title:g.title, subtitle:g.subtitle||"", ...(g.safety?{safety:g.safety}:{}),
+  return { title:g.title, subtitle:g.subtitle||"", ...(g.safety?{safety:g.safety}:{}), ...(cleanEnv(g.env).length?{env:cleanEnv(g.env)}:{}),
     phases:(g.phases||[]).map(p=>({ name:p.name, color:p.color, steps:(p.steps||[]).map(s=>({ t:s.t, allowMedia:s.allowMedia!==false, body:s.body||[] })) })),
-    tools:g.tools||[], parts:g.parts||[] };
+    tools:(g.tools||[]).map(t=>t.id&&LIB[t.id]?{id:t.id,n:t.n,d:t.d,q:t.q}:{n:t.n,d:t.d,q:t.q}), parts:g.parts||[] };
 }
 
 function openNew(){
@@ -921,7 +991,7 @@ function openNew(){
       try{
         const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
           headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-          body:JSON.stringify({model:"claude-opus-4-8",max_tokens:8192,system:SCHEMA_SYSTEM,messages:[{role:"user",content:[{type:"text",text:prompt}]}]})});
+          body:JSON.stringify({model:state.model,max_tokens:8192,system:SCHEMA_SYSTEM,messages:[{role:"user",content:[{type:"text",text:prompt}]}]})});
         if(!res.ok) throw new Error("API "+res.status+": "+(await res.text()).slice(0,200));
         const data=await res.json();
         if(data.stop_reason==="refusal") throw new Error("Claude declined this request.");
@@ -936,7 +1006,7 @@ function openNew(){
 
 function openGuides(){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
-  const rows=allGuides().map(g=>`<label class="grow"><input type="radio" name="gsel" value="${g.id}" ${g.id===ACTIVE.id?"checked":""}><span><b>${esc(g.title)}</b><small>${esc(g.subtitle||"")}${g.builtin?" · built-in":""}</small></span>${g.builtin?"":`<button class="exp" data-exp="${g.id}" title="Share / export">⧉</button><button class="del" data-del="${g.id}" title="Delete">🗑</button>`}</label>`).join("");
+  const rows=allGuides().map(g=>`<label class="grow"><input type="radio" name="gsel" value="${g.id}" ${g.id===ACTIVE.id?"checked":""}><span><b>${esc(g.title)}</b><small>${esc(g.subtitle||"")}${g.builtin?" · built-in":""}</small>${envChips(g)}</span>${g.builtin?"":`<button class="exp" data-exp="${g.id}" title="Share / export">⧉</button><button class="del" data-del="${g.id}" title="Delete">🗑</button>`}</label>`).join("");
   sheet("Guides", rows+`<div class="btnrow"><button class="btn" id="addG">⬇ Add guide</button><button class="btn pri" id="newG">＋ New Repair</button></div>`,
   (b)=>{
     b.querySelectorAll('input[name=gsel]').forEach(r=>r.onchange=()=>{ setActive(r.value); closeSheet(); goHome(); });

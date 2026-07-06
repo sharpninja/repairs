@@ -22,7 +22,9 @@ on demand.
   **data format** it fills in. See [New Repair — data format](#new-repair--data-format).
 - **Guide library** — switch guides with **⇄ Guides**, **⬇ Add guide** (paste/import a
   guide's JSON), or **⧉ Share/export** one (copy JSON or download `.json`) to move guides
-  between devices or people. The built-in CR-V guide lives alongside your own.
+  between devices or people. The built-in CR-V guide lives alongside your own. Each guide
+  carries **environment tags** — 🏭 Shop / 🔧 Garage / 🏠 Driveway / 🛣️ Roadside — shown as
+  chips on the dashboard and in the switcher so you know where a job is meant to be done.
 - **Completion tracking** — overall % ring + per-phase progress bars, resume, and reset.
   Per-guide, saved on-device (localStorage).
 - **Contemporaneous logging** — on most steps, capture a **📷 photo**, **🎙️ voice note**,
@@ -32,11 +34,16 @@ on demand.
   tool and part, plus a verify-fitment-by-VIN caveat. Tap **＋ I have it** to mark what you
   own: **tools are tracked across every guide/session** (you own a torque wrench no matter
   the job), while **parts are tracked per guide** (they're job-specific). A running
-  "Have X of Y" tally sits at the top of each list.
+  "Have X of Y" tally sits at the top of each list. Tools are drawn from a **standardized
+  tool library** with stable ids, so the same tool is recognized as *owned* across guides
+  even when a generated guide words its name a little differently — and New Repair is told
+  to reuse those library ids.
 - **Claude helper (vision)** — the *Ask Claude* button opens a chat primed with the
   active guide. Attach a captured photo (or grab a frame from a video clip) and ask
-  *"does this O-ring look seated right?"* — uses **`claude-opus-4-8`** with vision.
-  Requires **your own Anthropic API key** (entered once via ⚙️, stored only in-browser).
+  *"does this O-ring look seated right?"* — with vision. Pick your **model** in ⚙️
+  (**Sonnet 5** by default, or Opus 4.8 / Haiku 4.5 to trade quality against cost); the
+  choice applies to Ask Claude, hands-free voice, and New Repair. Requires **your own
+  Anthropic API key** (entered once via ⚙️, stored only in-browser).
 - **Hands-free voice** — tap the **🎙️** button and work with dirty hands: say your
   **wake word** (default *"Hey Claude"*, editable) then either a **voice command** or a
   question out loud. Commands navigate and narrate without touching the screen —
@@ -98,7 +105,7 @@ Nothing to build or install — the app is one static folder.
 
 ## New Repair — data format
 
-The New Repair sheet sends your prompt to `claude-opus-4-8` with a system prompt that
+The New Repair sheet sends your prompt to your selected model with a system prompt that
 constrains the reply to a **single JSON object**. The app validates it, then renders each
 step from **typed content blocks** (never raw HTML from the model). Shape:
 
@@ -107,6 +114,7 @@ step from **typed content blocks** (never raw HTML from the model). Shape:
   "title": "2015 Subaru Outback 2.5i — Front Brakes",
   "subtitle": "Front pads + rotors",
   "safety": "Chock the wheels and use jack stands — never rely on the jack alone.",
+  "env": ["driveway", "garage"],          // any of: shop, garage, driveway, roadside
   "phases": [
     { "name": "Phase 1 · Lift & Wheels", "color": "#4a86c5",
       "steps": [
@@ -120,7 +128,8 @@ step from **typed content blocks** (never raw HTML from the model). Shape:
             { "type": "spec",   "text": "Caliper bolts ~80 ft-lb", "verify": "Confirm vs the FSM for your VIN." },
             { "type": "note",   "text": "Plain paragraph." }
           ] } ] } ],
-  "tools": [ { "n": "Torque wrench (ft-lb)", "d": "Caliper & lug torque", "q": "amazon search terms" } ],
+  "tools": [ { "id": "torque-wrench-half", "d": "Caliper & lug torque" },   // library id → tracked as owned across guides
+             { "n": "Brake caliper piston tool", "q": "amazon terms" } ],   // no id → one-off tool
   "parts": [ { "g": "Brakes", "items": [ { "n": "Front brake pads", "d": "Match your trim", "q": "…" } ] } ]
 }
 ```
@@ -130,7 +139,11 @@ Block types: `steps` (numbered), `check` (checklist — counts toward progress),
 the FSM" note), `note` (paragraph). `**double asterisks**` render as bold. The system
 prompt tells Claude to lead with safety, keep one action per step, and flag any spec that
 must be verified against the factory service manual rather than presenting an invented
-number as certain. The same format is what **⬇ Add guide** imports.
+number as certain. It also passes the **standardized tool library** and asks Claude to
+reference tools by their `id` (so they track as *owned* across guides), and to set `env`
+to where the job is realistically done. On import, tools that carry a known library `id`
+are canonicalized to the library's name/search terms; unknown-`id` or id-less tools are
+kept as one-offs. The same format is what **⬇ Add guide** imports.
 
 ---
 
