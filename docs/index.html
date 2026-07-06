@@ -966,7 +966,7 @@ const Voice = {
     try{ if("wakeLock" in navigator) this.wakeLock=await navigator.wakeLock.request("screen"); }catch(e){}
     if(!this._vis){ this._vis=()=>{ if(this.on && document.visibilityState==="visible"){ this._relock(); if(this.mode==="wake"||this.mode==="ask") this.startRec(); } }; document.addEventListener("visibilitychange",this._vis); }
     this.render();
-    this.say("Hands free on. Say, hey Claude, then ask your question.");
+    this.say("Hands free on. Say, hey Claude, then a command like next step or read step, or just ask a question.");
   },
   async _relock(){ try{ if("wakeLock" in navigator && !this.wakeLock) this.wakeLock=await navigator.wakeLock.request("screen"); }catch(e){} },
   disable(){ this.on=false; state.voiceOn=false; saveState(); clearTimeout(this.askT); this.stopRec(); try{ speechSynthesis.cancel(); }catch(e){}
@@ -1000,10 +1000,55 @@ const Voice = {
   armAsk(ms){ this.setMode("ask"); this.startRec(); clearTimeout(this.askT);
     this.askT=setTimeout(()=>{ if(this.on && this.mode==="ask"){ this.setMode("wake"); this.startRec(); } }, ms||8000); },
   async ask(q){
-    if(this.mode==="think") return; clearTimeout(this.askT); this.setMode("think"); this.stopRec(); this.heard(q); this.answer("");
-    try{ pushUser(q,null); syncOpenChat(); const a=await completeClaude(this.ctx()); syncOpenChat(); this.say(a,true); }
+    if(this.mode==="think") return; clearTimeout(this.askT);
+    if(this.runCommand(q)) return;
+    this.claudeSay(q);
+  },
+  async claudeSay(userText, extraCtx){
+    this.setMode("think"); this.stopRec(); this.heard(userText); this.answer("");
+    try{ pushUser(userText,null); syncOpenChat(); const a=await completeClaude(this.ctx()+(extraCtx?("\n"+extraCtx):"")); syncOpenChat(); this.say(a,true); }
     catch(err){ this.say("Sorry, I hit an error. "+(err&&err.message?err.message:""), true); }
   },
+  // Recognize navigation / help commands; return true if one was handled (skips Claude).
+  runCommand(raw){
+    const q=(raw||"").toLowerCase().replace(/[.!?,;:]/g,"").replace(/\s+/g," ").trim();
+    if(!q) return false;
+    const W={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,first:1,last:-1};
+    const num=s=>/^\d+$/.test(s)?parseInt(s,10):(W[s]||null);
+    let m;
+    if(/^(go |move )?(to )?next( step| one)?$/.test(q)||q==="forward"){ this.heard(raw); this.nav(1); return true; }
+    if(/^(go |move )?(to )?(prev|previous|back|go ?back)( step| one)?$/.test(q)||q==="previous"||q==="back"){ this.heard(raw); this.nav(-1); return true; }
+    if((m=q.match(/(?:go ?to|goto|jump to|jump|open|show|take me to)\s+step\s+(\w+)/))||(m=q.match(/^step\s+(\w+)$/))){
+      const n=num(m[1]); if(n){ this.heard(raw); this.gotoStep(n===-1?TOTAL_STEPS:n); return true; } }
+    if(/^(read( it| this| that| the)?( step)?|read aloud|say the step)$/.test(q)){ this.heard(raw); this.readStep(); return true; }
+    if(/^(reword|rephrase|simplify|say (it|that) (again )?differently)( (it|this|that|the )?step)?$/.test(q)){ this.heard(raw); this.reword(); return true; }
+    if(/^(repeat|say (that|it) again|come again|what did you say)$/.test(q)){ this.heard(raw); this.repeat(); return true; }
+    if(/(i (need|want) help|i'?m stuck|help me|^help$|what do i do|i don'?t (know|understand))/.test(q)){ this.heard(raw); this.help(); return true; }
+    if(/^(go |take me )?(home|dashboard|main menu)$/.test(q)){ this.heard(raw); goHome(); this.say("Back to the dashboard.",false); return true; }
+    if(/^(end|close|stop|exit|quit|leave) (chat|conversation)|never ?mind|go back to (my |the )?step|back to step$/.test(q)){ this.heard(raw); this.endChat(); return true; }
+    if(/(what can (i|you) (say|do)|list commands|which commands|voice commands)/.test(q)){ this.heard(raw); this.helpMenu(); return true; }
+    return false;
+  },
+  nav(dir){
+    if(route!=="step"||cur==null){ go(cur==null?0:cur); this.announceStep(true); return; }
+    const t=cur+dir;
+    if(t<0){ this.say("You're already on the first step.",true); return; }
+    if(t>=TOTAL_STEPS){ this.say("That's the last step.",true); return; }
+    go(t); this.announceStep(true);
+  },
+  gotoStep(n){
+    const idx=n-1;
+    if(idx<0||idx>=TOTAL_STEPS){ this.say("There are "+TOTAL_STEPS+" steps. Say a number between 1 and "+TOTAL_STEPS+".",true); return; }
+    go(idx); this.announceStep(true);
+  },
+  announceStep(followup){ const st=STEPS[cur]; this.say("Step "+(cur+1)+" of "+TOTAL_STEPS+". "+st.t, followup); },
+  readText(st){ const d=document.createElement("div"); d.innerHTML=stepInner(st); d.querySelectorAll("svg,figure,input").forEach(n=>n.remove()); return (d.textContent||"").replace(/\s+/g," ").trim().slice(0,1600); },
+  readStep(){ if(route!=="step"){ this.say("Open a step first, then say, read step.",true); return; } const st=STEPS[cur]; this.say("Step "+(cur+1)+". "+st.t+". "+this.readText(st), true); },
+  reword(){ if(route!=="step"){ this.say("Open a step first, then say, reword step.",true); return; } this.claudeSay("Please reword this step in simpler, plain language I can follow with dirty hands. Keep it short.", "Full step text: "+this.readText(STEPS[cur])); },
+  help(){ const extra=route==="step"?("Full step text: "+this.readText(STEPS[cur])):""; this.claudeSay("I need help with this step. In a few sentences, what might go wrong here and what should I check or do?", extra); },
+  repeat(){ const a=[...chatHistory].reverse().find(m=>m.role==="assistant"); if(a){ this.say(a.content.filter(b=>b.type==="text").map(b=>b.text).join(""),true); } else this.say("There's nothing to repeat yet.",true); },
+  endChat(){ try{ closeSheet(); }catch(e){} if(route!=="step") go(cur!=null?cur:0); this.heard(""); this.answer(""); this.say("Okay, back to your step.",false); },
+  helpMenu(){ this.say("You can say: next step, previous step, go to step 5, read step, reword step, repeat, I need help, go home, or end chat. Or just ask a question.", true); },
   ctx(){ return route==="step" ? ('Current step: "'+STEPS[cur].t+'" ('+STEPS[cur].phase.name+').') : ""; },
   plain(t){ return (t||"").replace(/\*\*(.+?)\*\*/g,"$1").replace(/[#*_`>~]/g,"").replace(/\s+/g," ").trim().slice(0,1000); },
   say(text,followup){
@@ -1032,6 +1077,7 @@ function openVoiceSettings(){
     <p class="fine">Say your wake word, then ask — Claude answers out loud. Built for busy, dirty hands. Answers use your API key; speech recognition needs Chrome/Edge (Android or desktop) and internet; the spoken replies work offline. Keep the app open; the screen is kept awake while it's on.</p>
     <div class="field"><label>Wake word / phrase</label><input id="vw" value="${String(w).replace(/"/g,'&quot;')}"></div>
     <label class="grow" style="cursor:pointer"><input type="checkbox" id="vtts" ${state.voiceReplies===false?"":"checked"}><span><b>Speak answers aloud</b><small>Text-to-speech replies</small></span></label>
+    <div class="call tip"><span class="ic">🎙️</span><div><b>Voice commands</b> (after the wake word):<br><small>“next step” · “previous step” · “go to step 5” · “read step” · “reword step” · “I need help” · “repeat” · “go home” · “end chat” — or just ask a question.</small></div></div>
     ${Voice.supported()?"":'<div class="call crit"><span class="ic">⚠️</span><div>This browser can\'t do speech recognition. Spoken answers still work; asking must be typed.</div></div>'}
     <div class="btnrow"><button class="btn" id="vc">Close</button><button class="btn pri" id="vstart">${Voice.on?"Stop":"Start"} hands-free</button></div>`,
   (b)=>{

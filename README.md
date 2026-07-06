@@ -35,11 +35,14 @@ on demand.
   *"does this O-ring look seated right?"* — uses **`claude-opus-4-8`** with vision.
   Requires **your own Anthropic API key** (entered once via ⚙️, stored only in-browser).
 - **Hands-free voice** — tap the **🎙️** button and work with dirty hands: say your
-  **wake word** (default *"Hey Claude"*, editable) then ask a question out loud. Claude
-  answers by voice and reads back through your phone speaker, then listens for a follow-up.
-  Uses the browser's Web Speech API (recognition + synthesis) and a **screen wake lock** so
-  the display stays on while you work. All voice control is on-device; only the question
-  itself reaches Claude.
+  **wake word** (default *"Hey Claude"*, editable) then either a **voice command** or a
+  question out loud. Commands navigate and narrate without touching the screen —
+  *"next step"*, *"previous step"*, *"go to step 5"*, *"read step"* (reads it aloud),
+  *"reword step"* (Claude rephrases it simpler), *"I need help"* (Claude troubleshoots the
+  step), *"repeat"*, *"go home"*, and *"end chat"* to drop back to the step. Anything else
+  is answered by Claude out loud, then it listens for a follow-up. Uses the browser's Web
+  Speech API (recognition + synthesis) and a **screen wake lock** so the display stays on
+  while you work. All voice control is on-device; only questions themselves reach Claude.
 - **Themes** — System / Light / Dark, toggled from the header, following
   `prefers-color-scheme` by default. Styled to match the Claude ecosystem (coral accent,
   warm-paper light / charcoal dark, serif display). Honda-H app icon + favicon.
