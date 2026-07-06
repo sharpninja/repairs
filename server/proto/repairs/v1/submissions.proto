@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package repairs.v1;
+
+// Accepts app submissions authenticated by a Google ID token and opens a
+// pull request against the guide catalog (docs/marketplace.json) on GitHub.
+service SubmissionService {
+  // Append a star rating + review to an existing catalog guide via PR.
+  rpc SubmitReview(SubmitReviewRequest) returns (SubmitResponse) {}
+  // Add a full repair guide (the app's guide JSON) to the catalog via PR.
+  rpc SubmitRepair(SubmitRepairRequest) returns (SubmitResponse) {}
+}
+
+message SubmitReviewRequest {
+  // Google Identity Services ID token (JWT) from the browser.
+  string google_id_token = 1;
+  // Catalog entry id the review is for (e.g. "mkt-crv-s1").
+  string guide_id = 2;
+  string guide_title = 3;
+  int32 stars = 4; // 1..5
+  string review_text = 5;
+}
+
+message SubmitRepairRequest {
+  string google_id_token = 1;
+  // The app's guide JSON (exact export format), as a JSON string.
+  string guide_json = 2;
+}
+
+message SubmitResponse {
+  bool ok = 1;
+  string pr_url = 2;
+  int32 pr_number = 3;
+  string message = 4;
+}

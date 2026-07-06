@@ -1,0 +1,8 @@
+version: v2
+clean: true
+plugins:
+  # protobuf-es v2 generates messages AND service schemas (no separate connect plugin needed)
+  - remote: buf.build/bufbuild/es:v2.2.3
+    out: gen
+    opt:
+      - target=js+dts

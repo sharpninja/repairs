@@ -616,6 +616,11 @@ function saveState(){ localStorage.setItem(LS, JSON.stringify(state)); }
 let state=load(); state.checks=state.checks||{}; state.done=state.done||{}; state.apiKey=state.apiKey||"";
 state.wakeWord=state.wakeWord||"hey claude"; if(state.voiceReplies===undefined) state.voiceReplies=true;
 state.activeVehicle=state.activeVehicle||"";
+state.submitApi=state.submitApi||""; state.googleClientId=state.googleClientId||"";
+/* Community PR submission: set these in ⚙️ → Community (or bake defaults here). */
+const CONFIG={ submitApi:"", googleClientId:"" };
+const submitApi=()=>(state.submitApi||CONFIG.submitApi||"").trim();
+const googleClientId=()=>(state.googleClientId||CONFIG.googleClientId||"").trim();
 const MODELS=[
   {id:"claude-sonnet-5", n:"Sonnet 5", d:"Balanced quality & cost — recommended"},
   {id:"claude-opus-4-8", n:"Opus 4.8", d:"Most capable, highest cost"},
@@ -878,8 +883,13 @@ function openKey(){
   sheet("Claude settings",`<div class="field"><label>Anthropic API key</label><input id="keyIn" type="password" placeholder="sk-ant-..." value="${cur.replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Model</label><select id="modelIn">${opts}</select></div>
     <p class="fine">Stored only in this browser and sent directly to api.anthropic.com from your device. The model is used for <b>Ask Claude</b>, hands-free voice, and <b>New Repair</b> (all support vision). Get a key at console.anthropic.com; API usage is billed to your account — Opus costs the most, Haiku the least.</p>
+    <details class="fmtd"><summary>Community submissions (PR)</summary>
+      <p class="fine">Optional. To submit ratings, reviews, and repairs as GitHub pull requests, run the <b>submit service</b> (see <code>server/</code>) and enter its URL plus your Google OAuth client ID. Leave blank to keep everything on-device.</p>
+      <div class="field"><label>Backend URL</label><input id="subApiIn" placeholder="https://submit.example.com" value="${(state.submitApi||"").replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Google client ID</label><input id="gcidIn" placeholder="xxxx.apps.googleusercontent.com" value="${(state.googleClientId||"").replace(/"/g,'&quot;')}"></div>
+    </details>
     <div class="btnrow"><button class="btn" id="kc">Cancel</button><button class="btn pri" id="ks">Save</button></div>`,
-  (b)=>{ b.querySelector("#ks").onclick=()=>{ state.apiKey=b.querySelector("#keyIn").value.trim(); state.model=b.querySelector("#modelIn").value; saveState(); closeSheet(); }; b.querySelector("#kc").onclick=closeSheet; });
+  (b)=>{ b.querySelector("#ks").onclick=()=>{ state.apiKey=b.querySelector("#keyIn").value.trim(); state.model=b.querySelector("#modelIn").value; state.submitApi=b.querySelector("#subApiIn").value.trim(); state.googleClientId=b.querySelector("#gcidIn").value.trim(); saveState(); closeSheet(); }; b.querySelector("#kc").onclick=closeSheet; });
 }
 
 /* ---- VIN reading: door-jamb barcode (offline BarcodeDetector) + dashboard-stamp OCR via Claude ---- */
@@ -1080,7 +1090,7 @@ function openMarketGuide(e){
     <div id="myStars" class="stars" style="font-size:1.7em"></div>
     <div class="field" style="margin-top:10px"><label>Write a review (AI-moderated)</label><textarea id="revText" rows="3" placeholder="What worked, what to watch for…">${esc((ur.review&&ur.review.text)||"")}</textarea></div>
     <div id="revStatus"></div>
-    <div class="btnrow"><button class="btn" id="revContribute">⧉ Contribute</button><button class="btn pri" id="revSubmit">Submit review</button></div>
+    <div class="btnrow"><button class="btn" id="revContribute">⧉ Contribute</button><button class="btn" id="revPR">🚀 Submit as PR</button><button class="btn pri" id="revSubmit">Save review</button></div>
     <h3 style="margin:.7em 0 .2em">Reviews</h3>
     <div id="revList">${revHtml||'<p class="fine">No reviews yet — be the first.</p>'}</div>`,
   (b)=>{
@@ -1089,6 +1099,18 @@ function openMarketGuide(e){
     paint();
     b.querySelector("#mInstall").onclick=()=>{ installMarketGuide(e); closeSheet(); goHome(); };
     b.querySelector("#revContribute").onclick=()=>{ contributeReview({guideId:e.id, guideTitle:m.title, stars:picked, review:(b.querySelector("#revText").value||"").trim()}); };
+    b.querySelector("#revPR").onclick=async()=>{
+      const txt=(b.querySelector("#revText").value||"").trim(); const st=b.querySelector("#revStatus");
+      if(picked<1){ st.innerHTML=`<div class="modverdict no">Pick a star rating first.</div>`; return; }
+      if(!txt){ st.innerHTML=`<div class="modverdict no">Write a review to submit.</div>`; return; }
+      if(!state.apiKey){ closeSheet(); openKey(); return; }
+      const btn=b.querySelector("#revPR"); btn.disabled=true; st.innerHTML=`<div class="fine">Moderating with Claude before submission…</div>`;
+      try{ const v=await moderateReview(txt);
+        if(v.decision!=="approved"){ st.innerHTML=`<div class="modverdict no">⚠️ Can't submit: ${esc(v.reason||"failed moderation")}.</div>`; btn.disabled=false; return; }
+        setUserReview(e.id,{stars:picked, review:{text:v.cleaned||txt, ts:Date.now(), status:"approved"}});
+        openSubmitReview(e, m.title, picked, v.cleaned||txt);
+      }catch(err){ st.innerHTML=`<div class="modverdict no">⚠️ ${esc(String(err.message||err))}</div>`; btn.disabled=false; }
+    };
     b.querySelector("#revSubmit").onclick=async()=>{
       const txt=(b.querySelector("#revText").value||"").trim(); const st=b.querySelector("#revStatus");
       if(picked<1){ st.innerHTML=`<div class="modverdict no">Pick a star rating first.</div>`; return; }
@@ -1101,6 +1123,58 @@ function openMarketGuide(e){
       }catch(err){ st.innerHTML=`<div class="modverdict no">⚠️ ${esc(String(err.message||err))}</div>`; btn.disabled=false; }
     };
   });
+}
+
+/* ---- Google sign-in + submit-to-PR (backend gRPC/Connect service) ---- */
+let _gCred=null, _gEmail="";
+function gjwtEmail(tok){ try{ const p=JSON.parse(atob(tok.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))); return p.email||""; }catch(e){ return ""; } }
+function loadGIS(){ return new Promise((res,rej)=>{ if(window.google&&window.google.accounts&&google.accounts.id) return res();
+  const s=document.createElement("script"); s.src="https://accounts.google.com/gsi/client"; s.async=true; s.defer=true;
+  s.onload=()=>res(); s.onerror=()=>rej(new Error("Couldn't load Google sign-in (needs internet).")); document.head.appendChild(s); }); }
+async function renderGoogleButton(el, onToken){
+  const cid=googleClientId(); if(!cid) throw new Error("Google client ID isn't set (⚙️ → Community submissions).");
+  await loadGIS();
+  google.accounts.id.initialize({ client_id:cid, callback:(r)=>{ if(r&&r.credential){ _gCred=r.credential; _gEmail=gjwtEmail(r.credential); onToken(r.credential); } } });
+  el.innerHTML=""; google.accounts.id.renderButton(el,{theme:"outline",size:"large",text:"signin_with",width:260});
+}
+async function submitRPC(method,payload){
+  const base=submitApi(); if(!base) throw new Error("Submission backend isn't set (⚙️ → Community submissions).");
+  const res=await fetch(base.replace(/\/+$/,"")+"/repairs.v1.SubmissionService/"+method,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+  const txt=await res.text(); let data={}; try{ data=txt?JSON.parse(txt):{}; }catch(e){}
+  if(!res.ok) throw new Error(data.message||("Submission failed ("+res.status+")"));
+  return data;
+}
+/* Shared submit sheet: sign in with Google, then POST to the backend which opens the PR. */
+function submitSheet(title, previewHtml, doSubmit, back){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  if(!submitApi()||!googleClientId()){ sheet(title, `<div class="modverdict no">Community submissions aren't configured. Set the <b>Backend URL</b> and <b>Google client ID</b> in ⚙️ → Community submissions, then try again.</div><div class="btnrow"><button class="btn pri" id="cfg">Open settings</button></div>`, (b)=>{ b.querySelector("#cfg").onclick=()=>{ closeSheet(); openKey(); }; }); return; }
+  sheet(title, `${previewHtml}
+    <p class="fine">Sign in with Google to attribute your pull request. A maintainer reviews and merges it into the public catalog.</p>
+    <div id="gsi" style="margin:10px 0;min-height:44px"></div>
+    <div id="subStatus" class="fine"></div>
+    <div class="btnrow"><button class="btn" id="subCancel">Cancel</button><button class="btn pri" id="subGo" disabled>🚀 Submit PR</button></div>`,
+  (b)=>{
+    const go=b.querySelector("#subGo"), st=b.querySelector("#subStatus"), gsi=b.querySelector("#gsi");
+    const signedIn=()=>{ go.disabled=false; st.innerHTML=`Signed in as <b>${esc(_gEmail)}</b>.`; gsi.style.display="none"; };
+    if(_gCred){ signedIn(); } else { renderGoogleButton(gsi, ()=>signedIn()).catch(e=>{ st.innerHTML=`<span class="vinbad">⚠️ ${esc(e.message)}</span>`; }); }
+    b.querySelector("#subCancel").onclick=()=>{ back&&back(); };
+    go.onclick=async()=>{ if(!_gCred){ st.textContent="Sign in first."; return; } go.disabled=true; st.textContent="Opening pull request…";
+      try{ const r=await doSubmit(_gCred); st.innerHTML=`✅ Pull request opened: <a href="${esc(r.prUrl)}" target="_blank" rel="noopener">#${r.prNumber||""} ↗</a>`; }
+      catch(err){ go.disabled=false; st.innerHTML=`<span class="vinbad">⚠️ ${esc(String(err.message||err))}</span>`; } };
+  });
+}
+function openSubmitReview(entry, title, stars, text){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  submitSheet("🚀 Submit review", `<div class="review"><div class="rh"><b>${esc(title)}</b>${starHtml(stars)}</div><div>${esc(text)}</div></div>`,
+    (tok)=>submitRPC("SubmitReview",{googleIdToken:tok, guideId:entry.id, guideTitle:title, stars, reviewText:text}),
+    ()=>openMarketGuide(entry));
+}
+function openSubmitRepair(g){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const json=JSON.stringify(exportGuide(g),null,2);
+  submitSheet("🚀 Submit repair", `<p class="fine">Contribute this guide to the public marketplace. Make sure it's safe and accurate.</p><div class="field"><label>Guide</label><input value="${esc(g.title)}" readonly></div><details class="fmtd"><summary>JSON being submitted</summary><pre class="fmt">${esc(json)}</pre></details>`,
+    (tok)=>submitRPC("SubmitRepair",{googleIdToken:tok, guideJson:json}),
+    ()=>openExport(g));
 }
 
 function openChat(attachImg){
@@ -1378,12 +1452,13 @@ function openExport(g){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   const json=JSON.stringify(exportGuide(g),null,2);
   sheet("Share: "+esc(g.title), `
-    <p class="fine">Copy this JSON or download it — anyone can add it via <b>Guides → ⬇ Add guide</b> on their own device.</p>
+    <p class="fine">Copy this JSON or download it — anyone can add it via <b>Guides → ⬇ Add guide</b> on their own device. Or <b>🚀 Submit to marketplace</b> to open a pull request adding it to the shared catalog.</p>
     <div class="field"><textarea id="expJson" rows="12" readonly>${esc(json)}</textarea></div>
     <div id="expStatus" class="fine"></div>
-    <div class="btnrow"><button class="btn" id="expCopy">⧉ Copy</button><button class="btn pri" id="expDl">⬇ Download .json</button></div>`,
+    <div class="btnrow"><button class="btn" id="expCopy">⧉ Copy</button><button class="btn" id="expPR">🚀 Submit to marketplace</button><button class="btn pri" id="expDl">⬇ Download .json</button></div>`,
   (b)=>{
     const ta=b.querySelector("#expJson"), st=b.querySelector("#expStatus");
+    b.querySelector("#expPR").onclick=()=>{ openSubmitRepair(g); };
     b.querySelector("#expCopy").onclick=async()=>{ try{ await navigator.clipboard.writeText(json); st.textContent="Copied to clipboard."; }catch(e){ ta.focus(); ta.select(); st.textContent="Couldn't auto-copy — the text is selected, copy it manually."; } };
     b.querySelector("#expDl").onclick=()=>{ const blob=new Blob([json],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=(g.title||"guide").replace(/[^\w.-]+/g,"_").slice(0,48)+".json"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000); st.textContent="Downloaded."; };
   });
