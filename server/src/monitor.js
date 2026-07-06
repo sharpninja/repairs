@@ -4,6 +4,9 @@
 // (subscription) via moderate.js.
 import { Octokit } from "@octokit/rest";
 import { moderatePullRequest } from "./moderate.js";
+import { noteMerged } from "./store.js";
+
+const emailFromBody = (body) => (String(body || "").match(/\(([^\s()]+@[^\s()]+)\)/) || [])[1] || "";
 
 const OWNER = process.env.GITHUB_OWNER || "sharpninja";
 const REPO = process.env.GITHUB_REPO || "repairs";
@@ -29,6 +32,19 @@ async function tick() {
     } catch (e) {
       console.error(`#${pr.number}: ${e.message}`);
     }
+  }
+
+  // Positive trust signal: merged submission PRs not yet counted.
+  const closed = await kit.pulls.list({ owner: OWNER, repo: REPO, state: "closed", per_page: 30, sort: "updated", direction: "desc" });
+  for (const pr of closed.data) {
+    const labels = pr.labels.map((l) => l.name);
+    if (LABEL && !labels.includes(LABEL)) continue;
+    if (labels.includes("trust:counted")) continue;
+    if (pr.merged_at) {
+      const email = emailFromBody(pr.body);
+      if (email) { noteMerged(email); console.log(`trust+ merged #${pr.number} (${email})`); }
+    }
+    try { await kit.issues.addLabels({ owner: OWNER, repo: REPO, issue_number: pr.number, labels: ["trust:counted"] }); } catch (e) {}
   }
 }
 

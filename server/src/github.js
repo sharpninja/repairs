@@ -14,10 +14,10 @@ const SUBMISSION_LABEL = process.env.SUBMISSION_LABEL || "app-submission";
 // Label the PR as an app submission and (unless disabled) kick off Claude
 // moderation immediately. Fire-and-forget so the RPC returns fast; the monitor
 // process is the backstop for anything missed.
-async function afterPR(kit, prNumber) {
+async function afterPR(kit, prNumber, submitter) {
   try { await kit.issues.addLabels({ owner: OWNER, repo: REPO, issue_number: prNumber, labels: [SUBMISSION_LABEL] }); } catch (e) {}
   if (process.env.MODERATE_ON_SUBMIT !== "false") {
-    moderatePullRequest(kit, OWNER, REPO, prNumber).catch((e) => console.error("inline moderation #" + prNumber + ":", e.message));
+    moderatePullRequest(kit, OWNER, REPO, prNumber, { submitter }).catch((e) => console.error("inline moderation #" + prNumber + ":", e.message));
   }
 }
 
@@ -63,10 +63,24 @@ export async function openReviewPR({ user, guideId, guideTitle, stars, text }) {
     title: `Review: ${guideTitle} (${stars}★)`,
     body: `Submitted from the app by **${user.name || user.email}** (${user.email}).\n\n` +
       `Guide: \`${guideId}\`\nRating: ${stars}★\n\n> ${String(text).replace(/\n/g, "\n> ")}\n\n` +
-      `_Client-side AI-moderated before submission. Please verify before merging._`,
+      `_Claude moderation runs automatically; please verify before merging._`,
   });
-  await afterPR(kit, pr.data.number);
+  await afterPR(kit, pr.data.number, user.email);
   return pr.data;
+}
+
+export async function getStatuses(numbers) {
+  const kit = octo();
+  const out = [];
+  for (const n of (numbers || []).slice(0, 50)) {
+    try {
+      const pr = (await kit.pulls.get({ owner: OWNER, repo: REPO, pull_number: n })).data;
+      out.push({ number: n, state: pr.state, merged: !!pr.merged_at, url: pr.html_url, title: pr.title });
+    } catch (e) {
+      out.push({ number: n, state: "unknown", merged: false, url: "", title: "" });
+    }
+  }
+  return out;
 }
 
 export async function openRepairPR({ user, guide }) {
@@ -84,6 +98,6 @@ export async function openRepairPR({ user, guide }) {
       `Catalog id: \`${id}\`\nPhases: ${(guide.phases || []).map((p) => p.name).join(" · ")}\n\n` +
       `⚠️ Review for safety and accuracy before merging.`,
   });
-  await afterPR(kit, pr.data.number);
+  await afterPR(kit, pr.data.number, user.email);
   return pr.data;
 }

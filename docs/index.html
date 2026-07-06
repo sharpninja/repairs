@@ -217,6 +217,10 @@
   .modverdict{border-radius:10px;padding:9px 11px;margin:8px 0;font-size:.9em}
   .modverdict.ok{background:var(--tip-bg);border:1px solid var(--tip);color:var(--tip-ink)}
   .modverdict.no{background:var(--danger-bg,rgba(200,60,60,.12));border:1px solid var(--danger);color:var(--danger)}
+  #toaster{position:fixed;left:12px;right:12px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:80;display:flex;flex-direction:column;gap:8px;max-width:520px;margin:0 auto;pointer-events:none}
+  .toastitem{pointer-events:auto;background:var(--tip-bg);border:1px solid var(--tip);color:var(--tip-ink);border-radius:12px;padding:11px 13px;box-shadow:0 8px 24px rgba(0,0,0,.28);display:flex;gap:10px;align-items:center;transition:opacity .4s;font-size:.92em}
+  .toastitem a{color:inherit;font-weight:800;white-space:nowrap}
+  .toastitem button{margin-left:auto;background:none;border:none;color:inherit;cursor:pointer;font-size:1em;opacity:.7}
   .field textarea{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:15px;font-family:inherit;resize:vertical;line-height:1.45}
   .gbtns{display:flex;gap:8px;justify-content:center;margin-top:14px}
   .pill2{background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:9px 15px;font-weight:800;font-size:.84em;cursor:pointer}
@@ -1028,19 +1032,6 @@ function starHtml(v){ v=Math.round(v||0); let s=""; for(let i=1;i<=5;i++) s+=`<s
 function installMarketGuide(e){ if(e.builtinRef){ setActive(e.builtinRef); return guideById(e.builtinRef); }
   const existing=allGuides().find(g=>g.title===e.guide.title); if(existing){ setActive(existing.id); return existing; }
   const g=createGuide(e.guide); setActive(g.id); return g; }
-async function moderateReview(text){
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
-    headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-    body:JSON.stringify({model:state.model,max_tokens:300,
-      system:`You moderate user reviews for a DIY car-repair guide marketplace. Approve genuine, on-topic feedback about a repair guide. REJECT if the text is abusive/harassing, hate speech, spam or advertising, contains personal data (full names, plates, addresses, phone numbers), is off-topic, or promotes unsafe/illegal actions. You may lightly fix typos and remove profanity without changing meaning. Respond with ONLY a JSON object: {"decision":"approved"|"rejected","reason":"short reason when rejected","cleaned":"the cleaned review text when approved"}. No prose, no code fences.`,
-      messages:[{role:"user",content:[{type:"text",text:text}]}]})});
-  if(!res.ok) throw new Error("API "+res.status);
-  const data=await res.json();
-  if(data.stop_reason==="refusal") return {decision:"rejected", reason:"flagged by the safety system", cleaned:text};
-  const t=(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("");
-  let o; try{ o=extractJson(t); }catch(e){ return {decision:"rejected", reason:"couldn't parse the moderation result — try again", cleaned:text}; }
-  return { decision:o.decision==="approved"?"approved":"rejected", reason:String(o.reason||""), cleaned:String(o.cleaned||text) };
-}
 function contributeReview(payload){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   const json=JSON.stringify(payload,null,2);
@@ -1066,7 +1057,7 @@ async function openMarket(){
       html+=`<h3 style="margin:.2em 0">🚗 For your ${esc(vehDesc(veh)||"vehicle")}</h3>`+(forYou.length?forYou.map(x=>card(x.e)).join(""):`<p class="fine">No catalog guides match this vehicle yet — browse all below, or make one with ＋ New Repair.</p>`);
     } else html+=`<p class="fine">Tip: set an active vehicle (🚗) to surface guides matched to your car.</p>`;
     html+=`<h3 style="margin:.7em 0 .2em">All guides</h3>`+entries.map(card).join("");
-    html+=`<p class="fine" style="margin-top:12px">Ratings combine the community seed with your own. Your reviews are stored on-device and AI-moderated; open a guide and use <b>Contribute</b> to submit yours.</p>`;
+    html+=`<p class="fine" style="margin-top:12px">Ratings combine the community seed with your own, stored on-device. Open a guide to <b>🚀 Submit as PR</b> (moderated by Claude on the server) or <b>Contribute</b> via an issue.</p>`;
     box.innerHTML=html;
     box.querySelectorAll(".mkt").forEach(c=>c.onclick=()=>{ const e=entries.find(x=>x.id===c.dataset.id); if(e) openMarketGuide(e); });
   });
@@ -1078,7 +1069,7 @@ function openMarketGuide(e){
   const fit=fitLabel(cleanFits(m.fits));
   const seed=(e.reviews||[]).slice();
   const revHtml=seed.map(rv=>`<div class="review"><div class="rh"><b>${esc(rv.author||"anon")}</b>${starHtml(rv.stars)}</div><div>${esc(rv.text||"")}</div></div>`).join("")
-    + (ur.review&&ur.review.status==="approved"?`<div class="review"><div class="rh"><b>You</b>${starHtml(ur.stars||0)}</div><div>${esc(ur.review.text)}</div></div>`:"");
+    + (ur.review&&ur.review.text?`<div class="review"><div class="rh"><b>You</b>${starHtml(ur.stars||0)}</div><div>${esc(ur.review.text)}</div></div>`:"");
   const installed = e.builtinRef==="crv-s1" || allGuides().some(g=>g.title===gj.title);
   sheet(esc(m.title), `
     <p class="fine">${esc(m.subtitle||"")}</p>
@@ -1088,7 +1079,7 @@ function openMarketGuide(e){
     <div class="btnrow"><button class="btn pri" id="mInstall">${installed?"✓ In your library — open":"⬇ Install guide"}</button></div>
     <h3 style="margin:.7em 0 .2em">Your rating</h3>
     <div id="myStars" class="stars" style="font-size:1.7em"></div>
-    <div class="field" style="margin-top:10px"><label>Write a review (AI-moderated)</label><textarea id="revText" rows="3" placeholder="What worked, what to watch for…">${esc((ur.review&&ur.review.text)||"")}</textarea></div>
+    <div class="field" style="margin-top:10px"><label>Write a review</label><textarea id="revText" rows="3" placeholder="What worked, what to watch for…">${esc((ur.review&&ur.review.text)||"")}</textarea></div>
     <div id="revStatus"></div>
     <div class="btnrow"><button class="btn" id="revContribute">⧉ Contribute</button><button class="btn" id="revPR">🚀 Submit as PR</button><button class="btn pri" id="revSubmit">Save review</button></div>
     <h3 style="margin:.7em 0 .2em">Reviews</h3>
@@ -1099,28 +1090,19 @@ function openMarketGuide(e){
     paint();
     b.querySelector("#mInstall").onclick=()=>{ installMarketGuide(e); closeSheet(); goHome(); };
     b.querySelector("#revContribute").onclick=()=>{ contributeReview({guideId:e.id, guideTitle:m.title, stars:picked, review:(b.querySelector("#revText").value||"").trim()}); };
-    b.querySelector("#revPR").onclick=async()=>{
+    b.querySelector("#revPR").onclick=()=>{
       const txt=(b.querySelector("#revText").value||"").trim(); const st=b.querySelector("#revStatus");
       if(picked<1){ st.innerHTML=`<div class="modverdict no">Pick a star rating first.</div>`; return; }
       if(!txt){ st.innerHTML=`<div class="modverdict no">Write a review to submit.</div>`; return; }
-      if(!state.apiKey){ closeSheet(); openKey(); return; }
-      const btn=b.querySelector("#revPR"); btn.disabled=true; st.innerHTML=`<div class="fine">Moderating with Claude before submission…</div>`;
-      try{ const v=await moderateReview(txt);
-        if(v.decision!=="approved"){ st.innerHTML=`<div class="modverdict no">⚠️ Can't submit: ${esc(v.reason||"failed moderation")}.</div>`; btn.disabled=false; return; }
-        setUserReview(e.id,{stars:picked, review:{text:v.cleaned||txt, ts:Date.now(), status:"approved"}});
-        openSubmitReview(e, m.title, picked, v.cleaned||txt);
-      }catch(err){ st.innerHTML=`<div class="modverdict no">⚠️ ${esc(String(err.message||err))}</div>`; btn.disabled=false; }
+      setUserReview(e.id,{stars:picked, review:{text:txt, ts:Date.now(), status:"saved"}});
+      openSubmitReview(e, m.title, picked, txt);  // the backend moderates the PR with Claude
     };
-    b.querySelector("#revSubmit").onclick=async()=>{
+    b.querySelector("#revSubmit").onclick=()=>{
       const txt=(b.querySelector("#revText").value||"").trim(); const st=b.querySelector("#revStatus");
       if(picked<1){ st.innerHTML=`<div class="modverdict no">Pick a star rating first.</div>`; return; }
-      if(!txt){ setUserReview(e.id,{stars:picked}); st.innerHTML=`<div class="modverdict ok">✓ Rating saved.</div>`; return; }
-      if(!state.apiKey){ closeSheet(); openKey(); return; }
-      const btn=b.querySelector("#revSubmit"); btn.disabled=true; st.innerHTML=`<div class="fine">Checking your review with Claude…</div>`;
-      try{ const v=await moderateReview(txt);
-        if(v.decision==="approved"){ setUserReview(e.id,{stars:picked, review:{text:v.cleaned||txt, ts:Date.now(), status:"approved"}}); openMarketGuide(e); }
-        else { setUserReview(e.id,{stars:picked, review:{text:txt, ts:Date.now(), status:"rejected"}}); st.innerHTML=`<div class="modverdict no">⚠️ Not posted: ${esc(v.reason||"failed moderation")}. Your star rating was saved.</div>`; btn.disabled=false; }
-      }catch(err){ st.innerHTML=`<div class="modverdict no">⚠️ ${esc(String(err.message||err))}</div>`; btn.disabled=false; }
+      const patch={stars:picked}; if(txt) patch.review={text:txt, ts:Date.now(), status:"saved"};
+      setUserReview(e.id, patch);
+      st.innerHTML=`<div class="modverdict ok">✓ Saved on this device.</div>`;
     };
   });
 }
@@ -1139,42 +1121,84 @@ async function renderGoogleButton(el, onToken){
 }
 async function submitRPC(method,payload){
   const base=submitApi(); if(!base) throw new Error("Submission backend isn't set (⚙️ → Community submissions).");
-  const res=await fetch(base.replace(/\/+$/,"")+"/repairs.v1.SubmissionService/"+method,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+  const res=await fetch(base.replace(/\/+$/,"")+"/repairs.v1.SubmissionService/"+method,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload||{})});
   const txt=await res.text(); let data={}; try{ data=txt?JSON.parse(txt):{}; }catch(e){}
-  if(!res.ok) throw new Error(data.message||("Submission failed ("+res.status+")"));
+  if(!res.ok) throw new Error(data.message||("Request failed ("+res.status+")"));
   return data;
 }
-/* Shared submit sheet: sign in with Google, then POST to the backend which opens the PR. */
-function submitSheet(title, previewHtml, doSubmit, back){
+
+/* ---- Session: Google ID token -> session key; rotated on startup; every submission is tagged with it. ---- */
+const SESS_KEY="crv-session";
+let _session=null;
+function loadSession(){ try{ _session=JSON.parse(localStorage.getItem(SESS_KEY))||null; }catch(e){ _session=null; } if(_session&&_session.exp&&_session.exp<Date.now()) _session=null; return _session; }
+function saveSession(s){ _session=s; if(s){ localStorage.setItem(SESS_KEY,JSON.stringify(s)); _gEmail=s.email||_gEmail; } else localStorage.removeItem(SESS_KEY); }
+function loggedIn(){ return !!(_session&&_session.key&&(!_session.exp||_session.exp>Date.now())); }
+async function startSession(googleToken){ const r=await submitRPC("StartSession",{googleIdToken:googleToken}); saveSession({key:r.sessionKey, email:r.email||_gEmail, exp:Number(r.expiresAt)||0}); return _session; }
+async function negotiateSession(){ // on startup: rotate the stored session for a fresh key
+  loadSession(); if(!_session||!submitApi()) return;
+  try{ const r=await submitRPC("RefreshSession",{sessionKey:_session.key}); saveSession({key:r.sessionKey, email:r.email||_session.email, exp:Number(r.expiresAt)||0}); }
+  catch(e){ saveSession(null); }
+}
+function signOut(){ saveSession(null); _gCred=null; _gEmail=""; }
+
+/* ---- Track submitted PRs + notify when they go live (merged) ---- */
+const SUBS_KEY="crv-submissions";
+const submissionsList=()=>{ try{return JSON.parse(localStorage.getItem(SUBS_KEY))||[]}catch(e){return[]} };
+const saveSubmissions=a=>localStorage.setItem(SUBS_KEY,JSON.stringify(a));
+function recordSubmission(s){ if(!s||!s.number) return; const a=submissionsList(); if(a.some(x=>x.number===s.number)) return; a.push({number:s.number, url:s.url||"", title:s.title||"", kind:s.kind||"", ts:Date.now(), merged:false, state:"open", notified:false}); saveSubmissions(a); }
+async function pollSubmissions(){
+  if(!submitApi()||!loggedIn()) return;
+  const a=submissionsList(); const pending=a.filter(s=>!s.merged&&s.state!=="closed"); if(!pending.length) return;
+  let statuses; try{ const r=await submitRPC("GetSubmissionStatus",{prNumbers:pending.map(s=>s.number)}); statuses=r.statuses||[]; }catch(e){ return; }
+  let changed=false, live=[];
+  statuses.forEach(st=>{ const num=Number(st.number); const rec=a.find(x=>x.number===num); if(!rec) return;
+    if(st.merged&&!rec.merged){ rec.merged=true; rec.state="merged"; if(st.url) rec.url=st.url; if(!rec.notified){ rec.notified=true; live.push(rec); } changed=true; }
+    else if(st.state==="closed"&&!st.merged&&rec.state!=="closed"){ rec.state="closed"; changed=true; } });
+  if(changed) saveSubmissions(a);
+  live.forEach(rec=>{ const msg=`🎉 Your submission “${rec.title||"guide"}” is now live in the marketplace!`; toast(msg, rec.url);
+    try{ if("Notification" in window && Notification.permission==="granted") new Notification("Repairs", {body:msg}); }catch(e){} });
+}
+function toast(msg, url){
+  let t=document.getElementById("toaster"); if(!t){ t=document.createElement("div"); t.id="toaster"; document.body.appendChild(t); }
+  const item=document.createElement("div"); item.className="toastitem";
+  item.innerHTML=`<span>${String(msg).replace(/&/g,"&amp;").replace(/</g,"&lt;")}</span>${url?` <a href="${url}" target="_blank" rel="noopener">view ↗</a>`:""}<button aria-label="dismiss">✕</button>`;
+  item.querySelector("button").onclick=()=>item.remove(); t.appendChild(item);
+  setTimeout(()=>{ item.style.opacity="0"; setTimeout(()=>item.remove(),400); }, 10000);
+}
+
+/* Shared submit sheet: ensure a Google-backed session, then POST tagged with the session key. */
+function submitSheet(title, previewHtml, rpc, payload, meta, back){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   if(!submitApi()||!googleClientId()){ sheet(title, `<div class="modverdict no">Community submissions aren't configured. Set the <b>Backend URL</b> and <b>Google client ID</b> in ⚙️ → Community submissions, then try again.</div><div class="btnrow"><button class="btn pri" id="cfg">Open settings</button></div>`, (b)=>{ b.querySelector("#cfg").onclick=()=>{ closeSheet(); openKey(); }; }); return; }
   sheet(title, `${previewHtml}
-    <p class="fine">Sign in with Google to attribute your pull request. A maintainer reviews and merges it into the public catalog.</p>
+    <p class="fine">Every submission is tagged with your session key and moderated by Claude on the server. A maintainer reviews and merges it.</p>
     <div id="gsi" style="margin:10px 0;min-height:44px"></div>
     <div id="subStatus" class="fine"></div>
     <div class="btnrow"><button class="btn" id="subCancel">Cancel</button><button class="btn pri" id="subGo" disabled>🚀 Submit PR</button></div>`,
   (b)=>{
     const go=b.querySelector("#subGo"), st=b.querySelector("#subStatus"), gsi=b.querySelector("#gsi");
-    const signedIn=()=>{ go.disabled=false; st.innerHTML=`Signed in as <b>${esc(_gEmail)}</b>.`; gsi.style.display="none"; };
-    if(_gCred){ signedIn(); } else { renderGoogleButton(gsi, ()=>signedIn()).catch(e=>{ st.innerHTML=`<span class="vinbad">⚠️ ${esc(e.message)}</span>`; }); }
+    const ready=()=>{ go.disabled=false; st.innerHTML=`Signed in as <b>${esc(_session&&_session.email||_gEmail)}</b>.`; gsi.style.display="none"; };
+    if(loggedIn()){ ready(); }
+    else renderGoogleButton(gsi, async(tok)=>{ st.textContent="Establishing session…"; try{ await startSession(tok); ready(); }catch(e){ st.innerHTML=`<span class="vinbad">⚠️ ${esc(e.message)}</span>`; } }).catch(e=>{ st.innerHTML=`<span class="vinbad">⚠️ ${esc(e.message)}</span>`; });
     b.querySelector("#subCancel").onclick=()=>{ back&&back(); };
-    go.onclick=async()=>{ if(!_gCred){ st.textContent="Sign in first."; return; } go.disabled=true; st.textContent="Opening pull request…";
-      try{ const r=await doSubmit(_gCred); st.innerHTML=`✅ Pull request opened: <a href="${esc(r.prUrl)}" target="_blank" rel="noopener">#${r.prNumber||""} ↗</a>`; }
-      catch(err){ go.disabled=false; st.innerHTML=`<span class="vinbad">⚠️ ${esc(String(err.message||err))}</span>`; } };
+    go.onclick=async()=>{ if(!loggedIn()){ st.textContent="Sign in first."; return; } go.disabled=true; st.textContent="Submitting…";
+      try{ const r=await submitRPC(rpc, Object.assign({sessionKey:_session.key}, payload));
+        if(r.prNumber){ recordSubmission({number:r.prNumber, url:r.prUrl, title:meta&&meta.title, kind:meta&&meta.kind});
+          st.innerHTML=`✅ Pull request opened: <a href="${esc(r.prUrl)}" target="_blank" rel="noopener">#${r.prNumber} ↗</a><br><span class="fine">We'll let you know when it goes live.</span>`; }
+        else st.innerHTML=`✅ ${esc(r.message||"Submission received.")}`;
+      }catch(err){ go.disabled=false; st.innerHTML=`<span class="vinbad">⚠️ ${esc(String(err.message||err))}</span>`; } };
   });
 }
 function openSubmitReview(entry, title, stars, text){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   submitSheet("🚀 Submit review", `<div class="review"><div class="rh"><b>${esc(title)}</b>${starHtml(stars)}</div><div>${esc(text)}</div></div>`,
-    (tok)=>submitRPC("SubmitReview",{googleIdToken:tok, guideId:entry.id, guideTitle:title, stars, reviewText:text}),
-    ()=>openMarketGuide(entry));
+    "SubmitReview", {guideId:entry.id, guideTitle:title, stars, reviewText:text}, {title, kind:"review"}, ()=>openMarketGuide(entry));
 }
 function openSubmitRepair(g){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   const json=JSON.stringify(exportGuide(g),null,2);
   submitSheet("🚀 Submit repair", `<p class="fine">Contribute this guide to the public marketplace. Make sure it's safe and accurate.</p><div class="field"><label>Guide</label><input value="${esc(g.title)}" readonly></div><details class="fmtd"><summary>JSON being submitted</summary><pre class="fmt">${esc(json)}</pre></details>`,
-    (tok)=>submitRPC("SubmitRepair",{googleIdToken:tok, guideJson:json}),
-    ()=>openExport(g));
+    "SubmitRepair", {guideJson:json}, {title:g.title, kind:"repair"}, ()=>openExport(g));
 }
 
 function openChat(attachImg){
@@ -1634,6 +1658,9 @@ document.getElementById("mic").onclick=()=>Voice.toggle();
 setActive(state.activeGuide||"crv-s1");
 openDB().then(render).catch(render);
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+// On startup, if logged in, negotiate a fresh session key then poll our PRs and
+// notify when any have gone live (merged).
+negotiateSession().then(()=>{ if(loggedIn()) pollSubmissions(); });
 </script>
 </body>
 </html>

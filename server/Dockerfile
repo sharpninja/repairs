@@ -23,6 +23,11 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/gen ./gen
 COPY --from=build /app/src ./src
 COPY package.json ./
+# Persistent storage for sessions + trust/rate state (mount a volume here).
+RUN mkdir -p /app/data
+VOLUME ["/app/data"]
+ENV TRUST_STORE=/app/data/trust.json \
+    SESSION_STORE=/app/data/sessions.json
 EXPOSE 8080
 # Default: the submit service. Run the monitor as a second container with
 #   docker run ... repairs-submit-service node src/monitor.js

@@ -5,15 +5,35 @@ package repairs.v1;
 // Accepts app submissions authenticated by a Google ID token and opens a
 // pull request against the guide catalog (docs/marketplace.json) on GitHub.
 service SubmissionService {
+  // Exchange a Google ID token for a session key (call on login).
+  rpc StartSession(StartSessionRequest) returns (SessionResponse) {}
+  // Rotate an existing session key for a fresh one (call on app startup).
+  rpc RefreshSession(RefreshSessionRequest) returns (SessionResponse) {}
   // Append a star rating + review to an existing catalog guide via PR.
   rpc SubmitReview(SubmitReviewRequest) returns (SubmitResponse) {}
   // Add a full repair guide (the app's guide JSON) to the catalog via PR.
   rpc SubmitRepair(SubmitRepairRequest) returns (SubmitResponse) {}
+  // Poll the state of previously-submitted PRs (open / merged / closed) so the
+  // app can tell the user when their submission goes live. Public PR data.
+  rpc GetSubmissionStatus(SubmissionStatusRequest) returns (SubmissionStatusResponse) {}
+}
+
+message StartSessionRequest {
+  // Google Identity Services ID token (JWT) from the browser.
+  string google_id_token = 1;
+}
+message RefreshSessionRequest {
+  string session_key = 1;
+}
+message SessionResponse {
+  string session_key = 1;
+  string email = 2;
+  int64 expires_at = 3; // epoch ms (JSON-encoded as a string)
 }
 
 message SubmitReviewRequest {
-  // Google Identity Services ID token (JWT) from the browser.
-  string google_id_token = 1;
+  // Session key from StartSession/RefreshSession. Every submission is tagged with it.
+  string session_key = 1;
   // Catalog entry id the review is for (e.g. "mkt-crv-s1").
   string guide_id = 2;
   string guide_title = 3;
@@ -22,7 +42,7 @@ message SubmitReviewRequest {
 }
 
 message SubmitRepairRequest {
-  string google_id_token = 1;
+  string session_key = 1;
   // The app's guide JSON (exact export format), as a JSON string.
   string guide_json = 2;
 }
@@ -32,4 +52,18 @@ message SubmitResponse {
   string pr_url = 2;
   int32 pr_number = 3;
   string message = 4;
+}
+
+message SubmissionStatusRequest {
+  repeated int32 pr_numbers = 1;
+}
+message PrStatus {
+  int32 number = 1;
+  string state = 2;   // "open" | "closed" | "unknown"
+  bool merged = 3;    // true once merged (== "live")
+  string url = 4;
+  string title = 5;
+}
+message SubmissionStatusResponse {
+  repeated PrStatus statuses = 1;
 }

@@ -55,6 +55,18 @@ Copy `.env.example` to `.env` and fill it in:
 For moderation, also set **`CLAUDE_CODE_OAUTH_TOKEN`**: on a machine logged into a
 Claude Pro/Max account run `claude setup-token` and paste the token into `.env`.
 
+## Quick start (script)
+
+```bash
+cd server
+./setup.sh          # fills .env (runs `claude setup-token` for you), then brings it up
+./setup.sh --no-run # fill .env only
+```
+
+The script prompts for the Google client ID, GitHub token, and Claude subscription token
+(auto-capturing it from `claude setup-token` when the CLI is present), keeps any values you
+already set, then runs `docker compose up --build`. Manual steps below.
+
 ## Run with Docker
 
 Service only:

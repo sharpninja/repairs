@@ -38,18 +38,19 @@ on demand.
   (makes / models / year range, or *universal*), so with an active vehicle a **"For your
   2018 Honda CR-V"** section surfaces the guides that match — install any with one tap.
   The catalog is cached for **offline** browsing.
-- **Ratings & AI-moderated reviews** — rate a guide with **stars** and write a review;
-  **Claude moderates** it (rejecting abuse, spam, personal data, or unsafe advice, and
-  lightly cleaning the rest) before it's saved. Ratings shown combine the community seed
-  with your own, stored **on-device**.
+- **Ratings & reviews** — rate a guide with **stars** and write a review. Ratings shown
+  combine the community seed with your own, stored **on-device**.
 - **Submit to the catalog by PR (optional)** — with the [submit service](server/) running,
   sign in with **Google** and use **🚀 Submit as PR** (on a review) or **🚀 Submit to
   marketplace** (on a guide, via *Guides → Share/export*) to open a **GitHub pull request**
-  adding your rating/review or full repair to the shared catalog. Reviews are AI-moderated
-  in the app first, and the backend **moderates every submission PR again with Claude** (via
-  the Claude Code CLI on a subscription — no API key) posting an `approve`/`flag`/`reject`
-  verdict and label before a maintainer merges. Without the service configured, everything
-  stays on-device (a **⧉ Contribute** action still copies your JSON and opens a prefilled issue).
+  adding your rating/review or full repair to the shared catalog. The backend **moderates
+  every submission PR with Claude** (via the Claude Code CLI on a subscription — no API key),
+  posting an `approve`/`flag`/`reject` verdict and label before a maintainer merges. Without
+  the service configured, everything stays on-device (a **⧉ Contribute** action still copies
+  your JSON and opens a prefilled issue). The service also **tracks per-user trust** (silently
+  dropping submissions from users with a bad record), **rate-limits** to one submission per
+  minute, mints a **session key** on Google sign-in that every submission is tagged with, and
+  the app **polls your open PRs on startup and notifies you when one goes live**.
 - **Vehicles by VIN** — save your cars by **VIN** in **🚗 My vehicles**. Read the VIN three
   ways: **scan the barcode** on the driver's door-jamb sticker (offline, via the browser's
   `BarcodeDetector`), **📷 read a stamped VIN** (dashboard plate or sticker) with Claude
@@ -132,7 +133,8 @@ relative, so it runs correctly under the `/<repo>/` subpath.
 | [`docs/marketplace.json`](docs/marketplace.json) | **Curated guide catalog** — the marketplace's guides + fitment metadata and seed ratings/reviews. Cached for offline. |
 | `docs/manifest.webmanifest` · `docs/sw.js` · `docs/icon-*.png` · [`docs/favicon.svg`](docs/favicon.svg) | PWA manifest, offline service worker, Honda-H icons and favicon. |
 | [`guide/`](guide/) | The built-in CR-V guide as a standalone **slideshow + printable PDF** (see [below](#also-available-as-a-slideshow--pdf)). |
-| [`server/`](server/) | **Optional** Dockerized **gRPC / Connect** submit service — turns Google-authenticated app submissions into GitHub PRs against the catalog. The app works fully without it. |
+| [`server/`](server/) | **Optional** Dockerized **gRPC / Connect** submit service — Google sign-in → session key → GitHub PRs, with Claude moderation, per-user trust, and rate limiting. The app works fully without it. |
+| [`tests/`](tests/) | Backend unit tests (trust / rate limit / sessions) + headless **client↔server integration tests** covering every interaction. Run with [`tests/run.sh`](tests/run.sh). |
 
 The **app** itself is one static folder — nothing to build or install. The **submit
 service** is optional; deploy it only if you want in-app PR submission (see

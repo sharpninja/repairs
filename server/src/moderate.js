@@ -2,8 +2,11 @@
 // Claude **subscription** (CLAUDE_CODE_OAUTH_TOKEN from `claude setup-token`) —
 // no Anthropic API key is used here. Posts a verdict comment + label on the PR.
 import { spawn } from "node:child_process";
+import { noteVerdict } from "./store.js";
 
 const MARK = "<!-- claude-moderation -->";
+// Pull the submitter email out of a PR body like "... (name@example.com)."
+const emailFromBody = (body) => (String(body || "").match(/\(([^\s()]+@[^\s()]+)\)/) || [])[1] || "";
 
 function extractJson(t) {
   const a = t.indexOf("{"), b = t.lastIndexOf("}");
@@ -89,6 +92,10 @@ export async function moderatePullRequest(kit, owner, repo, prNumber, opts = {})
   const colors = { approve: "0e8a16", flag: "fbca04", reject: "b60205" };
   await ensureLabel(kit, owner, repo, `ai:${dec}`, colors[dec]);
   try { await kit.issues.addLabels({ owner, repo, issue_number: prNumber, labels: [`ai:${dec}`] }); } catch (e) {}
+
+  // Update the submitter's trust from this verdict.
+  const email = opts.submitter || emailFromBody(pr.body);
+  if (email) noteVerdict(email, dec);
 
   if (dec === "reject" && String(process.env.AUTO_CLOSE_REJECT || "") === "true") {
     try { await kit.pulls.update({ owner, repo, pull_number: prNumber, state: "closed" }); } catch (e) {}
