@@ -14,7 +14,11 @@ SEED="${3:-docs/marketplace.json}"
 BRANCH="approved"
 
 command -v gh >/dev/null 2>&1 || { echo "Install the GitHub CLI and run 'gh auth login' first: https://cli.github.com"; exit 1; }
+gh auth status >/dev/null 2>&1 || { echo "Run 'gh auth login' first."; exit 1; }
 [ -f "$SEED" ] || { echo "Seed file not found: $SEED"; exit 1; }
+
+# Make sure git pushes to github.com authenticate via gh (idempotent).
+gh auth setup-git >/dev/null 2>&1 || true
 
 if ! gh repo view "$OWNER/$REPO" >/dev/null 2>&1; then
   echo "Creating $OWNER/$REPO…"
