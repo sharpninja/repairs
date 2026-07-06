@@ -236,6 +236,12 @@
   #rec .rx{position:absolute;top:calc(14px + env(safe-area-inset-top));left:14px;background:#000a;color:#fff;border:none;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer}
   #rec .flip{background:#000a;color:#fff;border:1px solid #666;border-radius:999px;padding:12px 18px;font-weight:800;cursor:pointer}
   #rec .badge{position:absolute;top:calc(16px + env(safe-area-inset-top));right:16px;background:#e5534b;color:#fff;font-weight:800;padding:6px 12px;border-radius:999px;font-size:.85em}
+  #rec .reticle{position:absolute;left:7%;right:7%;top:40%;height:118px;border:3px solid #fff;border-radius:14px;box-shadow:0 0 0 4000px rgba(0,0,0,.42);pointer-events:none}
+  #rec .hint{position:absolute;left:16px;right:16px;top:calc(64px + env(safe-area-inset-top));color:#fff;text-align:center;font-weight:700;line-height:1.4;text-shadow:0 1px 4px #000;font-size:.95em}
+  #rec .vinfound{position:absolute;left:16px;right:16px;bottom:128px;text-align:center;color:#fff;font-weight:800;font-size:1.15em;font-family:ui-monospace,Menlo,monospace;letter-spacing:1px;text-shadow:0 1px 6px #000}
+  .vinline{margin-top:12px;font-size:.9em;color:var(--ink);background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:9px 12px;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;cursor:pointer}
+  .vinmono{font-family:ui-monospace,Menlo,monospace;letter-spacing:.5px;font-weight:700}
+  .vinbad{color:var(--danger)} .vinok{color:var(--tip)}
 </style>
 </head>
 <body>
@@ -536,6 +542,26 @@ const partKey=p=>ACTIVE.id+"::"+nk(p.n);
 const hasPart=p=>!!ownedParts[partKey(p)];
 const setPart=(p,v)=>{ if(v) ownedParts[partKey(p)]=1; else delete ownedParts[partKey(p)]; localStorage.setItem(INV_PARTS,JSON.stringify(ownedParts)); };
 
+/* ================= VEHICLES (VIN tracking) ================= */
+const VKEY="crv-vehicles";
+const vehicles=()=>{ try{return JSON.parse(localStorage.getItem(VKEY))||[]}catch(e){return[]} };
+const saveVehicles=a=>localStorage.setItem(VKEY,JSON.stringify(a));
+const activeVehicle=()=>vehicles().find(v=>v.id===state.activeVehicle)||null;
+/* VIN helpers — normalize, validate charset + ISO-3779 check digit, decode year/origin. */
+function normVin(s){ return String(s||"").toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g,"").slice(0,17); }
+const VIN_TRANS={A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,J:1,K:2,L:3,M:4,N:5,P:7,R:9,S:2,T:3,U:4,V:5,W:6,X:7,Y:8,Z:9,"0":0,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9};
+const VIN_WEIGHTS=[8,7,6,5,4,3,2,10,0,9,8,7,6,5,4,3,2];
+function vinCheckOk(v){ if(!v||v.length!==17) return false; let sum=0; for(let i=0;i<17;i++){ const c=v[i]; if(!(c in VIN_TRANS)) return false; sum+=VIN_TRANS[c]*VIN_WEIGHTS[i]; } const r=sum%11; return v[8]===(r===10?"X":String(r)); }
+const VIN_YCODES=["A","B","C","D","E","F","G","H","J","K","L","M","N","P","R","S","T","V","W","X","Y","1","2","3","4","5","6","7","8","9"]; // 1980..2009, then repeats at 2010
+function vinYear(v){ if(!v||v.length<10) return null; const i=VIN_YCODES.indexOf(v[9]); if(i<0) return null; let y=1980+i; if(/[A-Z]/.test(v[6]||"")) y+=30; /* pos7 alpha => 2010-2039 */ return y; }
+function vinOrigin(v){ const c=(v||"")[0]; if(/[1-5]/.test(c)) return "North America"; if(/[6-7]/.test(c)) return "Oceania"; if(/[8-9]/.test(c)) return "South America"; if(/[A-H]/.test(c)) return "Africa"; if(/[J-R]/.test(c)) return "Asia"; if(/[S-Z]/.test(c)) return "Europe"; return ""; }
+function vinInfo(v){ v=normVin(v); return { vin:v, len:v.length, ok17:v.length===17, checkOk:vinCheckOk(v), year:vinYear(v), origin:vinOrigin(v) }; }
+/* Pull a plausible 17-char VIN out of a barcode/OCR string. */
+function extractVin(raw){ const s=String(raw||"").toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g,"");
+  if(s.length>=17){ for(let i=0;i+17<=s.length;i++){ const sub=s.slice(i,i+17); if(vinCheckOk(sub)) return sub; } }
+  if(s.length===17) return s; return null; }
+const vehLabel=v=>v?(v.nick||[v.year,v.make,v.model].filter(Boolean).join(" ")||("VIN "+(v.vin||"").slice(-6))):"";
+
 let ACTIVE, STEPS=[], TOTAL_STEPS=0;
 function rebuild(){ STEPS=[]; ACTIVE.phases.forEach((ph,pi)=>{ if(!ph.id) ph.id="ph"+pi; if(!Array.isArray(ph.steps)) ph.steps=[]; ph.steps.forEach((st,si)=>{ st.phase=ph;st.pi=pi;st.si=si;st.id=ACTIVE.id+"::"+ph.id+"-"+si;st.gi=STEPS.length;STEPS.push(st);}); }); TOTAL_STEPS=STEPS.length; }
 function setActive(id){ ACTIVE=guideById(id); state.activeGuide=ACTIVE.id; saveState(); rebuild(); }
@@ -564,6 +590,7 @@ function load(){ try{return JSON.parse(localStorage.getItem(LS))||{}}catch(e){re
 function saveState(){ localStorage.setItem(LS, JSON.stringify(state)); }
 let state=load(); state.checks=state.checks||{}; state.done=state.done||{}; state.apiKey=state.apiKey||"";
 state.wakeWord=state.wakeWord||"hey claude"; if(state.voiceReplies===undefined) state.voiceReplies=true;
+state.activeVehicle=state.activeVehicle||"";
 const MODELS=[
   {id:"claude-sonnet-5", n:"Sonnet 5", d:"Balanced quality & cost — recommended"},
   {id:"claude-opus-4-8", n:"Opus 4.8", d:"Most capable, highest cost"},
@@ -615,7 +642,8 @@ function renderHome(){
       <h1>${esc(ACTIVE.title)}</h1>
       <p class="lead" style="margin:.3em 0 0">${esc(ACTIVE.subtitle||"")}<br>Tap a phase to start.</p>
       ${guideChips(ACTIVE)}
-      <div class="gbtns"><button class="pill2" id="guidesBtn">⇄ Guides</button><button class="pill2" id="newBtn">＋ New Repair</button></div>
+      ${vehicleLine()}
+      <div class="gbtns"><button class="pill2" id="guidesBtn">⇄ Guides</button><button class="pill2" id="vehBtn">🚗 ${esc(activeVehicle()?vehLabel(activeVehicle()):"Vehicle")}</button><button class="pill2" id="newBtn">＋ New Repair</button></div>
     </div>
     <div class="tiles">
       ${hasTools?`<button class="tile" id="toolsT"><span class="em">🧰</span><b>Tools &amp; Parts</b><span>Shopping list + Amazon links</span></button>`:""}
@@ -630,9 +658,13 @@ function renderHome(){
   document.getElementById("logT").onclick=()=>{route="log";render();window.scrollTo(0,0);};
   document.getElementById("guidesBtn").onclick=openGuides;
   document.getElementById("newBtn").onclick=openNew;
+  document.getElementById("vehBtn").onclick=openGarage;
+  const vl=document.getElementById("vinLine"); if(vl) vl.onclick=openGarage;
   document.getElementById("resetBtn").onclick=resetProgress;
   document.getElementById("keyBtn").onclick=openKey;
 }
+function vehicleLine(){ const v=activeVehicle(); if(!v||!v.vin) return ""; const i=vinInfo(v.vin);
+  return `<div class="vinline" id="vinLine">🚗 <b>${String(vehLabel(v)).replace(/&/g,"&amp;").replace(/</g,"&lt;")}</b> · <span class="vinmono">${i.vin}</span> <span class="${i.checkOk?'vinok':'vinbad'}">${i.checkOk?'✓':'⚠️'}</span></div>`; }
 
 function renderTools(){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
@@ -800,14 +832,16 @@ Key confirmed facts and safety rules:
 - A/C torque values are typical-Honda (line flanges ~9.8-12 N·m, compressor mounts ~24-25 N·m/18 lb-ft, condenser fittings ~9.8 N·m) — verify against the factory service manual for the VIN.
 Be concise and practical for someone in a driveway with a phone. Lead with the answer, prioritize safety, and say when a spec must be verified against the factory manual. If they attach a photo, describe what you see and whether it looks correct (O-ring seated, fitting clean, connector fully seated) and flag anything risky. You are not a substitute for a professional.`;
 BUILTIN.context = GUIDE_CONTEXT;
+function vinContext(){ const veh=activeVehicle(); if(!veh||!veh.vin) return ""; const yi=vinYear(veh.vin);
+  return `\n\nThe user's vehicle VIN is ${veh.vin}${yi?` (model year ${yi})`:""}${veh.make?`, ${veh.make} ${veh.model||""}`.trimEnd():""}. Whenever a part, torque, fluid, or fitment depends on the exact vehicle, decode/reference this VIN and remind them to confirm the part matches it.`; }
 function helperSystem(){
-  if(ACTIVE && ACTIVE.context) return ACTIVE.context;
+  if(ACTIVE && ACTIVE.context) return ACTIVE.context + vinContext();
   let s=`You are the in-app assistant for a DIY repair guide: "${ACTIVE.title}". ${ACTIVE.subtitle||""}\nThe guide's phases and steps:\n`;
   ACTIVE.phases.forEach(ph=>{ s+=`- ${ph.name}: `+ph.steps.map(st=>st.t).join("; ")+"\n"; });
   if(ACTIVE.safety) s+=`Safety notes: ${ACTIVE.safety}\n`;
   const ev=cleanEnv(ACTIVE.env); if(ev.length) s+=`Work setting: ${ev.map(k=>ENVS[k].n).join(" / ").toLowerCase()}.\n`;
   s+=`Help a person working on their own vehicle with a phone. Be concise, lead with the answer, prioritize safety, and tell them to verify torque and fluid specs against the factory service manual for their exact vehicle. If they attach a photo, say whether it looks correct and flag risks. You are not a substitute for a professional.`;
-  return s;
+  return s + vinContext();
 }
 let chatHistory=[], pendingImage=null;
 
@@ -819,6 +853,101 @@ function openKey(){
     <p class="fine">Stored only in this browser and sent directly to api.anthropic.com from your device. The model is used for <b>Ask Claude</b>, hands-free voice, and <b>New Repair</b> (all support vision). Get a key at console.anthropic.com; API usage is billed to your account — Opus costs the most, Haiku the least.</p>
     <div class="btnrow"><button class="btn" id="kc">Cancel</button><button class="btn pri" id="ks">Save</button></div>`,
   (b)=>{ b.querySelector("#ks").onclick=()=>{ state.apiKey=b.querySelector("#keyIn").value.trim(); state.model=b.querySelector("#modelIn").value; saveState(); closeSheet(); }; b.querySelector("#kc").onclick=closeSheet; });
+}
+
+/* ---- VIN reading: door-jamb barcode (offline BarcodeDetector) + dashboard-stamp OCR via Claude ---- */
+async function ocrVinWithClaude(dataUrl){
+  const [meta,b64]=dataUrl.split(","); const mt=(meta.match(/data:(.*?);/)||[])[1]||"image/jpeg";
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+    headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:state.model,max_tokens:64,
+      system:"You read VIN numbers from photos of a vehicle's door-jamb sticker or dashboard VIN plate. A VIN is exactly 17 characters, uppercase letters and digits with no I, O, or Q. Respond with ONLY the 17-character VIN and nothing else. If you cannot read a full, confident VIN, respond with exactly NONE.",
+      messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mt,data:b64}},{type:"text",text:"Read the VIN."}]}]})});
+  if(!res.ok) throw new Error("API "+res.status);
+  const data=await res.json();
+  const txt=(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("").trim();
+  if(/^none$/i.test(txt)) return null;
+  return extractVin(txt) || (normVin(txt).length===17?normVin(txt):null);
+}
+async function openVinScanner(onVin){
+  let stream;
+  try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false}); }
+  catch(e){ alert("Camera unavailable: "+e.message+"\n\nNeeds HTTPS or localhost + permission. You can type the VIN instead."); return; }
+  const hasBD=("BarcodeDetector" in window);
+  const ov=document.createElement("div"); ov.id="rec";
+  ov.innerHTML=`<button class="rx">✕</button>
+    <video autoplay playsinline muted></video>
+    <div class="reticle"></div>
+    <div class="hint">${hasBD?"Aim the box at the <b>barcode</b> on the driver's door-jamb sticker — it scans automatically.<br>Or tap 📷 to read a stamped VIN (dashboard/sticker) with Claude.":"Tap 📷 to read the VIN (door-jamb sticker or dashboard plate) with Claude — or ✕ and type it."}</div>
+    <div class="vinfound"></div>
+    <div class="rc"><button class="shutter" aria-label="capture">📷</button></div>`;
+  document.body.appendChild(ov);
+  const video=ov.querySelector("video"); try{ video.srcObject=stream; }catch(e){}
+  const foundEl=ov.querySelector(".vinfound"), shutter=ov.querySelector(".shutter");
+  let done=false, det=null, loopT=0;
+  function stop(){ done=true; clearTimeout(loopT); if(stream) stream.getTracks().forEach(t=>t.stop()); ov.remove(); }
+  function finish(vin){ if(done) return; foundEl.textContent="✓ "+vin; setTimeout(()=>{ stop(); onVin(vin); },350); }
+  ov.querySelector(".rx").onclick=stop;
+  if(hasBD){ try{ det=new BarcodeDetector({formats:["code_39","code_128","data_matrix","pdf417","qr_code","codabar","itf"]}); }catch(e){ det=null; } }
+  async function tick(){ if(done||!det) return;
+    try{ const codes=await det.detect(video); for(const c of codes){ const v=extractVin(c.rawValue); if(v){ return finish(v); } } }catch(e){}
+    loopT=setTimeout(tick,180); }
+  if(det){ video.addEventListener("loadeddata",()=>tick(),{once:true}); }
+  shutter.onclick=async()=>{
+    if(done) return;
+    if(!state.apiKey){ stop(); openKey(); return; }
+    const w=video.videoWidth||1280,h=video.videoHeight||720,s=Math.min(1,1600/Math.max(w,h));
+    const c=document.createElement("canvas"); c.width=w*s;c.height=h*s; c.getContext("2d").drawImage(video,0,0,c.width,c.height);
+    foundEl.textContent="Reading with Claude…"; shutter.disabled=true;
+    try{ const v=await ocrVinWithClaude(c.toDataURL("image/jpeg",0.85)); if(v) finish(v); else { foundEl.textContent="No VIN found — reposition and try again."; shutter.disabled=false; } }
+    catch(err){ foundEl.textContent="⚠️ "+(err.message||err); shutter.disabled=false; }
+  };
+}
+
+function vinStatusHtml(v){ const i=vinInfo(v); if(!i.vin) return `<span class="fine">Enter, scan, or read a VIN.</span>`;
+  if(!i.ok17) return `<span class="vinbad">${i.len}/17 characters.</span>`;
+  const extra=[i.year?("year "+i.year):"", i.origin].filter(Boolean).join(" · ");
+  return i.checkOk ? `<span class="vinok">✓ Valid VIN${extra?` — ${extra}`:""}.</span>` : `<span class="vinbad">⚠️ Check digit doesn't match — double-check the VIN.</span>${extra?` <span class="fine">(${extra})</span>`:""}`; }
+
+function openAddVehicle(existing){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const ex=existing||{};
+  sheet(existing?"Edit vehicle":"Add vehicle", `
+    <div class="field"><label>Nickname (optional)</label><input id="vNick" placeholder="e.g. Wife's CR-V" value="${esc(ex.nick||"").replace(/"/g,'&quot;')}"></div>
+    <div class="field"><label>VIN (17 characters)</label><input id="vVin" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="1HGRW2H50JL000000" value="${esc(ex.vin||"")}"></div>
+    <div class="btnrow" style="margin-top:0"><button class="btn" id="vScan">📷 Scan / read VIN</button></div>
+    <div id="vStatus" class="vinstat" style="margin:8px 0">${vinStatusHtml(ex.vin||"")}</div>
+    <p class="fine">Scan the <b>barcode</b> on the driver's door-jamb sticker (works offline where supported), or use <b>📷</b> to read a stamped VIN through the windshield / on the sticker with Claude. You can always type it. The VIN is stored on-device and given to Claude so fitment answers match your exact vehicle.</p>
+    <div class="btnrow"><button class="btn" id="vCancel">Cancel</button><button class="btn pri" id="vSave">Save vehicle</button></div>`,
+  (b)=>{
+    const vin=b.querySelector("#vVin"), stat=b.querySelector("#vStatus");
+    const refresh=()=>{ const n=normVin(vin.value); if(vin.value!==n) vin.value=n; stat.innerHTML=vinStatusHtml(n); };
+    vin.oninput=refresh;
+    b.querySelector("#vScan").onclick=()=>{ closeSheet(); openVinScanner(v=>{ openAddVehicle(Object.assign({}, ex, {vin:v, nick:ex.nick})); }); };
+    b.querySelector("#vCancel").onclick=()=>{ existing?openGarage():closeSheet(); };
+    b.querySelector("#vSave").onclick=()=>{
+      const v=normVin(vin.value); if(v.length!==17){ stat.innerHTML=`<span class="vinbad">⚠️ A VIN is 17 characters — got ${v.length}.</span>`; return; }
+      const nick=b.querySelector("#vNick").value.trim();
+      const arr=vehicles(); const yr=vinYear(v);
+      if(existing&&ex.id){ const i=arr.findIndex(x=>x.id===ex.id); if(i>=0){ arr[i]=Object.assign({}, arr[i], {vin:v, nick, year:yr||arr[i].year}); saveVehicles(arr); } }
+      else { const id="v"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36); arr.push({id, vin:v, nick, year:yr, ts:Date.now()}); saveVehicles(arr); state.activeVehicle=id; saveState(); }
+      closeSheet(); if(route==="home") render(); openGarage();
+    };
+  });
+}
+
+function openGarage(){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const vs=vehicles();
+  const rows=vs.length?vs.map(v=>{ const i=vinInfo(v.vin); return `<label class="grow" style="cursor:pointer"><input type="radio" name="vsel" value="${v.id}" ${v.id===state.activeVehicle?"checked":""}><span><b>${esc(vehLabel(v))}</b><small class="vinmono">${esc(v.vin)}</small><small>${i.checkOk?"✓ valid":"⚠️ check digit"}${i.year?` · ${i.year}`:""}${i.origin?` · ${i.origin}`:""}</small></span><button class="exp" data-edit="${v.id}" title="Edit">✏️</button><button class="del" data-delv="${v.id}" title="Delete">🗑</button></label>`; }).join("")
+    :`<p class="fine">No vehicles yet. Add one by VIN so parts &amp; fitment answers match your exact car.</p>`;
+  sheet("🚗 My vehicles", rows+`<div class="btnrow"><button class="btn pri" id="addV">＋ Add vehicle</button></div>`,
+  (b)=>{
+    b.querySelectorAll('input[name=vsel]').forEach(r=>r.onchange=()=>{ state.activeVehicle=r.value; saveState(); closeSheet(); if(route==="home") render(); });
+    b.querySelectorAll("[data-delv]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); const id=x.dataset.delv; saveVehicles(vehicles().filter(v=>v.id!==id)); if(state.activeVehicle===id){ const rest=vehicles(); state.activeVehicle=rest[0]?rest[0].id:""; saveState(); } closeSheet(); if(route==="home") render(); openGarage(); });
+    b.querySelectorAll("[data-edit]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); const v=vehicles().find(z=>z.id===x.dataset.edit); if(v){ closeSheet(); openAddVehicle(v); } });
+    b.querySelector("#addV").onclick=()=>{ closeSheet(); openAddVehicle(null); };
+  });
 }
 
 function openChat(attachImg){
@@ -1034,7 +1163,8 @@ function openNew(){
     const go=b.querySelector("#gGo"), status=b.querySelector("#genStatus");
     go.onclick=async()=>{
       if(!state.apiKey){ closeSheet(); openKey(); return; }
-      const prompt=b.querySelector("#genPrompt").value.trim(); if(!prompt) return;
+      let prompt=b.querySelector("#genPrompt").value.trim(); if(!prompt) return;
+      const veh=activeVehicle(); if(veh&&veh.vin&&!/\b[A-HJ-NPR-Z0-9]{17}\b/.test(prompt)) prompt+=`\n\nMy vehicle VIN (decode year/make/model/engine from it and match parts to it): ${veh.vin}`;
       go.disabled=true; status.textContent="✨ Generating with Claude… this can take 20–40s.";
       try{
         const obj=await genGuideJSON(SCHEMA_SYSTEM, prompt);

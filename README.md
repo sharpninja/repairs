@@ -33,6 +33,13 @@ on demand.
   shown as chips on the dashboard and in the switcher. The region also **picks the Amazon
   marketplace** for that guide's Tools & Parts links (e.g. a UK guide links to
   `amazon.co.uk`), so parts land in the right store.
+- **Vehicles by VIN** — save your cars by **VIN** in **🚗 My vehicles**. Read the VIN three
+  ways: **scan the barcode** on the driver's door-jamb sticker (offline, via the browser's
+  `BarcodeDetector`), **📷 read a stamped VIN** (dashboard plate or sticker) with Claude
+  vision, or just **type it**. The VIN is validated (17-char charset + ISO-3779 check
+  digit) and decoded on-device for **model year** and region. The active vehicle's VIN is
+  handed to the Claude helper and New Repair so every *"verify against your VIN"* fitment
+  answer is about *your* exact car. Stored on-device only.
 - **Completion tracking** — overall % ring + per-phase progress bars, resume, and reset.
   Per-guide, saved on-device (localStorage).
 - **Contemporaneous logging** — on most steps, capture a **📷 photo**, **🎙️ voice note**,
@@ -64,9 +71,10 @@ on demand.
 - **Themes** — System / Light / Dark, toggled from the header, following
   `prefers-color-scheme` by default. Styled to match the Claude ecosystem (coral accent,
   warm-paper light / charcoal dark, serif display). Honda-H app icon + favicon.
-- **Offline-first** — the whole guide, progress, camera/mic capture, stored media, and
-  even voice recognition/synthesis work with **no internet**. Only the Claude features
-  (*Ask Claude*, hands-free voice questions, *New Repair*) reach `api.anthropic.com`.
+- **Offline-first** — the whole guide, progress, camera/mic capture, stored media, voice
+  recognition/synthesis, and **VIN barcode scanning** work with **no internet**. Only the
+  Claude features (*Ask Claude*, hands-free voice questions, *New Repair*, and *📷 read VIN*)
+  reach `api.anthropic.com`.
 - **Safe by construction** — generated *and imported* guides render through a typed-block
   renderer: the model/JSON never yields raw HTML (any `html` field is ignored, phase
   colors are sanitized to hex, all text is escaped).
