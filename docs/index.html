@@ -415,7 +415,10 @@ const DIAGRAMS = {
 };
 
 /* ================= TOOLS & PARTS (Amazon search links) ================= */
-const AMZ = q => "https://www.amazon.com/s?k=" + encodeURIComponent(q);
+/* Amazon marketplace follows the active guide's region so part links land in the
+   right store; falls back to amazon.com. */
+function regionAmz(){ const r=ACTIVE&&ACTIVE.region; return (r&&REGIONS[r]&&REGIONS[r].amz)||"amazon.com"; }
+const AMZ = q => "https://www." + regionAmz() + "/s?k=" + encodeURIComponent(q);
 
 /* Standardized tool library. Every guide (built-in, imported, or Claude-generated)
    references these by stable `id` so ownership tracks reliably across guides — a
@@ -489,12 +492,29 @@ const PARTS = [
 const ENVS={ shop:{n:"Shop",icon:"🏭"}, garage:{n:"Garage",icon:"🔧"}, driveway:{n:"Driveway",icon:"🏠"}, roadside:{n:"Roadside",icon:"🛣️"} };
 const ENV_KEYS=Object.keys(ENVS);
 const cleanEnv=e=>Array.isArray(e)?e.filter(x=>ENV_KEYS.includes(x)).filter((v,i,a)=>a.indexOf(v)===i):[];
-const envChips=g=>{ const e=cleanEnv(g&&g.env); return e.length?`<span class="envchips">${e.map(k=>`<span class="envchip">${ENVS[k].icon} ${ENVS[k].n}</span>`).join("")}</span>`:""; };
+/* Region — the market a guide targets. Also selects the Amazon marketplace for part links. */
+const REGIONS={
+  us:{n:"United States", flag:"🇺🇸", amz:"amazon.com"},
+  ca:{n:"Canada", flag:"🇨🇦", amz:"amazon.ca"},
+  uk:{n:"United Kingdom", flag:"🇬🇧", amz:"amazon.co.uk"},
+  eu:{n:"Europe", flag:"🇪🇺", amz:"amazon.de"},
+  au:{n:"Australia", flag:"🇦🇺", amz:"amazon.com.au"},
+  mx:{n:"Mexico", flag:"🇲🇽", amz:"amazon.com.mx"},
+  in:{n:"India", flag:"🇮🇳", amz:"amazon.in"},
+  jp:{n:"Japan", flag:"🇯🇵", amz:"amazon.co.jp"},
+};
+const REGION_KEYS=Object.keys(REGIONS);
+const cleanRegion=r=>(typeof r==="string"&&REGIONS[r])?r:"";
+/* Region + environment chips for a guide. */
+const guideChips=g=>{ const r=cleanRegion(g&&g.region), e=cleanEnv(g&&g.env);
+  const rc=r?`<span class="envchip">${REGIONS[r].flag} ${REGIONS[r].n}</span>`:"";
+  const ec=e.map(k=>`<span class="envchip">${ENVS[k].icon} ${ENVS[k].n}</span>`).join("");
+  return (rc||ec)?`<span class="envchips">${rc}${ec}</span>`:""; };
 const GKEY="crv-guides";
 const userGuides=()=>{ try{return JSON.parse(localStorage.getItem(GKEY))||[]}catch(e){return[]} };
 const saveUserGuides=a=>localStorage.setItem(GKEY,JSON.stringify(a));
 const BUILTIN={ id:"crv-s1", builtin:true, title:"2018 Honda CR-V 1.5T",
-  subtitle:"Session 1 · A/C + condenser, ECT2, HG-1.", env:["driveway","garage"],
+  subtitle:"Session 1 · A/C + condenser, ECT2, HG-1.", region:"us", env:["driveway","garage"],
   safety:"1) Never open A/C under pressure. 2) Cap every open line instantly. 3) New oiled O-ring at every fitting. 4) Hand-rotate the new compressor. 5) HG-1 cold, ½ bottle.",
   phases:PHASES, tools:TOOLS, parts:PARTS };
 const allGuides=()=>[BUILTIN,...userGuides()];
@@ -594,7 +614,7 @@ function renderHome(){
       <div class="ring" style="--v:${p}"><b>${p}%</b><small>complete</small></div>
       <h1>${esc(ACTIVE.title)}</h1>
       <p class="lead" style="margin:.3em 0 0">${esc(ACTIVE.subtitle||"")}<br>Tap a phase to start.</p>
-      ${envChips(ACTIVE)}
+      ${guideChips(ACTIVE)}
       <div class="gbtns"><button class="pill2" id="guidesBtn">⇄ Guides</button><button class="pill2" id="newBtn">＋ New Repair</button></div>
     </div>
     <div class="tiles">
@@ -633,7 +653,7 @@ function renderTools(){
     <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Check fitment first</span>${warn}</div></div>
     <div class="toolgrp"><h3>Tools</h3>${toolArr.length?`<div class="invsum" id="toolSum">Have ${toolOwned} of ${toolArr.length} · tracked across all your guides</div>`:""}${toolsHtml}</div>
     ${parts?`<h2 style="margin-top:22px">Parts</h2>${partArr.length?`<div class="invsum" id="partSum">Have ${partOwned} of ${partArr.length} · for this guide</div>`:""}${parts}`:""}
-    <p class="fine" style="margin-top:14px">Tap <b>＋ I have it</b> to mark what you own — tools stay checked across every guide; parts are per-guide. Amazon links open in a new tab and need internet. No affiliate tags — plain searches.</p>`;
+    <p class="fine" style="margin-top:14px">Tap <b>＋ I have it</b> to mark what you own — tools stay checked across every guide; parts are per-guide. Amazon links open <b>${regionAmz()}</b> (this guide's region) in a new tab and need internet. No affiliate tags — plain searches.</p>`;
   view.querySelectorAll("button.have").forEach(btn=>{ btn.onclick=()=>{
     const {t,kind}=flat[+btn.dataset.i]; const now=kind==='tool'?!hasTool(t):!hasPart(t);
     if(kind==='tool') setTool(t,now); else setPart(t,now);
@@ -867,6 +887,7 @@ const BOILERPLATE = `Create a DIY repair guide for:
 Vehicle: <year make model engine — e.g. 2015 Subaru Outback 2.5i>
 Job(s): <what to repair — e.g. replace front brake pads and rotors>
 Where: <shop / garage / driveway / roadside — where I'll be working>
+Region: <your market for parts/links — e.g. US, Canada, UK, Europe, Australia>
 
 Audience: someone with common hand tools, reading on a phone.
 Requirements:
@@ -883,6 +904,7 @@ JSON shape:
   "title": "string — vehicle + job",
   "subtitle": "string — one short line",
   "safety": "string — the 1-2 most important safety rules (optional)",
+  "region": "string — the market the vehicle/parts are for; one of: us, ca, uk, eu, au, mx, in, jp",
   "env": ["array — where the job is realistically done; any of: shop, garage, driveway, roadside"],
   "phases": [
     { "name": "string — e.g. \\"Phase 1 · Lift & Wheels\\"",
@@ -914,6 +936,7 @@ Rules:
 - Give real torque and fluid specs where they matter. If a number is model-specific or you are not certain, still give a typical value but add a "spec" block whose "verify" note tells the user to confirm it against the factory service manual for their VIN. Never present an invented number as certain.
 - Keep each step to one action; keep text concise for a phone.
 - 3-8 phases, safety/prep first and a verification phase last.
+- Set "region" to the user's market (us, ca, uk, eu, au, mx, in, jp) — infer it from the prompt (language, spelling, currency, or an explicit region); it selects the Amazon store and hints at parts/units. Default to "us" only if there's no signal.
 - Set "env" to where the job is realistically done (shop / garage / driveway / roadside).
 - For tools, prefer library "id"s; fill parts with useful Amazon search terms.
 - Output valid JSON only.`;
@@ -922,6 +945,7 @@ const SCHEMA_EXAMPLE = `{
   "title": "2015 Subaru Outback 2.5i — Front Brakes",
   "subtitle": "Front pads + rotors",
   "safety": "Chock the wheels and use jack stands — never rely on the jack alone.",
+  "region": "us",
   "env": ["driveway", "garage"],
   "phases": [
     { "name": "Phase 1 · Lift & Wheels", "color": "#4a86c5",
@@ -959,7 +983,7 @@ const cleanTool=t=>{ if(t&&t.id&&LIB[t.id]) return libTool(t.id, (t.d!=null&&t.d
   return { n:String((t&&t.n)||"Tool"), d:String((t&&t.d)||""), q:String((t&&t.q)||(t&&t.n)||"") }; };
 function createGuide(o){
   const id="g"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
-  const g={ id, builtin:false, title:o.title, subtitle:o.subtitle||"", safety:o.safety||"", env:cleanEnv(o.env),
+  const g={ id, builtin:false, title:o.title, subtitle:o.subtitle||"", safety:o.safety||"", region:cleanRegion(o.region), env:cleanEnv(o.env),
     phases:(o.phases||[]).map((p,i)=>({ id:"ph"+i, name:String(p.name||("Phase "+(i+1))),
       color:/^#[0-9a-fA-F]{3,8}$/.test(p.color)?p.color:"#8a8a80",
       steps:(p.steps||[]).map(s=>({ t:String(s.t||"Step"), allowMedia:s.allowMedia!==false, body:Array.isArray(s.body)?s.body:[] })) })),  // never trust s.html on import
@@ -968,7 +992,7 @@ function createGuide(o){
   const arr=userGuides(); arr.push(g); saveUserGuides(arr); return g;
 }
 function exportGuide(g){
-  return { title:g.title, subtitle:g.subtitle||"", ...(g.safety?{safety:g.safety}:{}), ...(cleanEnv(g.env).length?{env:cleanEnv(g.env)}:{}),
+  return { title:g.title, subtitle:g.subtitle||"", ...(g.safety?{safety:g.safety}:{}), ...(cleanRegion(g.region)?{region:cleanRegion(g.region)}:{}), ...(cleanEnv(g.env).length?{env:cleanEnv(g.env)}:{}),
     phases:(g.phases||[]).map(p=>({ name:p.name, color:p.color, steps:(p.steps||[]).map(s=>({ t:s.t, allowMedia:s.allowMedia!==false, body:s.body||[] })) })),
     tools:(g.tools||[]).map(t=>t.id&&LIB[t.id]?{id:t.id,n:t.n,d:t.d,q:t.q}:{n:t.n,d:t.d,q:t.q}), parts:g.parts||[] };
 }
@@ -1006,7 +1030,7 @@ function openNew(){
 
 function openGuides(){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
-  const rows=allGuides().map(g=>`<label class="grow"><input type="radio" name="gsel" value="${g.id}" ${g.id===ACTIVE.id?"checked":""}><span><b>${esc(g.title)}</b><small>${esc(g.subtitle||"")}${g.builtin?" · built-in":""}</small>${envChips(g)}</span>${g.builtin?"":`<button class="exp" data-exp="${g.id}" title="Share / export">⧉</button><button class="del" data-del="${g.id}" title="Delete">🗑</button>`}</label>`).join("");
+  const rows=allGuides().map(g=>`<label class="grow"><input type="radio" name="gsel" value="${g.id}" ${g.id===ACTIVE.id?"checked":""}><span><b>${esc(g.title)}</b><small>${esc(g.subtitle||"")}${g.builtin?" · built-in":""}</small>${guideChips(g)}</span>${g.builtin?"":`<button class="exp" data-exp="${g.id}" title="Share / export">⧉</button><button class="del" data-del="${g.id}" title="Delete">🗑</button>`}</label>`).join("");
   sheet("Guides", rows+`<div class="btnrow"><button class="btn" id="addG">⬇ Add guide</button><button class="btn pri" id="newG">＋ New Repair</button></div>`,
   (b)=>{
     b.querySelectorAll('input[name=gsel]').forEach(r=>r.onchange=()=>{ setActive(r.value); closeSheet(); goHome(); });

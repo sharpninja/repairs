@@ -23,8 +23,11 @@ on demand.
 - **Guide library** — switch guides with **⇄ Guides**, **⬇ Add guide** (paste/import a
   guide's JSON), or **⧉ Share/export** one (copy JSON or download `.json`) to move guides
   between devices or people. The built-in CR-V guide lives alongside your own. Each guide
-  carries **environment tags** — 🏭 Shop / 🔧 Garage / 🏠 Driveway / 🛣️ Roadside — shown as
-  chips on the dashboard and in the switcher so you know where a job is meant to be done.
+  carries **environment tags** — 🏭 Shop / 🔧 Garage / 🏠 Driveway / 🛣️ Roadside — and a
+  **region** (🇺🇸 US / 🇨🇦 CA / 🇬🇧 UK / 🇪🇺 EU / 🇦🇺 AU / 🇲🇽 MX / 🇮🇳 IN / 🇯🇵 JP),
+  shown as chips on the dashboard and in the switcher. The region also **picks the Amazon
+  marketplace** for that guide's Tools & Parts links (e.g. a UK guide links to
+  `amazon.co.uk`), so parts land in the right store.
 - **Completion tracking** — overall % ring + per-phase progress bars, resume, and reset.
   Per-guide, saved on-device (localStorage).
 - **Contemporaneous logging** — on most steps, capture a **📷 photo**, **🎙️ voice note**,
@@ -114,6 +117,7 @@ step from **typed content blocks** (never raw HTML from the model). Shape:
   "title": "2015 Subaru Outback 2.5i — Front Brakes",
   "subtitle": "Front pads + rotors",
   "safety": "Chock the wheels and use jack stands — never rely on the jack alone.",
+  "region": "us",                         // us, ca, uk, eu, au, mx, in, jp → picks the Amazon store
   "env": ["driveway", "garage"],          // any of: shop, garage, driveway, roadside
   "phases": [
     { "name": "Phase 1 · Lift & Wheels", "color": "#4a86c5",
@@ -141,7 +145,8 @@ prompt tells Claude to lead with safety, keep one action per step, and flag any 
 must be verified against the factory service manual rather than presenting an invented
 number as certain. It also passes the **standardized tool library** and asks Claude to
 reference tools by their `id` (so they track as *owned* across guides), and to set `env`
-to where the job is realistically done. On import, tools that carry a known library `id`
+to where the job is realistically done and `region` to the user's market (which also
+selects the Amazon marketplace for the links). On import, tools that carry a known library `id`
 are canonicalized to the library's name/search terms; unknown-`id` or id-less tools are
 kept as one-offs. The same format is what **⬇ Add guide** imports.
 
