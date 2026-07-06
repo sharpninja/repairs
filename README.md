@@ -29,7 +29,10 @@ on demand.
   or **🎬 video clip** as you work (MediaRecorder). Everything is timestamped, stored
   on-device (IndexedDB), and collected chronologically in the **Session Log**.
 - **Tools & Parts** — a categorized shopping list with **Amazon search links** for every
-  tool and part, plus a verify-fitment-by-VIN caveat.
+  tool and part, plus a verify-fitment-by-VIN caveat. Tap **＋ I have it** to mark what you
+  own: **tools are tracked across every guide/session** (you own a torque wrench no matter
+  the job), while **parts are tracked per guide** (they're job-specific). A running
+  "Have X of Y" tally sits at the top of each list.
 - **Claude helper (vision)** — the *Ask Claude* button opens a chat primed with the
   active guide. Attach a captured photo (or grab a frame from a video clip) and ask
   *"does this O-ring look seated right?"* — uses **`claude-opus-4-8`** with vision.

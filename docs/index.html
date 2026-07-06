@@ -176,6 +176,12 @@
   .prod .pi b{display:block}
   .prod .pi small{color:var(--muted);font-size:.82em}
   .prod a.buy{flex:0 0 auto;align-self:center;background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:800;font-size:.82em;padding:9px 13px;border-radius:11px;white-space:nowrap}
+  .prod .have{flex:0 0 auto;align-self:center;background:var(--card2);border:1px solid var(--line);color:var(--ink);font-weight:800;font-size:.8em;padding:9px 12px;border-radius:11px;white-space:nowrap;cursor:pointer}
+  .prod .have:active{transform:scale(.95)}
+  .prod .have.on{background:var(--tip-bg);border-color:var(--tip);color:var(--tip-ink)}
+  .prod.owned{opacity:.62}
+  .prod.owned .pi b{text-decoration:line-through;text-decoration-color:var(--tip)}
+  .invsum{color:var(--muted);font-size:.85em;font-weight:700;margin:2px 0 6px}
 
   /* chat */
   #chatlog{display:flex;flex-direction:column;gap:12px}
@@ -449,6 +455,19 @@ const BUILTIN={ id:"crv-s1", builtin:true, title:"2018 Honda CR-V 1.5T",
 const allGuides=()=>[BUILTIN,...userGuides()];
 const guideById=id=>allGuides().find(g=>g.id===id)||BUILTIN;
 
+/* ===== "I have it" inventory. Tools are tracked GLOBALLY (across every guide /
+   session — you own a torque wrench regardless of the job); parts are tracked
+   per-guide (job-specific). Both persist in localStorage. ===== */
+const INV_TOOLS="crv-owned-tools", INV_PARTS="crv-owned-parts";
+const loadInv=k=>{ try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return {}} };
+const nk=s=>String(s==null?"":s).toLowerCase().replace(/\s+/g," ").trim();
+let ownedTools=loadInv(INV_TOOLS), ownedParts=loadInv(INV_PARTS);
+const hasTool=t=>!!ownedTools[nk(t.n)];
+const setTool=(t,v)=>{ if(v) ownedTools[nk(t.n)]=1; else delete ownedTools[nk(t.n)]; localStorage.setItem(INV_TOOLS,JSON.stringify(ownedTools)); };
+const partKey=p=>ACTIVE.id+"::"+nk(p.n);
+const hasPart=p=>!!ownedParts[partKey(p)];
+const setPart=(p,v)=>{ if(v) ownedParts[partKey(p)]=1; else delete ownedParts[partKey(p)]; localStorage.setItem(INV_PARTS,JSON.stringify(ownedParts)); };
+
 let ACTIVE, STEPS=[], TOTAL_STEPS=0;
 function rebuild(){ STEPS=[]; ACTIVE.phases.forEach((ph,pi)=>{ if(!ph.id) ph.id="ph"+pi; if(!Array.isArray(ph.steps)) ph.steps=[]; ph.steps.forEach((st,si)=>{ st.phase=ph;st.pi=pi;st.si=si;st.id=ACTIVE.id+"::"+ph.id+"-"+si;st.gi=STEPS.length;STEPS.push(st);}); }); TOTAL_STEPS=STEPS.length; }
 function setActive(id){ ACTIVE=guideById(id); state.activeGuide=ACTIVE.id; saveState(); rebuild(); }
@@ -542,18 +561,31 @@ function renderHome(){
 
 function renderTools(){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
-  const prod=t=>`<div class="prod"><div class="pi"><b>${esc(t.n)}</b><small>${esc(t.d||"")}</small></div><a class="buy" target="_blank" rel="noopener" href="${AMZ(t.q||t.n||"")}">Amazon ↗</a></div>`;
-  const tools=(ACTIVE.tools||[]).map(prod).join("")||`<p class="fine">No tools listed for this guide.</p>`;
-  const parts=(ACTIVE.parts||[]).map(g=>`<div class="toolgrp"><h3>${esc(g.g||"Parts")}</h3>${(g.items||[]).map(prod).join("")}</div>`).join("");
+  const flat=[]; // ordered list so each button maps back to its item
+  const prod=(t,kind)=>{ const i=flat.length; flat.push({t,kind}); const owned=kind==='tool'?hasTool(t):hasPart(t);
+    return `<div class="prod${owned?' owned':''}" data-i="${i}"><button class="have${owned?' on':''}" data-i="${i}">${owned?'✓ Have it':'＋ I have it'}</button><div class="pi"><b>${esc(t.n)}</b><small>${esc(t.d||"")}</small></div><a class="buy" target="_blank" rel="noopener" href="${AMZ(t.q||t.n||"")}">Amazon ↗</a></div>`; };
+  const toolArr=ACTIVE.tools||[];
+  const toolsHtml=toolArr.map(t=>prod(t,'tool')).join("")||`<p class="fine">No tools listed for this guide.</p>`;
+  const toolOwned=toolArr.filter(hasTool).length;
+  const partArr=[]; (ACTIVE.parts||[]).forEach(g=>(g.items||[]).forEach(p=>partArr.push(p)));
+  const parts=(ACTIVE.parts||[]).map(g=>`<div class="toolgrp"><h3>${esc(g.g||"Parts")}</h3>${(g.items||[]).map(p=>prod(p,'part')).join("")}</div>`).join("");
+  const partOwned=partArr.filter(hasPart).length;
   const warn = ACTIVE.id==="crv-s1"
     ? `Links are Amazon <b>searches</b>, not specific listings — verify the compressor/condenser/ECT2 match your VIN (1.5&nbsp;T, not 2.4L) and that A/C oil is the <b>R-1234yf</b> type before buying.`
     : `Links are Amazon <b>searches</b>, not specific listings — verify every part matches your exact vehicle (engine/trim) before buying.`;
   view.innerHTML=`
     <h2>🧰 Tools &amp; Parts</h2>
     <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Check fitment first</span>${warn}</div></div>
-    <div class="toolgrp"><h3>Tools</h3>${tools}</div>
-    ${parts?`<h2 style="margin-top:22px">Parts</h2>${parts}`:""}
-    <p class="fine" style="margin-top:14px">These open Amazon in a new tab and need internet. No affiliate tags — plain searches.</p>`;
+    <div class="toolgrp"><h3>Tools</h3>${toolArr.length?`<div class="invsum" id="toolSum">Have ${toolOwned} of ${toolArr.length} · tracked across all your guides</div>`:""}${toolsHtml}</div>
+    ${parts?`<h2 style="margin-top:22px">Parts</h2>${partArr.length?`<div class="invsum" id="partSum">Have ${partOwned} of ${partArr.length} · for this guide</div>`:""}${parts}`:""}
+    <p class="fine" style="margin-top:14px">Tap <b>＋ I have it</b> to mark what you own — tools stay checked across every guide; parts are per-guide. Amazon links open in a new tab and need internet. No affiliate tags — plain searches.</p>`;
+  view.querySelectorAll("button.have").forEach(btn=>{ btn.onclick=()=>{
+    const {t,kind}=flat[+btn.dataset.i]; const now=kind==='tool'?!hasTool(t):!hasPart(t);
+    if(kind==='tool') setTool(t,now); else setPart(t,now);
+    const row=btn.closest(".prod"); row.classList.toggle("owned",now); btn.classList.toggle("on",now); btn.textContent=now?'✓ Have it':'＋ I have it';
+    const ts=document.getElementById("toolSum"); if(ts) ts.textContent=`Have ${toolArr.filter(hasTool).length} of ${toolArr.length} · tracked across all your guides`;
+    const ps=document.getElementById("partSum"); if(ps) ps.textContent=`Have ${partArr.filter(hasPart).length} of ${partArr.length} · for this guide`;
+  }; });
 }
 
 async function renderLog(){
