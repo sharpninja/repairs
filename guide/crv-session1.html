@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>2018 CR-V 1.5T — Repair Guide, Session 1</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --ink:#f4f6fb; --muted:#aab3c5;
+    --line:#2a2f3a; --accent:#4da3ff;
+    --danger:#ff4d4d; --danger-bg:#3a1414;
+    --crit:#ff9f1c; --crit-bg:#3a2a10;
+    --tip:#39d98a; --tip-bg:#0f2e22;
+    --phase:#7c5cff;
+    --pad: clamp(16px, 4.5vw, 40px);
+    --h1: clamp(28px, 8vw, 52px);
+    --h2: clamp(22px, 6vw, 38px);
+    --body: clamp(18px, 4.6vw, 24px);
+    --big: clamp(20px, 5vw, 28px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:var(--body);line-height:1.45;-webkit-text-size-adjust:100%}
+
+  /* ---------- SLIDESHOW (screen) ---------- */
+  #deck{position:relative}
+  .slide{
+    min-height:100dvh; padding:calc(var(--pad) + env(safe-area-inset-top)) var(--pad)
+      calc(var(--pad) + 96px) var(--pad);
+    display:none; flex-direction:column; gap:14px;
+    max-width:820px; margin:0 auto;
+  }
+  .slide.active{display:flex; animation:fade .25s ease}
+  @keyframes fade{from{opacity:.2;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .kicker{display:inline-flex;align-items:center;gap:10px;font-weight:800;
+    letter-spacing:.06em;text-transform:uppercase;font-size:clamp(13px,3.4vw,16px);
+    color:#fff;background:var(--phase);padding:8px 14px;border-radius:999px;align-self:flex-start}
+  .kicker.p0{background:#556}.kicker.p1{background:#2f7dd1}.kicker.p2{background:#8a5a2b}
+  .kicker.p3{background:#b0413e}.kicker.p4{background:#2f8f6b}.kicker.p5{background:#6a5acd}
+  .kicker.p6{background:#c07b1e}.kicker.p7{background:#3a7d44}
+
+  h1{font-size:var(--h1);line-height:1.05;margin:.1em 0;font-weight:900;letter-spacing:-.01em}
+  h2{font-size:var(--h2);line-height:1.1;margin:.1em 0;font-weight:850}
+  .lead{color:var(--muted);font-size:var(--big)}
+  p{margin:.3em 0}
+  ul,ol{margin:.2em 0;padding-left:1.1em}
+  li{margin:.45em 0}
+  strong{font-weight:800}
+  .mono{font-variant-numeric:tabular-nums}
+
+  /* checklist */
+  .check{list-style:none;padding:0;margin:.2em 0}
+  .check li{display:flex;gap:14px;align-items:flex-start;padding:12px 14px;margin:.4em 0;
+    background:var(--card);border:1px solid var(--line);border-radius:14px}
+  .check input[type=checkbox]{
+    appearance:none;-webkit-appearance:none;min-width:30px;height:30px;margin-top:2px;
+    border:2.5px solid var(--muted);border-radius:8px;background:transparent;cursor:pointer;
+    display:inline-grid;place-content:center;transition:.15s}
+  .check input[type=checkbox]:checked{background:var(--tip);border-color:var(--tip)}
+  .check input[type=checkbox]:checked::after{content:"";width:10px;height:18px;border:solid #06231a;
+    border-width:0 5px 5px 0;transform:rotate(45deg) translateY(-2px)}
+  .check label{cursor:pointer;flex:1}
+  .check .done{opacity:.5;text-decoration:line-through}
+
+  /* callouts */
+  .call{border-radius:14px;padding:14px 16px;border:1.5px solid;font-weight:650;
+    display:flex;gap:12px;align-items:flex-start;font-size:var(--body)}
+  .call .ic{font-size:1.5em;line-height:1}
+  .danger{background:var(--danger-bg);border-color:var(--danger);color:#ffd7d7}
+  .danger .t{color:#ff8b8b}
+  .crit{background:var(--crit-bg);border-color:var(--crit);color:#ffe6c2}
+  .crit .t{color:var(--crit)}
+  .tip{background:var(--tip-bg);border-color:var(--tip);color:#c8f7e3}
+  .tip .t{color:var(--tip)}
+  .call .t{display:block;font-weight:900;text-transform:uppercase;letter-spacing:.04em;
+    font-size:.8em;margin-bottom:2px}
+
+  .specbox{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--accent);
+    border-radius:12px;padding:12px 16px}
+  .specbox b{color:var(--accent)}
+  .verify{color:var(--crit);font-size:.82em;font-weight:700}
+
+  figure{margin:6px 0;background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:12px;text-align:center}
+  figure svg{width:100%;height:auto;max-height:46vh}
+  figcaption{color:var(--muted);font-size:.82em;margin-top:8px}
+
+  .steps{counter-reset:s;list-style:none;padding:0}
+  .steps>li{counter-increment:s;position:relative;padding:12px 12px 12px 56px;margin:.4em 0;
+    background:var(--card);border:1px solid var(--line);border-radius:14px}
+  .steps>li::before{content:counter(s);position:absolute;left:12px;top:12px;width:32px;height:32px;
+    background:var(--accent);color:#04121f;border-radius:9px;display:grid;place-content:center;
+    font-weight:900;font-size:.9em}
+
+  .pill{display:inline-block;background:#23283340;border:1px solid var(--line);border-radius:999px;
+    padding:3px 12px;font-size:.8em;color:var(--muted);font-weight:700}
+
+  /* nav */
+  #nav{position:fixed;left:0;right:0;bottom:0;z-index:50;
+    padding:10px calc(var(--pad)) calc(10px + env(safe-area-inset-bottom));
+    display:flex;gap:10px;align-items:center;background:linear-gradient(transparent,var(--bg) 40%)}
+  #nav button{flex:1;font-size:clamp(16px,4.4vw,20px);font-weight:800;padding:14px;border-radius:14px;
+    border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+  #nav button:active{transform:scale(.98)}
+  #nav button.primary{background:var(--accent);color:#04121f;border-color:var(--accent);flex:1.4}
+  #nav button:disabled{opacity:.35}
+  #count{position:fixed;top:calc(8px + env(safe-area-inset-top));right:12px;z-index:50;
+    background:#000a;border:1px solid var(--line);border-radius:999px;padding:5px 12px;
+    font-size:.78em;font-weight:800;color:var(--muted)}
+  #bar{position:fixed;top:0;left:0;height:4px;background:var(--accent);z-index:60;transition:width .25s}
+
+  .legend{display:grid;gap:10px}
+  .legend .row{display:flex;gap:12px;align-items:center;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .legend .ic{font-size:1.6em}
+
+  a{color:var(--accent)}
+  .fine{color:var(--muted);font-size:.82em}
+
+  /* ---------- PRINT / PDF ---------- */
+  @media print{
+    @page{size:Letter;margin:14mm}
+    :root{--bg:#fff;--card:#fff;--ink:#111;--muted:#444;--line:#bbb}
+    html,body{background:#fff;color:#111;font-size:12.5pt}
+    #nav,#count,#bar,.noprint{display:none !important}
+    #deck{max-width:none}
+    .slide{display:flex !important;min-height:auto;page-break-after:always;break-after:page;
+      padding:0 0 8mm 0;max-width:none;gap:9px}
+    .slide:last-child{page-break-after:auto}
+    .slide.active{animation:none}
+    h1{font-size:26pt}h2{font-size:19pt}
+    .lead{font-size:14pt}
+    .kicker{color:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .call,.specbox,.check li,.steps>li,figure,.kicker,.legend .row,.check input:checked{
+      -webkit-print-color-adjust:exact;print-color-adjust:exact}
+    figure svg{max-height:none;width:70%}
+    .check input[type=checkbox]{border-color:#333}
+    a{color:#111;text-decoration:none}
+    .call{border-width:2px}
+  }
+  @media (max-width:380px){ :root{--body:17px} }
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="count"></div>
+<main id="deck">
+
+<!-- ============ COVER ============ -->
+<section class="slide">
+  <span class="kicker">Session 1 of 2 · DIY Repair Guide</span>
+  <h1>2018 Honda CR-V<br>1.5L Turbo (L15B7)</h1>
+  <p class="lead">Three jobs, one coolant drain &amp; front-end teardown. Read for a phone in the driveway — one step per screen.</p>
+  <ul class="check">
+    <li><input type="checkbox" id="c0a"><label for="c0a"><strong>Job 1 — A/C compressor + condenser</strong> (system ends open/empty; recharge at shop)</label></li>
+    <li><input type="checkbox" id="c0b"><label for="c0b"><strong>Job 2 — ECT Sensor 2</strong> in the lower radiator tank</label></li>
+    <li><input type="checkbox" id="c0c"><label for="c0c"><strong>Job 3 — Bar's Leaks HG-1</strong> head-gasket stop-leak (½ bottle, cold)</label></li>
+  </ul>
+  <div class="call crit"><span class="ic">⚠️</span><div><span class="t">This session ends with the A/C system OPEN</span>Refrigerant was professionally recovered. You will drive to a shop afterward to evacuate &amp; recharge. <b>Do not turn the A/C on</b> until the shop is done.</div></div>
+</section>
+
+<!-- ============ LEGEND ============ -->
+<section class="slide">
+  <span class="kicker">How to read this guide</span>
+  <h2>Warning legend &amp; the 5 rules</h2>
+  <div class="legend">
+    <div class="row"><span class="ic">🛑</span><div><strong>STOP / DANGER</strong> — do not skip. Safety or system-killer.</div></div>
+    <div class="row"><span class="ic">⚠️</span><div><strong>CRITICAL</strong> — the step people get wrong. Slow down.</div></div>
+    <div class="row"><span class="ic">💡</span><div><strong>TIP</strong> — makes the job easier or cleaner.</div></div>
+    <div class="row"><span class="ic">☑️</span><div><strong>Checkbox</strong> — tap to tick off (or pen on paper).</div></div>
+  </div>
+  <div class="call danger"><span class="ic">🛑</span><div><span class="t">The 5 rules that save this job</span>
+    <ol style="margin:.2em 0">
+      <li>Never open A/C lines under pressure.</li>
+      <li>Cap every open line <b>instantly</b> — moisture is the enemy.</li>
+      <li>Fresh, <b>oiled</b> O-ring at every A/C fitting.</li>
+      <li>Hand-rotate the new compressor 8–10 turns before the drive.</li>
+      <li>HG-1 only in a <b>cold</b> engine, ½-bottle dose.</li>
+    </ol></div></div>
+</section>
+
+<!-- ============ PHASE 0 ============ -->
+<section class="slide">
+  <span class="kicker p0">Phase 0 · Prep &amp; Safety</span>
+  <h2>Cold engine. Confirm. Stage parts.</h2>
+  <div class="call danger"><span class="ic">🛑</span><div><span class="t">Engine must be stone cold</span>Cooling system is pressurized when hot. No draining, no cap off, no HG-1 until you can hold the radiator hose comfortably.</div></div>
+  <ul class="check">
+    <li><input type="checkbox" id="p0a"><label for="p0a"><strong>Refrigerant recovered — gauge reads 0 psi</strong> (confirm with the shop that recovered it)</label></li>
+    <li><input type="checkbox" id="p0b"><label for="p0b"><strong>Battery NEGATIVE (−) terminal disconnected</strong>, cable tucked aside</label></li>
+    <li><input type="checkbox" id="p0c"><label for="p0c">Two <strong>drain pans</strong> ready (1 = coolant, 1 = old compressor oil)</label></li>
+    <li><input type="checkbox" id="p0d"><label for="p0d">Parts staged: <strong>compressor, condenser w/ drier, O-ring kit, PAG46 oil, coolant, ECT2 sensor + new O-ring, HG-1</strong></label></li>
+  </ul>
+  <div class="call tip"><span class="ic">💡</span><div><span class="t">Measuring cup for oil</span>You'll drain and <b>measure</b> the old compressor oil — have a clear marked cup (mL) ready.</div></div>
+</section>
+
+<!-- ============ PHASE 1 ============ -->
+<section class="slide">
+  <span class="kicker p1">Phase 1 · Lift &amp; Drain</span>
+  <h2>Jack stands → splash shield → coolant</h2>
+  <ol class="steps">
+    <li>Loosen front wheel/lug area only if needed, raise the front and set on <strong>jack stands</strong> on solid ground.</li>
+    <li>Remove the <strong>lower splash shield / undertray</strong> (8/10mm bolts + push clips) to reach the radiator.</li>
+    <li>Place <strong>drain pan #1</strong> under the radiator's driver-side lower tank.</li>
+    <li>Open the <strong>radiator petcock (drain plug)</strong> by hand / flat screwdriver. Remove the cap or fill neck to speed flow.</li>
+  </ol>
+  <div class="call danger"><span class="ic">🛑</span><div><span class="t">Never work under a car on a jack alone</span>Jack stands rated for the weight, wheels chocked, level ground.</div></div>
+  <div class="call tip"><span class="ic">💡</span><div><span class="t">Save the coolant volume</span>Note roughly how much drains — it tells you how much to put back. System holds ~<b>5–6 qt</b>.</div></div>
+</section>
+
+<!-- ============ PHASE 2 ============ -->
+<section class="slide">
+  <span class="kicker p2">Phase 2 · Front bumper</span>
+  <h2>Free the bumper cover for condenser room</h2>
+  <figure><svg viewBox="0 0 640 360" role="img" aria-label="Front bumper fastener map" style="color:var(--ink)">
+    <defs><style>
+      .edge{fill:none;stroke:currentColor;stroke-width:3}
+      .lab{fill:currentColor;font:600 15px sans-serif}
+      .clip{fill:#4da3ff;stroke:#04121f;stroke-width:1.5}
+      .screw{fill:#ff9f1c;stroke:#3a2a10;stroke-width:1.5}
+      .key{font:700 14px sans-serif;fill:currentColor}
+    </style></defs>
+    <!-- hood lip -->
+    <path class="edge" d="M60 70 H580" stroke-dasharray="6 6" opacity=".5"/>
+    <text class="lab" x="60" y="58" opacity=".7">under hood lip / radiator support</text>
+    <!-- bumper outline -->
+    <path class="edge" d="M60 90 Q40 90 40 130 V250 Q40 300 100 300 H540 Q600 300 600 250 V130 Q600 90 580 90 Z"/>
+    <!-- grille -->
+    <rect x="230" y="140" width="180" height="70" rx="10" class="edge" opacity=".6"/>
+    <text class="lab" x="320" y="182" text-anchor="middle" opacity=".6">grille</text>
+    <!-- wheel arches -->
+    <path class="edge" d="M40 250 Q90 250 100 300" opacity=".5"/>
+    <path class="edge" d="M600 250 Q550 250 540 300" opacity=".5"/>
+    <!-- top clips -->
+    <g class="clip"><circle cx="120" cy="100" r="7"/><circle cx="220" cy="96" r="7"/><circle cx="320" cy="94" r="7"/><circle cx="420" cy="96" r="7"/><circle cx="520" cy="100" r="7"/></g>
+    <!-- wheel-well screws -->
+    <g class="screw"><circle cx="70" cy="180" r="7"/><circle cx="66" cy="220" r="7"/><circle cx="570" cy="180" r="7"/><circle cx="574" cy="220" r="7"/></g>
+    <!-- bottom push clips -->
+    <g class="clip"><circle cx="160" cy="296" r="7"/><circle cx="260" cy="300" r="7"/><circle cx="380" cy="300" r="7"/><circle cx="480" cy="296" r="7"/></g>
+    <!-- legend -->
+    <circle cx="80" cy="335" r="7" class="clip"/><text class="key" x="94" y="340">push clip</text>
+    <circle cx="230" cy="335" r="7" class="screw"/><text class="key" x="244" y="340">screw (8mm)</text>
+  </svg><figcaption>Front bumper cover fastener map — top edge screws under the hood lip, wheel-well screws, and lower push-clips along the undertray line.</figcaption></figure>
+  <ol class="steps">
+    <li>Open hood. Remove the <strong>top-edge fasteners</strong> along the radiator support (push clips / 8mm screws).</li>
+    <li>Turn wheels for access; remove <strong>2–3 screws per wheel-well</strong> where the liner meets the bumper.</li>
+    <li>Remove the <strong>lower push-clips</strong> along the bottom lip.</li>
+    <li>Release the side clips (pull the bumper corner outward at the fender) and lower the cover — support it or set it aside.</li>
+  </ol>
+  <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Plastic clips break — that's normal</span>Have <b>replacement clips</b> on hand. Note which broke so you can match them.</div></div>
+</section>
+
+<!-- ============ PHASE 3a ============ -->
+<section class="slide">
+  <span class="kicker p3">Phase 3 · A/C — Step A</span>
+  <h2>Open lines → CAP INSTANTLY</h2>
+  <figure><svg viewBox="0 0 640 340" role="img" aria-label="A/C compressor and condenser location" style="color:var(--ink)">
+    <defs><style>
+      .o{fill:none;stroke:currentColor;stroke-width:3}
+      .t{fill:currentColor;font:600 15px sans-serif}
+      .hl{fill:#4da3ff;fill-opacity:.28;stroke:#4da3ff;stroke-width:2.5}
+      .hl2{fill:#ff4d4d;fill-opacity:.28;stroke:#ff4d4d;stroke-width:2.5}
+      .callt{font:800 15px sans-serif}
+      .lead{stroke:currentColor;stroke-width:1.5;fill:none}
+    </style></defs>
+    <text class="t" x="20" y="26" opacity=".7">◄ FRONT of car</text>
+    <!-- grille/bumper front -->
+    <path class="o" d="M60 60 V300" opacity=".5"/>
+    <text class="t" x="40" y="320" opacity=".6">grille</text>
+    <!-- condenser (front, highlighted) -->
+    <rect x="95" y="80" width="34" height="200" rx="6" class="hl"/>
+    <text class="callt" x="112" y="70" text-anchor="middle" fill="#4da3ff">CONDENSER</text>
+    <text class="t" x="112" y="300" text-anchor="middle" font-size="12" opacity=".8">(+ drier)</text>
+    <!-- radiator (behind) -->
+    <rect x="150" y="80" width="34" height="200" rx="6" class="o"/>
+    <text class="t" x="167" y="70" text-anchor="middle" font-size="13" opacity=".8">radiator</text>
+    <!-- engine block -->
+    <rect x="300" y="90" width="300" height="180" rx="14" class="o"/>
+    <text class="t" x="450" y="140" text-anchor="middle" opacity=".8">engine (L15B7)</text>
+    <!-- compressor low front of engine (highlighted) -->
+    <circle cx="360" cy="235" r="34" class="hl2"/>
+    <text class="callt" x="360" y="240" text-anchor="middle" fill="#ff4d4d">A/C</text>
+    <text class="callt" x="360" y="300" text-anchor="middle" fill="#ff4d4d">COMPRESSOR</text>
+    <!-- belt -->
+    <path class="o" d="M394 235 Q470 180 470 235" opacity=".6"/>
+    <text class="t" x="500" y="215" font-size="12" opacity=".7">accessory belt</text>
+    <!-- lines -->
+    <path class="lead" d="M129 235 H326" stroke-dasharray="5 5"/>
+    <text class="t" x="200" y="255" font-size="12" opacity=".7">refrigerant lines</text>
+  </svg><figcaption>Front-end layout: condenser sits in front of the radiator; compressor is low on the front of the engine, driven by the accessory belt.</figcaption></figure>
+  <ol class="steps">
+    <li>Unplug the <strong>compressor clutch connector</strong>.</li>
+    <li>Unbolt the <strong>suction &amp; discharge line flanges</strong> at the compressor (single center bolt each).</li>
+  </ol>
+  <div class="call danger"><span class="ic">🛑</span><div><span class="t">Never open a line still under pressure</span>Confirm 0 psi first (Phase 0). Refrigerant under pressure can cause frostbite/blindness.</div></div>
+  <div class="call danger"><span class="ic">🛑</span><div><span class="t">CAP EVERY OPEN LINE IMMEDIATELY</span>The second a fitting is open, plug it. Moisture in an open system ruins the new parts and the recharge.</div></div>
+</section>
+
+<!-- ============ PHASE 3b ============ -->
+<section class="slide">
+  <span class="kicker p3">Phase 3 · A/C — Step B</span>
+  <h2>Remove compressor · drain &amp; MEASURE oil</h2>
+  <ol class="steps">
+    <li>Remove the <strong>4 compressor mounting bolts</strong> and lift the compressor out.</li>
+    <li>Tip the old compressor and <strong>drain its oil into the measuring cup</strong>. Record the amount in mL.</li>
+    <li>Rotate the old pulley/shaft while draining to get most of it out.</li>
+  </ol>
+  <div class="specbox"><b>Why measure?</b> The new compressor ships with a full oil charge. To avoid <b>overfilling</b> (which kills cooling), you set the new compressor to hold what you can account for across the whole system. <span class="verify">Final oil setting is done at the shop with the recharge — bring your measured number.</span></div>
+  <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Write the number down</span>Old oil out = your reference. Give it to the shop so total system oil is correct.</div></div>
+</section>
+
+<!-- ============ PHASE 3c ============ -->
+<section class="slide">
+  <span class="kicker p3">Phase 3 · A/C — Step C</span>
+  <h2>Remove the old condenser</h2>
+  <ol class="steps">
+    <li>Disconnect the <strong>two refrigerant lines</strong> at the condenser — <strong>cap them instantly</strong>.</li>
+    <li>Remove the condenser <strong>upper mounting bolts / brackets</strong>.</li>
+    <li>Lift the condenser <strong>up and out</strong> (it usually drops into lower rubber mounts).</li>
+  </ol>
+  <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Mind the radiator fins</span>Don't jam the condenser against the radiator on the way out — bent fins hurt cooling.</div></div>
+  <div class="call tip"><span class="ic">💡</span><div><span class="t">New condenser includes the drier</span>Good — a fresh receiver/drier is exactly why we replace the condenser with an open system.</div></div>
+</section>
+
+<!-- ============ PHASE 3d ============ -->
+<section class="slide">
+  <span class="kicker p3">Phase 3 · A/C — Step D</span>
+  <h2>Prep the new compressor</h2>
+  <ol class="steps">
+    <li><strong>Set the oil charge</strong>: match new compressor oil to what the system needs (drain/re-measure per the new unit's instructions; final setting confirmed at the shop).</li>
+    <li>Pour a measured amount of <strong>PAG46 into the SUCTION port</strong>.</li>
+    <li><strong>HAND-ROTATE the pulley 8–10 full turns</strong> to pre-lube the internals.</li>
+  </ol>
+  <div class="call danger"><span class="ic">🛑</span><div><span class="t">Hand-rotate before it ever runs</span>Skipping this can seize a dry compressor on first start. 8–10 slow turns, by hand, no exceptions.</div></div>
+  <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Check the refrigerant type FIRST</span>The 2018 1.5T very likely uses <b>R-1234yf</b>, not R-134a. Generic PAG46 is the R-134a oil — an R-1234yf system may need Honda's own oil (ND-OIL 12 / POE). <b>Read the underhood A/C label</b> and confirm the correct oil for your VIN before adding any.</div></div>
+  <div class="specbox"><b>Oil:</b> use the Honda-spec oil for your refrigerant (PAG46 only if confirmed). <span class="verify">Exact charge + final oil balance are set at the shop with the recharge — bring your measured old-oil number.</span></div>
+</section>
+
+<!-- ============ PHASE 3e ============ -->
+<section class="slide">
+  <span class="kicker p3">Phase 3 · A/C — Step E</span>
+  <h2>Add oil to condenser · install · torque</h2>
+  <ol class="steps">
+    <li>Add <strong>~1 oz (≈30 mL) PAG46</strong> to the new condenser before fitting.</li>
+    <li>Install condenser, then compressor, into their mounts. Torque the <strong>4 compressor bolts</strong>.</li>
+    <li>At <strong>every</strong> fitting, install a <strong>NEW, PAG-oiled O-ring</strong>. Reconnect line flanges.</li>
+    <li>Torque the line flange bolts. Reconnect the clutch connector.</li>
+  </ol>
+  <div class="specbox"><b>Torque — line flange bolts:</b> ≈9.8–12 N·m (7–9 lb-ft / 87–106 in-lb) · <b>Compressor mount bolts:</b> ≈24–25 N·m (18 lb-ft) · <b>Condenser line fittings:</b> ≈9.8 N·m (7 lb-ft) <span class="verify">*Typical Honda A/C values — verify against the 2017–2022 CR-V service manual for your VIN before final torque.</span></div>
+  <div class="call danger"><span class="ic">🛑</span><div><span class="t">A missed O-ring is the #1 leak</span>Every fitting. New. Oiled. No reused O-rings, ever.</div></div>
+</section>
+
+<!-- ============ PHASE 4 ============ -->
+<section class="slide">
+  <span class="kicker p4">Phase 4 · ECT Sensor 2</span>
+  <h2>Swap the lower-radiator ECT2</h2>
+  <figure><svg viewBox="0 0 640 340" role="img" aria-label="ECT Sensor 2 location on lower radiator tank" style="color:var(--ink)">
+    <defs><style>
+      .o{fill:none;stroke:currentColor;stroke-width:3}
+      .t{fill:currentColor;font:600 15px sans-serif}
+      .core{fill:currentColor;fill-opacity:.06;stroke:currentColor;stroke-width:2.5}
+      .tank{fill:currentColor;fill-opacity:.12;stroke:currentColor;stroke-width:2.5}
+      .hl2{fill:#ff4d4d;fill-opacity:.3;stroke:#ff4d4d;stroke-width:2.5}
+      .callt{font:800 16px sans-serif;fill:#ff4d4d}
+      .lead{stroke:#ff4d4d;stroke-width:2;fill:none}
+    </style></defs>
+    <!-- radiator core -->
+    <rect x="120" y="70" width="400" height="150" rx="4" class="core"/>
+    <g stroke="currentColor" stroke-width="1" opacity=".35">
+      <line x1="150" y1="70" x2="150" y2="220"/><line x1="190" y1="70" x2="190" y2="220"/>
+      <line x1="230" y1="70" x2="230" y2="220"/><line x1="270" y1="70" x2="270" y2="220"/>
+      <line x1="310" y1="70" x2="310" y2="220"/><line x1="350" y1="70" x2="350" y2="220"/>
+      <line x1="390" y1="70" x2="390" y2="220"/><line x1="430" y1="70" x2="430" y2="220"/>
+      <line x1="470" y1="70" x2="470" y2="220"/>
+    </g>
+    <text class="t" x="320" y="55" text-anchor="middle" opacity=".8">radiator core</text>
+    <!-- upper tank -->
+    <rect x="110" y="52" width="420" height="22" rx="8" class="tank"/>
+    <!-- lower tank (plastic) -->
+    <rect x="110" y="216" width="420" height="30" rx="10" class="tank"/>
+    <text class="t" x="300" y="236" text-anchor="middle" font-size="13">LOWER RADIATOR TANK (plastic)</text>
+    <!-- lower hose -->
+    <path class="o" d="M110 231 Q60 231 55 280 H30" opacity=".7"/>
+    <text class="t" x="20" y="300" font-size="12" opacity=".7">lower hose</text>
+    <!-- ECT2 sensor -->
+    <rect x="150" y="246" width="26" height="30" rx="4" class="hl2"/>
+    <rect x="154" y="276" width="18" height="16" rx="3" class="hl2"/>
+    <path class="lead" d="M240 300 L180 285"/>
+    <text class="callt" x="248" y="296">ECT SENSOR 2</text>
+    <text class="t" x="248" y="316" font-size="12" fill="#ff4d4d">unplug connector, then unscrew</text>
+    <!-- petcock -->
+    <circle cx="470" cy="260" r="8" class="o" opacity=".7"/>
+    <text class="t" x="486" y="264" font-size="12" opacity=".7">petcock (drain)</text>
+  </svg><figcaption>ECT Sensor 2 threads into the lower radiator tank (driver side, near the lower hose). Coolant is already drained from Phase 1.</figcaption></figure>
+  <ol class="steps">
+    <li><strong>Unplug</strong> the ECT2 connector.</li>
+    <li>Unscrew the old sensor with a <strong>deep socket — measure the flats first</strong> (reports split between 17&nbsp;mm and 19&nbsp;mm; bring both).</li>
+    <li>Fit the <strong>new O-ring</strong> to the new sensor; thread in by hand, then snug.</li>
+  </ol>
+  <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Do NOT overtighten into the plastic tank</span>It threads into a <b>plastic</b> radiator tank. No metal-boss torque spec applies — seat by hand on the new O-ring, then <b>hand-tight + a small nudge only</b>. Overtightening cracks the tank and causes a coolant leak.</div></div>
+</section>
+
+<!-- ============ PHASE 5 ============ -->
+<section class="slide">
+  <span class="kicker p5">Phase 5 · Reassemble</span>
+  <h2>Bumper → splash shield → battery</h2>
+  <ul class="check">
+    <li><input type="checkbox" id="p5a"><label for="p5a">Reinstall <strong>bumper cover</strong> — <strong>replace every broken clip</strong> with new ones</label></li>
+    <li><input type="checkbox" id="p5b"><label for="p5b">Reconnect wheel-well screws, top-edge fasteners, lower clips</label></li>
+    <li><input type="checkbox" id="p5c"><label for="p5c">Reinstall the <strong>lower splash shield / undertray</strong></label></li>
+    <li><input type="checkbox" id="p5d"><label for="p5d">Confirm the radiator <strong>petcock is CLOSED</strong> before refilling</label></li>
+    <li><input type="checkbox" id="p5e"><label for="p5e"><strong>Reconnect the battery (−)</strong> terminal, snug it</label></li>
+  </ul>
+  <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Petcock closed?</span>Easy to forget — a fresh fill will pour straight onto the floor if it's open.</div></div>
+</section>
+
+<!-- ============ PHASE 6 ============ -->
+<section class="slide">
+  <span class="kicker p6">Phase 6 · Coolant + HG-1 + Bleed</span>
+  <h2>Refill 50/50 · add HG-1 cold · burp the air</h2>
+  <ol class="steps">
+    <li>With engine <strong>COLD</strong>, slowly fill through the <strong>expansion / degas tank</strong> with 50/50 <strong>Honda Type 2 (blue) coolant</strong>. This engine has <strong>NO bleed bolt</strong> — it self-bleeds through the tank. Install the cap <strong>loosely</strong>.</li>
+    <li>Add <strong>½ bottle of Bar's Leaks HG-1</strong> now, while cold (system holds ~6.2 L ≈ 6.5 qt — ½-bottle bracket).</li>
+    <li>Start the engine. Air purges automatically back to the degas tank as it warms.</li>
+    <li>Set <strong>heater to HIGH, fan HIGH</strong>. Idle ~<strong>15 min</strong>, watching the temp gauge, until the radiator fan cycles <strong>twice</strong>.</li>
+    <li>Shut off, let cool, then <strong>top the expansion tank to MAX</strong>. Re-check and top off over the next few drive cycles as trapped air works out.</li>
+  </ol>
+  <div class="call danger"><span class="ic">🛑</span><div><span class="t">HG-1 goes in COLD, ½ bottle only</span>Never pour stop-leak into a hot/running-hot engine. Half bottle for this ~5–6 qt system.</div></div>
+  <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Watch that temp gauge</span>If it climbs toward hot or the upper hose stays cold, you have an <b>air pocket</b> — stop, let cool, re-burp. Do not overheat.</div></div>
+</section>
+
+<!-- ============ PHASE 7 ============ -->
+<section class="slide">
+  <span class="kicker p7">Phase 7 · Verify &amp; leak check</span>
+  <h2>Final checks before it moves</h2>
+  <ul class="check">
+    <li><input type="checkbox" id="p7a"><label for="p7a"><strong>Every A/C O-ring is new &amp; oiled</strong> (the #1 leak source)</label></li>
+    <li><input type="checkbox" id="p7b"><label for="p7b">All A/C <strong>fittings torqued</strong> (flanges + compressor bolts)</label></li>
+    <li><input type="checkbox" id="p7c"><label for="p7c">You <strong>hand-rotated the compressor</strong> 8–10 turns</label></li>
+    <li><input type="checkbox" id="p7d"><label for="p7d">No <strong>coolant leaks</strong> at ECT2, petcock, hoses after warm idle</label></li>
+    <li><input type="checkbox" id="p7e"><label for="p7e">Coolant topped off; reserve at MAX; cap tight</label></li>
+    <li><input type="checkbox" id="p7f"><label for="p7f">Old compressor oil amount <strong>written down</strong> for the shop</label></li>
+  </ul>
+  <div class="call danger"><span class="ic">🛑</span><div><span class="t">DO NOT turn the A/C on</span>The system is open/empty. Running it dry destroys the new compressor. Straight to the shop.</div></div>
+</section>
+
+<!-- ============ BEFORE YOU DRIVE ============ -->
+<section class="slide">
+  <span class="kicker p7">Before you drive</span>
+  <h2>Final drive-off checklist</h2>
+  <ul class="check">
+    <li><input type="checkbox" id="bd1"><label for="bd1">Battery reconnected, tools out of the engine bay</label></li>
+    <li><input type="checkbox" id="bd2"><label for="bd2">Car off the stands, wheels torqued if removed, on the ground</label></li>
+    <li><input type="checkbox" id="bd3"><label for="bd3">Splash shield &amp; bumper fully fastened</label></li>
+    <li><input type="checkbox" id="bd4"><label for="bd4">Coolant full, no leaks, temp normal at idle</label></li>
+    <li><input type="checkbox" id="bd5"><label for="bd5"><strong>A/C left OFF</strong> — no exceptions</label></li>
+    <li><input type="checkbox" id="bd6"><label for="bd6">Measured old-oil note + parts receipts in hand for the shop</label></li>
+  </ul>
+  <div class="call tip"><span class="ic">💡</span><div><span class="t">Next: the shop</span>They evacuate the system, verify no leaks under vacuum, <b>set the final oil charge</b>, and recharge the refrigerant. Then — and only then — the A/C runs.</div></div>
+  <p class="fine">This is Session 1 of 2. Session 2 covers the follow-up work in your two-session plan.</p>
+</section>
+
+<!-- ============ SHOP NOTE ============ -->
+<section class="slide">
+  <span class="kicker">Reference</span>
+  <h2>What happens at the shop</h2>
+  <ol class="steps">
+    <li><strong>Evacuate</strong> the open system under deep vacuum (pulls out air &amp; moisture).</li>
+    <li><strong>Vacuum leak test</strong> — holds vacuum = your O-rings sealed.</li>
+    <li><strong>Set total oil charge</strong> (PAG46) using your measured old-oil number.</li>
+    <li><strong>Recharge</strong> refrigerant to Honda spec, then verify vent temps.</li>
+  </ol>
+  <div class="specbox"><b>Bring to the shop:</b> the measured old compressor oil amount (mL), the new parts' oil-spec sheets, and a note that a fresh condenser+drier were installed.</div>
+  <p class="fine">Guide generated for a 2018 Honda CR-V 1.5T (L15B7). Verify every torque/spec against the factory service manual for your VIN before final assembly.</p>
+</section>
+
+</main>
+
+<nav id="nav" class="noprint">
+  <button id="prev">‹ Back</button>
+  <button id="next" class="primary">Next ›</button>
+</nav>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  var i=0, bar=document.getElementById('bar'), count=document.getElementById('count');
+  var prev=document.getElementById('prev'), next=document.getElementById('next');
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach(function(s,k){s.classList.toggle('active',k===i)});
+    bar.style.width=((i+1)/slides.length*100)+'%';
+    count.textContent=(i+1)+' / '+slides.length;
+    prev.disabled=(i===0); next.textContent=(i===slides.length-1)?'Done ✓':'Next ›';
+    window.scrollTo(0,0);
+    try{location.hash=i+1}catch(e){}
+  }
+  prev.onclick=function(){show(i-1)}; next.onclick=function(){show(i+1)};
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key===' ')show(i+1);
+    if(e.key==='ArrowLeft')show(i-1);
+  });
+  // swipe
+  var x0=null;
+  document.addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(x0===null)return; var dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>55){show(i+(dx<0?1:-1))} x0=null;
+  },{passive:true});
+  // persist checkboxes
+  document.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+    var key='crv1-'+(cb.id||'');
+    if(cb.id&&localStorage.getItem(key)==='1'){cb.checked=true}
+    cb.addEventListener('change',function(){
+      var lab=cb.parentElement.querySelector('label'); if(lab)lab.classList.toggle('done',cb.checked);
+      if(cb.id)localStorage.setItem(key,cb.checked?'1':'0');
+    });
+    if(cb.checked){var l=cb.parentElement.querySelector('label');if(l)l.classList.add('done')}
+  });
+  window.addEventListener('hashchange',function(){
+    var h=parseInt((location.hash||'').replace('#',''),10);
+    if(!isNaN(h)&&h-1!==i)show(h-1);
+  });
+  var start=parseInt((location.hash||'').replace('#',''),10);
+  show(isNaN(start)?0:start-1);
+})();
+</script>
+</body>
+</html>
