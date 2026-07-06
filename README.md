@@ -34,12 +34,18 @@ on demand.
   active guide. Attach a captured photo (or grab a frame from a video clip) and ask
   *"does this O-ring look seated right?"* — uses **`claude-opus-4-8`** with vision.
   Requires **your own Anthropic API key** (entered once via ⚙️, stored only in-browser).
+- **Hands-free voice** — tap the **🎙️** button and work with dirty hands: say your
+  **wake word** (default *"Hey Claude"*, editable) then ask a question out loud. Claude
+  answers by voice and reads back through your phone speaker, then listens for a follow-up.
+  Uses the browser's Web Speech API (recognition + synthesis) and a **screen wake lock** so
+  the display stays on while you work. All voice control is on-device; only the question
+  itself reaches Claude.
 - **Themes** — System / Light / Dark, toggled from the header, following
   `prefers-color-scheme` by default. Styled to match the Claude ecosystem (coral accent,
   warm-paper light / charcoal dark, serif display). Honda-H app icon + favicon.
-- **Offline-first** — the whole guide, progress, camera/mic capture, and stored media
-  work with **no internet**. Only the two Claude features (*Ask Claude*, *New Repair*)
-  reach `api.anthropic.com`.
+- **Offline-first** — the whole guide, progress, camera/mic capture, stored media, and
+  even voice recognition/synthesis work with **no internet**. Only the Claude features
+  (*Ask Claude*, hands-free voice questions, *New Repair*) reach `api.anthropic.com`.
 - **Safe by construction** — generated *and imported* guides render through a typed-block
   renderer: the model/JSON never yields raw HTML (any `html` field is ignored, phase
   colors are sanitized to hex, all text is escaped).
