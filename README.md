@@ -20,6 +20,11 @@ on demand.
   and job, and Claude drafts a full, safety-first guide in the app's format that becomes
   instantly followable. The sheet ships an editable **boilerplate prompt** and shows the
   **data format** it fills in. See [New Repair — data format](#new-repair--data-format).
+- **Merge guides with AI** — in **⇄ Guides → ⤵ Merge**, pick two or more guides and Claude
+  combines them into one: shared teardown/drain steps are done **once**, the work is
+  re-sequenced (shared prep → each job → one final verification), and tools & parts are
+  unioned and de-duplicated. The originals are kept; a new merged guide is added. Perfect
+  for jobs done together on one coolant drain / front-end teardown.
 - **Guide library** — switch guides with **⇄ Guides**, **⬇ Add guide** (paste/import a
   guide's JSON), or **⧉ Share/export** one (copy JSON or download `.json`) to move guides
   between devices or people. The built-in CR-V guide lives alongside your own. Each guide

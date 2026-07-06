@@ -977,6 +977,30 @@ const SCHEMA_EXAMPLE = `{
 
 function extractJson(txt){ let s=(txt||"").trim(); const a=s.indexOf("{"), b=s.lastIndexOf("}"); if(a>=0&&b>a) s=s.slice(a,b+1); return JSON.parse(s); }
 function validGuide(o){ return o&&typeof o.title==="string"&&Array.isArray(o.phases)&&o.phases.length&&o.phases.every(p=>p&&Array.isArray(p.steps)&&p.steps.length); }
+/* Ask Claude for a guide JSON object (used by New Repair and Merge). Throws with a
+   user-facing message on API/parse/validation failure. Caller must have an API key. */
+async function genGuideJSON(system, userText){
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+    headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:state.model,max_tokens:8192,system,messages:[{role:"user",content:[{type:"text",text:userText}]}]})});
+  if(!res.ok) throw new Error("API "+res.status+": "+(await res.text()).slice(0,200));
+  const data=await res.json();
+  if(data.stop_reason==="refusal") throw new Error("Claude declined this request.");
+  const txt=(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("");
+  let obj; try{ obj=extractJson(txt); }catch(e){ throw new Error("Couldn't parse the guide (it may have been cut off). Try a more focused request or run it again."); }
+  if(!validGuide(obj)) throw new Error("The generated guide was missing phases or steps. Try again.");
+  return obj;
+}
+/* Merge extends the New Repair schema rules with combine-specific guidance. */
+const MERGE_SYSTEM = SCHEMA_SYSTEM + `
+
+You are MERGING several existing guides (provided as JSON) into ONE combined guide in the exact same JSON format. Combine intelligently:
+- Produce a single coherent job order. Where guides share setup or teardown (draining coolant, lifting the car, removing the same cover/bumper), do that work ONCE in a shared phase — do not repeat it per job.
+- Sequence phases so shared prep/disassembly comes first, then each job's specific steps, then reassembly and ONE combined final verification / "before you drive" checklist at the end.
+- Union tools and parts: de-duplicate (keep a single entry, preserving library "id"s), but keep every distinct part each job needs. Group parts sensibly.
+- Combine the safety notes into the few most important. Union the "env" tags. For "region", use the common value; if they differ, use the first guide's region.
+- Preserve every VIN / factory-service-manual "verify" caution and keep one action per step.
+- The title should name the vehicle and the combined jobs (e.g. "2018 Honda CR-V 1.5T — A/C + ECT2 + HG-1"). Output valid JSON only.`;
 /* Canonicalize a tool: if it names a library id, rebuild from the library (keeping any
    per-guide description) so ownership tracks by id; otherwise sanitize to strings. */
 const cleanTool=t=>{ if(t&&t.id&&LIB[t.id]) return libTool(t.id, (t.d!=null&&t.d!=="")?{d:String(t.d)}:{});
@@ -1013,15 +1037,35 @@ function openNew(){
       const prompt=b.querySelector("#genPrompt").value.trim(); if(!prompt) return;
       go.disabled=true; status.textContent="✨ Generating with Claude… this can take 20–40s.";
       try{
-        const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
-          headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-          body:JSON.stringify({model:state.model,max_tokens:8192,system:SCHEMA_SYSTEM,messages:[{role:"user",content:[{type:"text",text:prompt}]}]})});
-        if(!res.ok) throw new Error("API "+res.status+": "+(await res.text()).slice(0,200));
-        const data=await res.json();
-        if(data.stop_reason==="refusal") throw new Error("Claude declined this request.");
-        const txt=(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("");
-        let obj; try{ obj=extractJson(txt); }catch(e){ throw new Error("Couldn't parse the guide (it may have been cut off). Try a more focused request or run it again."); }
-        if(!validGuide(obj)) throw new Error("The generated guide was missing phases or steps. Try again.");
+        const obj=await genGuideJSON(SCHEMA_SYSTEM, prompt);
+        const g=createGuide(obj); setActive(g.id); closeSheet(); goHome();
+      }catch(err){ go.disabled=false; status.innerHTML=`<span style="color:var(--danger)">⚠️ ${esc(String(err.message||err))}</span>`; }
+    };
+  });
+}
+
+function openMerge(){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const rows=allGuides().map(g=>`<label class="grow" style="cursor:pointer"><input type="checkbox" class="mchk" value="${g.id}"><span><b>${esc(g.title)}</b><small>${esc(g.subtitle||"")}${g.builtin?" · built-in":""}</small>${guideChips(g)}</span></label>`).join("");
+  sheet("⤵ Merge guides", `
+    <p class="fine">Pick <b>two or more</b> guides and Claude combines them into one — doing shared teardown/drain steps once, ordering the work, and merging the tools &amp; parts. Ideal for jobs done together (like the CR-V's A/C + ECT2 + HG-1). The originals are kept; a new merged guide is added. Uses your API key.</p>
+    ${rows}
+    <div class="field"><label>Extra instructions (optional)</label><textarea id="mNote" rows="3" placeholder="e.g. drain coolant once; keep all A/C steps before the ECT2 swap"></textarea></div>
+    <div id="mStatus" class="fine" style="margin-top:8px"></div>
+    <div class="btnrow"><button class="btn" id="mCancel">Cancel</button><button class="btn pri" id="mGo">✨ Merge</button></div>`,
+  (b)=>{
+    b.querySelector("#mCancel").onclick=closeSheet;
+    const go=b.querySelector("#mGo"), status=b.querySelector("#mStatus");
+    go.onclick=async()=>{
+      if(!state.apiKey){ closeSheet(); openKey(); return; }
+      const ids=[...b.querySelectorAll(".mchk:checked")].map(c=>c.value);
+      if(ids.length<2){ status.innerHTML=`<span style="color:var(--danger)">⚠️ Pick at least two guides to merge.</span>`; return; }
+      const note=b.querySelector("#mNote").value.trim();
+      const picked=ids.map(id=>exportGuide(guideById(id)));
+      go.disabled=true; status.textContent="✨ Merging with Claude… this can take 20–40s.";
+      const userText="Merge these guides into one combined guide.\n"+(note?("Extra instructions: "+note+"\n"):"")+"\nGuides JSON:\n"+JSON.stringify(picked);
+      try{
+        const obj=await genGuideJSON(MERGE_SYSTEM, userText);
         const g=createGuide(obj); setActive(g.id); closeSheet(); goHome();
       }catch(err){ go.disabled=false; status.innerHTML=`<span style="color:var(--danger)">⚠️ ${esc(String(err.message||err))}</span>`; }
     };
@@ -1031,11 +1075,13 @@ function openNew(){
 function openGuides(){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   const rows=allGuides().map(g=>`<label class="grow"><input type="radio" name="gsel" value="${g.id}" ${g.id===ACTIVE.id?"checked":""}><span><b>${esc(g.title)}</b><small>${esc(g.subtitle||"")}${g.builtin?" · built-in":""}</small>${guideChips(g)}</span>${g.builtin?"":`<button class="exp" data-exp="${g.id}" title="Share / export">⧉</button><button class="del" data-del="${g.id}" title="Delete">🗑</button>`}</label>`).join("");
-  sheet("Guides", rows+`<div class="btnrow"><button class="btn" id="addG">⬇ Add guide</button><button class="btn pri" id="newG">＋ New Repair</button></div>`,
+  const canMerge=allGuides().length>=2;
+  sheet("Guides", rows+`<div class="btnrow"><button class="btn" id="addG">⬇ Add guide</button>${canMerge?`<button class="btn" id="mergeG">⤵ Merge</button>`:""}<button class="btn pri" id="newG">＋ New Repair</button></div>`,
   (b)=>{
     b.querySelectorAll('input[name=gsel]').forEach(r=>r.onchange=()=>{ setActive(r.value); closeSheet(); goHome(); });
     b.querySelectorAll("[data-del]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); const id=x.dataset.del; saveUserGuides(userGuides().filter(g=>g.id!==id)); if(ACTIVE.id===id) setActive("crv-s1"); closeSheet(); openGuides(); });
     b.querySelectorAll("[data-exp]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); openExport(guideById(x.dataset.exp)); });
+    const mg=b.querySelector("#mergeG"); if(mg) mg.onclick=openMerge;
     b.querySelector("#addG").onclick=openAdd;
     b.querySelector("#newG").onclick=openNew;
   });
