@@ -50,9 +50,9 @@ Copy `.env.example` to `.env` and fill it in:
    the app under **⚙️ → Community submissions → Google client ID**.
 2. **GitHub credential** — a **GitHub App** (recommended) installed on the **data
    repo** `sharpninja/repairs-data` with **Contents + Pull requests + Issues =
-   Read/Write**, or a fine-grained PAT with the same scopes. `./setup.sh` can mint a
+   Read/Write**, or a fine-grained PAT with the same scopes. `./setup.ps1` can mint a
    scoped token for you; the service auto-refreshes when the `GITHUB_APP_*` vars are set.
-   The data repo is bootstrapped with [`scripts/init-data-repo.sh`](../scripts/init-data-repo.sh).
+   The data repo is bootstrapped with [`scripts/init-data-repo.ps1`](../scripts/init-data-repo.ps1).
 3. **`ALLOWED_ORIGIN`** — the exact origin of your deployed PWA (or `*`).
 
 For moderation, also set **`CLAUDE_CODE_OAUTH_TOKEN`**: on a machine logged into a
@@ -60,10 +60,10 @@ Claude Pro/Max account run `claude setup-token` and paste the token into `.env`.
 
 ## Quick start (script)
 
-```bash
+```powershell
 cd server
-./setup.sh          # fills .env (runs `claude setup-token` for you), then brings it up
-./setup.sh --no-run # fill .env only
+./setup.ps1          # fills .env (runs `claude setup-token` for you), then brings it up
+./setup.ps1 -NoRun   # fill .env only
 ```
 
 The script prompts for the Google client ID, GitHub token, and Claude subscription token
@@ -97,22 +97,28 @@ to the value above. The **🚀 Submit** buttons in the Marketplace and in
 
 ## Local smoke test (no browser)
 
-With the service running and a valid Google ID token in `$TOKEN`:
+Every submission is tagged with a **session key**. First exchange a Google ID token
+(`$IDTOKEN`) for one, then submit with it:
 
 ```bash
+KEY=$(curl -sS http://localhost:8080/repairs.v1.SubmissionService/StartSession \
+  -H 'content-type: application/json' -d '{"googleIdToken":"'"$IDTOKEN"'"}' | jq -r .sessionKey)
+
 curl -sS http://localhost:8080/repairs.v1.SubmissionService/SubmitReview \
   -H 'content-type: application/json' \
-  -d '{"googleIdToken":"'"$TOKEN"'","guideId":"mkt-crv-s1","guideTitle":"CR-V","stars":5,"reviewText":"Clear and safe."}'
+  -d '{"sessionKey":"'"$KEY"'","guideId":"mkt-crv-s1","guideTitle":"CR-V","stars":5,"reviewText":"Clear and safe."}'
 ```
 
 A successful call returns `{"ok":true,"prUrl":"https://github.com/.../pull/123","prNumber":123,"message":"Review PR opened"}`.
 
 ## Security notes
 
-- The ID token audience is checked against `GOOGLE_CLIENT_ID`, and
-  `email_verified` is required.
-- The server credential is the only thing that can write to the repo; keep it
-  scoped to this one repo and rotate it if leaked.
-- Submissions still go through **human PR review** before they reach the catalog,
-  and the app AI-moderates review text client-side before submission. Consider
-  adding rate limiting / an allowlist if you expose this publicly.
+- The Google ID token audience is checked against `GOOGLE_CLIENT_ID`, and
+  `email_verified` is required; submissions then carry a rotating **session key**.
+- **Trust + rate limiting** are built in: submissions from users with a bad
+  moderation record are silently dropped, and each user is capped at one submission
+  per minute (see `store.js`).
+- The server credential is the only thing that can write to the repo; prefer a
+  **GitHub App** (least-privilege, auto-refreshing) and keep it scoped to the data repo.
+- Submissions are **Claude-moderated** and still go through **human PR review** before
+  they reach the catalog.

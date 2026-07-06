@@ -10,7 +10,7 @@ Covers every client↔server interaction in the app plus the backend's stateful 
 ## Run
 
 ```bash
-tests/run.sh
+./tests/run.ps1
 ```
 
 Or individually:

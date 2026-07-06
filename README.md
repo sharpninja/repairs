@@ -132,11 +132,11 @@ relative, so it runs correctly under the `/<repo>/` subpath.
 |------|-----------|
 | [`docs/index.html`](docs/index.html) | **The entire app** — self-contained HTML/CSS/JS. Home dashboard, step flow, Tools & Parts, Session Log, New Repair, Guides. |
 | [`docs/marketplace.json`](docs/marketplace.json) | **Bundled seed** of the guide catalog — offline fallback. The live catalog is served from the separate data repo's `approved` branch. |
-| [`scripts/init-data-repo.sh`](scripts/init-data-repo.sh) | Bootstraps the `sharpninja/repairs-data` repo + `approved` branch from the seed (uses the GitHub CLI). |
+| [`scripts/init-data-repo.ps1`](scripts/init-data-repo.ps1) | Bootstraps the `sharpninja/repairs-data` repo + `approved` branch from the seed (uses the GitHub CLI). |
 | `docs/manifest.webmanifest` · `docs/sw.js` · `docs/icon-*.png` · [`docs/favicon.svg`](docs/favicon.svg) | PWA manifest, offline service worker, Honda-H icons and favicon. |
 | [`guide/`](guide/) | The built-in CR-V guide as a standalone **slideshow + printable PDF** (see [below](#also-available-as-a-slideshow--pdf)). |
 | [`server/`](server/) | **Optional** Dockerized **gRPC / Connect** submit service — Google sign-in → session key → GitHub PRs, with Claude moderation, per-user trust, and rate limiting. The app works fully without it. |
-| [`tests/`](tests/) | Backend unit tests (trust / rate limit / sessions) + headless **client↔server integration tests** covering every interaction. Run with [`tests/run.sh`](tests/run.sh). |
+| [`tests/`](tests/) | Backend unit tests (trust / rate limit / sessions) + headless **client↔server integration tests** covering every interaction. Run with [`tests/run.ps1`](tests/run.ps1). |
 
 The **app** itself is one static folder — nothing to build or install. The **submit
 service** is optional; deploy it only if you want in-app PR submission (see
@@ -179,7 +179,7 @@ change to what every app reads. No app redeploy needed to update data.
 **Bootstrap the data repo** (needs the GitHub CLI, `gh auth login`):
 
 ```bash
-scripts/init-data-repo.sh sharpninja repairs-data docs/marketplace.json
+./scripts/init-data-repo.ps1 -Owner sharpninja -Repo repairs-data -Seed docs/marketplace.json
 ```
 
 Then install your **GitHub App** (or scope the PAT) on `repairs-data`; the submit service
