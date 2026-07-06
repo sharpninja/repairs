@@ -10,6 +10,9 @@ import { dirname } from "node:path";
 const FILE = process.env.TRUST_STORE || "./data/trust.json";
 const BLOCK_AT = Number(process.env.TRUST_BLOCK_AT || -4);
 const RATE_MS = Number(process.env.SUBMIT_RATE_MS || 60000); // 1/min default
+// Append-only ban audit log for maintainer review (each entry carries receipts:
+// the PR, the moderation verdict, and the timestamp). Mount on the data volume.
+const BANS_STORE = process.env.BANS_STORE || "./data/bans.json";
 
 function load() {
   try { return JSON.parse(readFileSync(FILE, "utf8")); } catch (e) { return {}; }
@@ -67,3 +70,42 @@ export function noteMerged(email) {
   if (r.score > BLOCK_AT) r.blocked = false;
   save(db);
 }
+
+// ---- Immediate hard ban + reviewable audit log ----
+function loadBans() { try { return JSON.parse(readFileSync(BANS_STORE, "utf8")); } catch (e) { return []; } }
+function saveBans(list) {
+  try { mkdirSync(dirname(BANS_STORE), { recursive: true }); writeFileSync(BANS_STORE, JSON.stringify(list, null, 2)); }
+  catch (e) { console.error("bans save:", e.message); }
+}
+
+// Hard-ban a user right now (used for detected prompt-injection): sets blocked=true
+// regardless of trust score, and appends an append-only audit record carrying the
+// receipts a maintainer needs to review the decision (PR, verdict, timestamp).
+// Returns the audit entry.
+export function banUser(email, receipt = {}) {
+  if (!email) return null;
+  const ts = receipt.ts || new Date().toISOString();
+  const db = load();
+  const r = rec(db, email);
+  r.blocked = true;
+  r.bannedAt = ts;
+  r.banReason = receipt.reason || "policy-violation";
+  if (r.score > BLOCK_AT) r.score = BLOCK_AT - 1; // keep score consistent with blocked
+  save(db);
+  const entry = {
+    email, ts,
+    reason: receipt.reason || "policy-violation",
+    prNumber: receipt.prNumber || 0,
+    prUrl: receipt.prUrl || "",
+    prTitle: receipt.prTitle || "",
+    verdict: receipt.verdict || null,     // { decision, severity, categories, summary }
+    evidence: receipt.evidence || "",     // short note / offending snippet
+  };
+  const list = loadBans();
+  list.push(entry);
+  saveBans(list);
+  return entry;
+}
+
+// The reviewable ban log (append-only, newest last) for the maintainer.
+export function listBans() { return loadBans(); }

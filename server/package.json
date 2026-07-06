@@ -8,7 +8,8 @@
     "generate": "buf generate",
     "start": "node src/server.js",
     "monitor": "node src/monitor.js",
-    "mint-token": "node scripts/mint-token.mjs"
+    "mint-token": "node scripts/mint-token.mjs",
+    "bans": "node scripts/bans.mjs"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.2.3",

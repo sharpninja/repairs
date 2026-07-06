@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'; worker-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.googleusercontent.com https://www.gstatic.com; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com https://accounts.google.com https://www.googleapis.com https://raw.githubusercontent.com https://sharpninja.ngrok.app; frame-src https://accounts.google.com;">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf9f5">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#262624">
@@ -600,7 +601,7 @@ const stepById=id=>STEPS.find(s=>s.id===id);
    never emits raw HTML; every string is escaped, only **bold** is honored. */
 function bodyToHtml(body){
   if(!Array.isArray(body)) return "";
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const rich=s=>esc(s).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
   return body.map(b=>{
     if(!b||!b.type) return "";
@@ -612,6 +613,9 @@ function bodyToHtml(body){
   }).join("");
 }
 const stepInner=st=> st.html ? st.html : bodyToHtml(st.body);
+/* Phase colors are hex-sanitized on import (createGuide), but also sanitize at the
+   render sink so a raw color can never reach a style="" attribute (defense-in-depth). */
+const hexc=c=>/^#[0-9a-fA-F]{3,8}$/.test(c)?c:"#8a8a80";
 
 /* ================= STATE ================= */
 const LS="crvapp1";
@@ -622,7 +626,9 @@ state.wakeWord=state.wakeWord||"hey claude"; if(state.voiceReplies===undefined) 
 state.activeVehicle=state.activeVehicle||"";
 state.submitApi=state.submitApi||""; state.googleClientId=state.googleClientId||""; state.dataUrl=state.dataUrl||"";
 /* Community PR submission + data source: set these in ⚙️ → Community (or bake defaults here). */
-const CONFIG={ submitApi:"", googleClientId:"", dataUrl:"" };
+/* Deploy config: baked in at build time, NOT shown to end users. Update submitApi
+   when the backend moves off the ngrok tunnel. dataUrl "" uses DEFAULT_DATA_URL. */
+const CONFIG={ submitApi:"https://sharpninja.ngrok.app", googleClientId:"71016487426-fiq7ga9ti2lr0crnoofmsveq2pnvhu80.apps.googleusercontent.com", dataUrl:"" };
 const submitApi=()=>(state.submitApi||CONFIG.submitApi||"").trim();
 const googleClientId=()=>(state.googleClientId||CONFIG.googleClientId||"").trim();
 const MODELS=[
@@ -665,10 +671,10 @@ function render(){
 }
 
 function renderHome(){
-  const p=overallPct(); const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const p=overallPct(); const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   let rows="";
   ACTIVE.phases.forEach((ph,pi)=>{ const pr=phaseProgress(ph); const pct=pr.total?Math.round(pr.done/pr.total*100):0; const all=pr.total&&pr.done===pr.total; const dnum=(String(ph.name||"").match(/\d+/)||[pi])[0];
-    rows+=`<button class="prow ${all?'doneall':''}" data-gi="${ph.steps[0]?ph.steps[0].gi:0}"><span class="dot" style="background:${ph.color||'#8a8a80'}">${all?'✓':dnum}</span><span class="meta"><b>${esc(ph.name)}</b><span class="bar"><i style="width:${pct}%"></i></span></span><span class="cnt">${pr.done}/${pr.total}</span></button>`; });
+    rows+=`<button class="prow ${all?'doneall':''}" data-gi="${ph.steps[0]?ph.steps[0].gi:0}"><span class="dot" style="background:${hexc(ph.color)}">${all?'✓':dnum}</span><span class="meta"><b>${esc(ph.name)}</b><span class="bar"><i style="width:${pct}%"></i></span></span><span class="cnt">${pr.done}/${pr.total}</span></button>`; });
   const hasTools=(ACTIVE.tools&&ACTIVE.tools.length)||(ACTIVE.parts&&ACTIVE.parts.length);
   view.innerHTML=`
     <div class="hero">
@@ -703,7 +709,7 @@ function vehicleLine(){ const v=activeVehicle(); if(!v||!v.vin) return ""; const
   return `<div class="vinline" id="vinLine">🚗 <b>${String(vehLabel(v)).replace(/&/g,"&amp;").replace(/</g,"&lt;")}</b> · <span class="vinmono">${i.vin}</span> <span class="${i.checkOk?'vinok':'vinbad'}">${i.checkOk?'✓':'⚠️'}</span></div>`; }
 
 function renderTools(){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const flat=[]; // ordered list so each button maps back to its item
   const prod=(t,kind)=>{ const i=flat.length; flat.push({t,kind}); const owned=kind==='tool'?hasTool(t):hasPart(t);
     return `<div class="prod${owned?' owned':''}" data-i="${i}"><button class="have${owned?' on':''}" data-i="${i}">${owned?'✓ Have it':'＋ I have it'}</button><div class="pi"><b>${esc(t.n)}</b><small>${esc(t.d||"")}</small></div><a class="buy" target="_blank" rel="noopener" href="${AMZ(t.q||t.n||"")}">Amazon ↗</a></div>`; };
@@ -772,7 +778,7 @@ function mediaEl(m, showStep){
 }
 
 function renderStep(st){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   document.getElementById("topTitle").textContent=st.phase.name;
   const fig=(st.diagram&&DIAGRAMS[st.diagram])?`<figure>${DIAGRAMS[st.diagram]}</figure>`:"";
   const log=st.allowMedia?`<div class="logbar"><div class="logbtns">
@@ -780,7 +786,7 @@ function renderStep(st){
       <button class="lbtn" data-cap="audio">🎙️ Voice</button>
       <button class="lbtn" data-cap="video">🎬 Video</button></div>
       <div class="medialist" id="medialist"></div></div>`:"";
-  view.innerHTML=`<span class="kicker" style="background:${st.phase.color||'#8a8a80'}">${esc(st.phase.name)}</span><h2>${esc(st.t)}</h2>${fig}${stepInner(st)}${log}`;
+  view.innerHTML=`<span class="kicker" style="background:${hexc(st.phase.color)}">${esc(st.phase.name)}</span><h2>${esc(st.t)}</h2>${fig}${stepInner(st)}${log}`;
   view.querySelectorAll('input[type=checkbox]').forEach((cb,i)=>{
     const key=st.id+"#"+i; cb.checked=!!state.checks[key];
     if(cb.checked) cb.closest('li').querySelector('label').classList.add('done');
@@ -884,18 +890,12 @@ let chatHistory=[], pendingImage=null;
 function openKey(){
   const cur=state.apiKey||"";
   const opts=MODELS.map(m=>`<option value="${m.id}" ${m.id===state.model?"selected":""}>${m.n} — ${m.d}</option>`).join("");
-  sheet("Claude settings",`<div class="field"><label>Anthropic API key</label><input id="keyIn" type="password" placeholder="sk-ant-..." value="${cur.replace(/"/g,'&quot;')}"></div>
+  sheet("Claude settings",`<div class="field"><label>Anthropic API key</label><input id="keyIn" type="password" placeholder="sk-ant-..." value="${cur.replace(/"/g,'&quot;')}">
+      <div class="btnrow" style="margin-top:6px"><a class="btn" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">🔑 Generate a key on console.anthropic.com ↗</a></div></div>
     <div class="field"><label>Model</label><select id="modelIn">${opts}</select></div>
     <p class="fine">Stored only in this browser and sent directly to api.anthropic.com from your device. The model is used for <b>Ask Claude</b>, hands-free voice, and <b>New Repair</b> (all support vision). Get a key at console.anthropic.com; API usage is billed to your account — Opus costs the most, Haiku the least.</p>
-    <details class="fmtd"><summary>Community submissions (PR)</summary>
-      <p class="fine">Optional. To submit ratings, reviews, and repairs as GitHub pull requests, run the <b>submit service</b> (see <code>server/</code>) and enter its URL plus your Google OAuth client ID. Leave blank to keep everything on-device.</p>
-      <div class="field"><label>Backend URL</label><input id="subApiIn" placeholder="https://submit.example.com" value="${(state.submitApi||"").replace(/"/g,'&quot;')}"></div>
-      <div class="field"><label>Google client ID</label><input id="gcidIn" placeholder="xxxx.apps.googleusercontent.com" value="${(state.googleClientId||"").replace(/"/g,'&quot;')}"></div>
-      <div class="field"><label>Catalog data URL</label><input id="dataUrlIn" placeholder="${DEFAULT_DATA_URL}" value="${(state.dataUrl||"").replace(/"/g,'&quot;')}"></div>
-      <p class="fine">The catalog is published on the <b>approved</b> branch of the data repo and read directly. Leave blank to use the default; a bundled copy is the offline fallback.</p>
-    </details>
     <div class="btnrow"><button class="btn" id="kc">Cancel</button><button class="btn pri" id="ks">Save</button></div>`,
-  (b)=>{ b.querySelector("#ks").onclick=()=>{ state.apiKey=b.querySelector("#keyIn").value.trim(); state.model=b.querySelector("#modelIn").value; state.submitApi=b.querySelector("#subApiIn").value.trim(); state.googleClientId=b.querySelector("#gcidIn").value.trim(); state.dataUrl=b.querySelector("#dataUrlIn").value.trim(); _marketCat=null; saveState(); closeSheet(); }; b.querySelector("#kc").onclick=closeSheet; });
+  (b)=>{ b.querySelector("#ks").onclick=()=>{ state.apiKey=b.querySelector("#keyIn").value.trim(); state.model=b.querySelector("#modelIn").value; saveState(); closeSheet(); }; b.querySelector("#kc").onclick=closeSheet; });
 }
 
 /* ---- VIN reading: door-jamb barcode (offline BarcodeDetector) + dashboard-stamp OCR via Claude ---- */
@@ -953,7 +953,7 @@ function vinStatusHtml(v){ const i=vinInfo(v); if(!i.vin) return `<span class="f
   return i.checkOk ? `<span class="vinok">✓ Valid VIN${extra?` — ${extra}`:""}.</span>` : `<span class="vinbad">⚠️ Check digit doesn't match — double-check the VIN.</span>${extra?` <span class="fine">(${extra})</span>`:""}`; }
 
 function openAddVehicle(existing){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const ex=existing||{};
   sheet(existing?"Edit vehicle":"Add vehicle", `
     <div class="field"><label>Nickname (optional)</label><input id="vNick" placeholder="e.g. Wife's CR-V" value="${esc(ex.nick||"").replace(/"/g,'&quot;')}"></div>
@@ -1004,7 +1004,7 @@ async function decodeVinWithClaude(vin){
 }
 
 function openGarage(){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const vs=vehicles();
   const rows=vs.length?vs.map(v=>{ const i=vinInfo(v.vin); return `<label class="grow" style="cursor:pointer"><input type="radio" name="vsel" value="${v.id}" ${v.id===state.activeVehicle?"checked":""}><span><b>${esc(vehLabel(v))}</b><small class="vinmono">${esc(v.vin)}</small><small>${i.checkOk?"✓ valid":"⚠️ check digit"}${i.year?` · ${i.year}`:""}${i.origin?` · ${i.origin}`:""}</small></span><button class="exp" data-edit="${v.id}" title="Edit">✏️</button><button class="del" data-delv="${v.id}" title="Delete">🗑</button></label>`; }).join("")
     :`<p class="fine">No vehicles yet. Add one by VIN so parts &amp; fitment answers match your exact car.</p>`;
@@ -1041,7 +1041,7 @@ function installMarketGuide(e){ if(e.builtinRef){ setActive(e.builtinRef); retur
   const existing=allGuides().find(g=>g.title===e.guide.title); if(existing){ setActive(existing.id); return existing; }
   const g=createGuide(e.guide); setActive(g.id); return g; }
 function contributeReview(payload){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const json=JSON.stringify(payload,null,2);
   try{ navigator.clipboard.writeText(json); }catch(e){}
   const url="https://github.com/sharpninja/repairs-data/issues/new?title="+encodeURIComponent("Guide review: "+(payload.guideTitle||payload.guideId))+"&body="+encodeURIComponent("Proposed review (from the app):\n\n```json\n"+json+"\n```");
@@ -1051,7 +1051,7 @@ function contributeReview(payload){
   (b)=>{ b.querySelector("#cClose").onclick=openMarket; });
 }
 async function openMarket(){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const veh=activeVehicle();
   sheet("🛒 Marketplace", `<div id="mktBody"><p class="fine">Loading guides…</p></div>`, async (b)=>{
     let cat; try{ cat=await loadMarket(); }catch(e){ cat=null; }
@@ -1071,7 +1071,7 @@ async function openMarket(){
   });
 }
 function openMarketGuide(e){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const m=entryMeta(e), gj=entryGuideJSON(e), r=aggRating(e), ur=userReview(e.id)||{};
   const phases=(gj.phases||[]).map(p=>p.name).filter(Boolean);
   const fit=fitLabel(cleanFits(m.fits));
@@ -1176,7 +1176,7 @@ function toast(msg, url){
 
 /* Shared submit sheet: ensure a Google-backed session, then POST tagged with the session key. */
 function submitSheet(title, previewHtml, rpc, payload, meta, back){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   if(!submitApi()||!googleClientId()){ sheet(title, `<div class="modverdict no">Community submissions aren't configured. Set the <b>Backend URL</b> and <b>Google client ID</b> in ⚙️ → Community submissions, then try again.</div><div class="btnrow"><button class="btn pri" id="cfg">Open settings</button></div>`, (b)=>{ b.querySelector("#cfg").onclick=()=>{ closeSheet(); openKey(); }; }); return; }
   sheet(title, `${previewHtml}
     <p class="fine">Every submission is tagged with your session key and moderated by Claude on the server. A maintainer reviews and merges it.</p>
@@ -1198,12 +1198,12 @@ function submitSheet(title, previewHtml, rpc, payload, meta, back){
   });
 }
 function openSubmitReview(entry, title, stars, text){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   submitSheet("🚀 Submit review", `<div class="review"><div class="rh"><b>${esc(title)}</b>${starHtml(stars)}</div><div>${esc(text)}</div></div>`,
     "SubmitReview", {guideId:entry.id, guideTitle:title, stars, reviewText:text}, {title, kind:"review"}, ()=>openMarketGuide(entry));
 }
 function openSubmitRepair(g){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const json=JSON.stringify(exportGuide(g),null,2);
   submitSheet("🚀 Submit repair", `<p class="fine">Contribute this guide to the public marketplace. Make sure it's safe and accurate.</p><div class="field"><label>Guide</label><input value="${esc(g.title)}" readonly></div><details class="fmtd"><summary>JSON being submitted</summary><pre class="fmt">${esc(json)}</pre></details>`,
     "SubmitRepair", {guideJson:json}, {title:g.title, kind:"repair"}, ()=>openExport(g));
@@ -1413,7 +1413,7 @@ function exportGuide(g){
 }
 
 function openNew(){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   sheet("＋ New Repair Guide", `
     <p class="fine">Describe the vehicle and the job — Claude drafts a phased, safety-first guide in this app's format and you can start following it right away. Uses your Anthropic API key (same one as the helper).</p>
     <div class="field"><label>Getting-started prompt (edit freely)</label><textarea id="genPrompt" rows="11">${esc(BOILERPLATE)}</textarea></div>
@@ -1437,7 +1437,7 @@ function openNew(){
 }
 
 function openMerge(){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const rows=allGuides().map(g=>`<label class="grow" style="cursor:pointer"><input type="checkbox" class="mchk" value="${g.id}"><span><b>${esc(g.title)}</b><small>${esc(g.subtitle||"")}${g.builtin?" · built-in":""}</small>${guideChips(g)}</span></label>`).join("");
   sheet("⤵ Merge guides", `
     <p class="fine">Pick <b>two or more</b> guides and Claude combines them into one — doing shared teardown/drain steps once, ordering the work, and merging the tools &amp; parts. Ideal for jobs done together (like the CR-V's A/C + ECT2 + HG-1). The originals are kept; a new merged guide is added. Uses your API key.</p>
@@ -1465,7 +1465,7 @@ function openMerge(){
 }
 
 function openGuides(){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const rows=allGuides().map(g=>`<label class="grow"><input type="radio" name="gsel" value="${g.id}" ${g.id===ACTIVE.id?"checked":""}><span><b>${esc(g.title)}</b><small>${esc(g.subtitle||"")}${g.builtin?" · built-in":""}</small>${guideChips(g)}</span>${g.builtin?"":`<button class="exp" data-exp="${g.id}" title="Share / export">⧉</button><button class="del" data-del="${g.id}" title="Delete">🗑</button>`}</label>`).join("");
   const canMerge=allGuides().length>=2;
   sheet("Guides", rows+`<div class="btnrow"><button class="btn" id="mktBtn">🛒 Marketplace</button><button class="btn" id="addG">⬇ Add guide</button>${canMerge?`<button class="btn" id="mergeG">⤵ Merge</button>`:""}<button class="btn pri" id="newG">＋ New Repair</button></div>`,
@@ -1481,7 +1481,7 @@ function openGuides(){
 }
 
 function openExport(g){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const json=JSON.stringify(exportGuide(g),null,2);
   sheet("Share: "+esc(g.title), `
     <p class="fine">Copy this JSON or download it — anyone can add it via <b>Guides → ⬇ Add guide</b> on their own device. Or <b>🚀 Submit to marketplace</b> to open a pull request adding it to the shared catalog.</p>

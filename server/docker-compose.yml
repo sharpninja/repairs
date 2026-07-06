@@ -6,8 +6,9 @@ services:
   submit:
     build: .
     env_file: .env
+    # Host:container port from ${PORT} in .env (defaults to 8788; never 8080).
     ports:
-      - "8080:8080"
+      - "${PORT:-8788}:${PORT:-8788}"
     volumes:
       - data:/app/data
     restart: unless-stopped
@@ -19,6 +20,20 @@ services:
     volumes:
       - data:/app/data
     restart: unless-stopped
+
+  # Public HTTPS tunnel to the submit service (so the deployed app / a phone can
+  # reach it). Reads NGROK_AUTHTOKEN from .env. Web inspector on :4040 exposes the
+  # generated public URL at http://localhost:4040/api/tunnels.
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command: ["http", "--url=sharpninja.ngrok.app", "submit:8788", "--log=stdout"]
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    depends_on:
+      - submit
 
 volumes:
   data:

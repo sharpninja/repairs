@@ -11,6 +11,7 @@ process.env.SESSION_STORE = join(dir, "sessions.json");
 process.env.SUBMIT_RATE_MS = "60000";
 process.env.TRUST_BLOCK_AT = "-4";
 process.env.SESSION_TTL_MS = "100000";
+process.env.BANS_STORE = join(dir, "bans.json");
 
 const store = await import("../server/src/store.js");
 const session = await import("../server/src/session.js");
@@ -55,6 +56,29 @@ t("approve raises score, flag is neutral", () => {
   store.noteVerdict(email, "approve");
   store.noteVerdict(email, "flag");
   assert.equal(store.isBlocked(email), false);
+});
+
+console.log("store.js — bans (immediate + audit log)");
+t("banUser hard-bans a fresh user immediately, regardless of score", () => {
+  const email = "injector@example.com";
+  assert.equal(store.isBlocked(email), false);
+  const entry = store.banUser(email, {
+    reason: "prompt-injection", prNumber: 42, prUrl: "https://github.com/x/y/pull/42", prTitle: "New guide",
+    verdict: { decision: "reject", severity: "high", categories: ["prompt-injection"], summary: "tried to override the moderator" },
+  });
+  assert.equal(store.isBlocked(email), true);
+  assert.ok(entry && entry.email === email);
+  assert.equal(entry.reason, "prompt-injection");
+  assert.equal(entry.prNumber, 42);
+  assert.ok(entry.prUrl.includes("/pull/42"));
+  assert.equal(entry.verdict.decision, "reject");
+});
+t("ban log is reviewable and append-only with receipts (email, PR, timestamp)", () => {
+  store.banUser("second@example.com", { reason: "prompt-injection", prNumber: 43, prUrl: "https://github.com/x/y/pull/43" });
+  const bans = store.listBans();
+  assert.ok(Array.isArray(bans) && bans.length >= 2);
+  const rec = bans.find((b) => b.email === "second@example.com");
+  assert.ok(rec && rec.prNumber === 43 && typeof rec.ts === "string" && rec.ts.length > 0);
 });
 
 console.log("session.js — sessions");

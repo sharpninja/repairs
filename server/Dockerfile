@@ -1,6 +1,10 @@
 # ---- build: install deps + generate protobuf-es code from the .proto ----
 FROM node:22-slim AS build
 WORKDIR /app
+# node:22-slim ships without the system CA bundle; buf (a Go binary) reads the
+# system cert store, so `buf generate` below fails TLS to buf.build without this.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 COPY package.json ./
 RUN npm install
 COPY buf.yaml buf.gen.yaml ./
@@ -27,7 +31,8 @@ COPY package.json ./
 RUN mkdir -p /app/data
 VOLUME ["/app/data"]
 ENV TRUST_STORE=/app/data/trust.json \
-    SESSION_STORE=/app/data/sessions.json
+    SESSION_STORE=/app/data/sessions.json \
+    BANS_STORE=/app/data/bans.json
 EXPOSE 8080
 # Default: the submit service. Run the monitor as a second container with
 #   docker run ... repairs-submit-service node src/monitor.js

@@ -4,13 +4,18 @@ import http from "node:http";
 import { connectNodeAdapter } from "@connectrpc/connect-node";
 import routes from "./routes.js";
 
-const ALLOW = process.env.ALLOWED_ORIGIN || "*";
+// CORS allowlist: a comma-separated list of exact origins, or "*" to allow any.
+// With a list, the matching request Origin is echoed back (proper multi-origin CORS);
+// lock this down to your published origin(s) before go-live.
+const ALLOW = (process.env.ALLOWED_ORIGIN || "*").split(",").map((s) => s.trim()).filter(Boolean);
+const ALLOW_ANY = ALLOW.includes("*");
+const originFor = (req) => ALLOW_ANY ? "*" : (ALLOW.includes(req.headers.origin) ? req.headers.origin : (ALLOW[0] || ""));
 const PORT = process.env.PORT || 8080;
 
 const adapter = connectNodeAdapter({ routes });
 
 const server = http.createServer((req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", ALLOW);
+  res.setHeader("Access-Control-Allow-Origin", originFor(req));
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader(
