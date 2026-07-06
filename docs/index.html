@@ -205,6 +205,18 @@
   .field label{display:block;font-weight:700;margin-bottom:6px;font-size:.92em}
   .field input{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:16px}
   .field select{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:16px;font-family:inherit}
+  .row3{display:flex;gap:8px}.row3 .field{flex:1;min-width:0}
+  .stars{display:inline-flex;gap:2px;font-size:1.05em;line-height:1}
+  .stars .st{cursor:pointer;color:var(--muted)}.stars .st.on{color:#e6a817}
+  .mkt{display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;margin:8px 0;box-shadow:var(--shadow);cursor:pointer}
+  .mkt .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .mkt b{font-size:1.02em}.mkt small{color:var(--muted)}
+  .mkt .rate{white-space:nowrap;font-size:.85em;color:var(--muted);display:flex;align-items:center;gap:4px}
+  .mkt .fitpill{background:var(--tip-bg);border:1px solid var(--tip);color:var(--tip-ink);border-radius:999px;padding:2px 9px;font-size:.72em;font-weight:800}
+  .review{border-top:1px solid var(--line);padding:9px 0}.review .rh{display:flex;justify-content:space-between;font-size:.82em;color:var(--muted)}
+  .modverdict{border-radius:10px;padding:9px 11px;margin:8px 0;font-size:.9em}
+  .modverdict.ok{background:var(--tip-bg);border:1px solid var(--tip);color:var(--tip-ink)}
+  .modverdict.no{background:var(--danger-bg,rgba(200,60,60,.12));border:1px solid var(--danger);color:var(--danger)}
   .field textarea{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:15px;font-family:inherit;resize:vertical;line-height:1.45}
   .gbtns{display:flex;gap:8px;justify-content:center;margin-top:14px}
   .pill2{background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:9px 15px;font-weight:800;font-size:.84em;cursor:pointer}
@@ -521,6 +533,7 @@ const userGuides=()=>{ try{return JSON.parse(localStorage.getItem(GKEY))||[]}cat
 const saveUserGuides=a=>localStorage.setItem(GKEY,JSON.stringify(a));
 const BUILTIN={ id:"crv-s1", builtin:true, title:"2018 Honda CR-V 1.5T",
   subtitle:"Session 1 · A/C + condenser, ECT2, HG-1.", region:"us", env:["driveway","garage"],
+  fits:{makes:["Honda"],models:["CR-V"],yearFrom:2017,yearTo:2022},
   safety:"1) Never open A/C under pressure. 2) Cap every open line instantly. 3) New oiled O-ring at every fitting. 4) Hand-rotate the new compressor. 5) HG-1 cold, ½ bottle.",
   phases:PHASES, tools:TOOLS, parts:PARTS };
 const allGuides=()=>[BUILTIN,...userGuides()];
@@ -561,6 +574,18 @@ function extractVin(raw){ const s=String(raw||"").toUpperCase().replace(/[^A-HJ-
   if(s.length>=17){ for(let i=0;i+17<=s.length;i++){ const sub=s.slice(i,i+17); if(vinCheckOk(sub)) return sub; } }
   if(s.length===17) return s; return null; }
 const vehLabel=v=>v?(v.nick||[v.year,v.make,v.model].filter(Boolean).join(" ")||("VIN "+(v.vin||"").slice(-6))):"";
+const vehDesc=v=>v?[v.year,v.make,v.model].filter(Boolean).join(" "):"";
+/* Vehicle-fit metadata for a guide + a match score for discovery. */
+function cleanFits(f){ if(!f||typeof f!=="object") return null; const arr=x=>Array.isArray(x)?x.map(s=>String(s).trim()).filter(Boolean).slice(0,20):[];
+  const out={ universal:!!f.universal, makes:arr(f.makes), models:arr(f.models), yearFrom:parseInt(f.yearFrom,10)||null, yearTo:parseInt(f.yearTo,10)||null };
+  return (out.universal||out.makes.length||out.models.length||out.yearFrom||out.yearTo)?out:null; }
+function fitLabel(f){ if(!f) return ""; if(f.universal) return "Universal"; const yr=f.yearFrom||f.yearTo?`${f.yearFrom||""}${f.yearFrom&&f.yearTo?"–":""}${f.yearTo||""} `:""; return (yr+[f.makes.join("/"),f.models.join("/")].filter(Boolean).join(" ")).trim(); }
+function fitScore(fits, veh){ const f=cleanFits(fits); if(!f) return 0; if(f.universal) return 1; if(!veh) return 0;
+  const mk=(veh.make||"").toLowerCase(), md=(veh.model||"").toLowerCase(), yr=veh.year||vinYear(veh.vin); let sc=0;
+  if(f.makes.length){ if(mk){ if(f.makes.some(x=>x.toLowerCase()===mk)) sc+=3; else return -1; } }
+  if(f.models.length&&md){ if(f.models.some(x=>md.includes(x.toLowerCase())||x.toLowerCase().includes(md))) sc+=3; else if(f.makes.length&&mk&&f.makes.some(x=>x.toLowerCase()===mk)) sc+=0; else return -1; }
+  if((f.yearFrom||f.yearTo)&&yr){ if((!f.yearFrom||yr>=f.yearFrom)&&(!f.yearTo||yr<=f.yearTo)) sc+=2; else return -1; }
+  return sc; }
 
 let ACTIVE, STEPS=[], TOTAL_STEPS=0;
 function rebuild(){ STEPS=[]; ACTIVE.phases.forEach((ph,pi)=>{ if(!ph.id) ph.id="ph"+pi; if(!Array.isArray(ph.steps)) ph.steps=[]; ph.steps.forEach((st,si)=>{ st.phase=ph;st.pi=pi;st.si=si;st.id=ACTIVE.id+"::"+ph.id+"-"+si;st.gi=STEPS.length;STEPS.push(st);}); }); TOTAL_STEPS=STEPS.length; }
@@ -647,6 +672,7 @@ function renderHome(){
     </div>
     <div class="tiles">
       ${hasTools?`<button class="tile" id="toolsT"><span class="em">🧰</span><b>Tools &amp; Parts</b><span>Shopping list + Amazon links</span></button>`:""}
+      <button class="tile" id="mktT"><span class="em">🛒</span><b>Marketplace</b><span>Find guides for your car</span></button>
       <button class="tile" id="logT"><span class="em">📋</span><b>Session Log</b><span>Your photos, voice &amp; video</span></button>
     </div>
     <div class="phaselist">${rows}</div>
@@ -655,6 +681,7 @@ function renderHome(){
     <p class="fine" style="margin-top:14px">Progress &amp; media are stored on this device only. Camera/mic and install-to-home-screen need HTTPS or localhost. Only the Claude features (help &amp; New Repair) use the internet — via your own Anthropic API key.</p>`;
   view.querySelectorAll(".prow").forEach(b=>b.onclick=()=>go(+b.dataset.gi));
   const tt=document.getElementById("toolsT"); if(tt) tt.onclick=()=>{route="tools";render();window.scrollTo(0,0);};
+  document.getElementById("mktT").onclick=openMarket;
   document.getElementById("logT").onclick=()=>{route="log";render();window.scrollTo(0,0);};
   document.getElementById("guidesBtn").onclick=openGuides;
   document.getElementById("newBtn").onclick=openNew;
@@ -915,25 +942,49 @@ function openAddVehicle(existing){
   sheet(existing?"Edit vehicle":"Add vehicle", `
     <div class="field"><label>Nickname (optional)</label><input id="vNick" placeholder="e.g. Wife's CR-V" value="${esc(ex.nick||"").replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>VIN (17 characters)</label><input id="vVin" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="1HGRW2H50JL000000" value="${esc(ex.vin||"")}"></div>
-    <div class="btnrow" style="margin-top:0"><button class="btn" id="vScan">📷 Scan / read VIN</button></div>
+    <div class="btnrow" style="margin-top:0"><button class="btn" id="vScan">📷 Scan / read VIN</button><button class="btn" id="vDecode">🔎 Decode with Claude</button></div>
     <div id="vStatus" class="vinstat" style="margin:8px 0">${vinStatusHtml(ex.vin||"")}</div>
-    <p class="fine">Scan the <b>barcode</b> on the driver's door-jamb sticker (works offline where supported), or use <b>📷</b> to read a stamped VIN through the windshield / on the sticker with Claude. You can always type it. The VIN is stored on-device and given to Claude so fitment answers match your exact vehicle.</p>
+    <div class="row3"><div class="field"><label>Year</label><input id="vYear" inputmode="numeric" placeholder="2018" value="${esc(ex.year||"")}"></div>
+      <div class="field"><label>Make</label><input id="vMake" placeholder="Honda" value="${esc(ex.make||"").replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Model</label><input id="vModel" placeholder="CR-V" value="${esc(ex.model||"").replace(/"/g,'&quot;')}"></div></div>
+    <p class="fine">Scan the <b>barcode</b> on the door-jamb sticker (offline where supported), <b>📷</b> read a stamped VIN, or type it. <b>🔎 Decode</b> fills year/make/model from the VIN (uses Claude) — these power <b>marketplace guide discovery for your car</b>. Stored on-device.</p>
     <div class="btnrow"><button class="btn" id="vCancel">Cancel</button><button class="btn pri" id="vSave">Save vehicle</button></div>`,
   (b)=>{
     const vin=b.querySelector("#vVin"), stat=b.querySelector("#vStatus");
     const refresh=()=>{ const n=normVin(vin.value); if(vin.value!==n) vin.value=n; stat.innerHTML=vinStatusHtml(n); };
     vin.oninput=refresh;
-    b.querySelector("#vScan").onclick=()=>{ closeSheet(); openVinScanner(v=>{ openAddVehicle(Object.assign({}, ex, {vin:v, nick:ex.nick})); }); };
+    b.querySelector("#vScan").onclick=()=>{ closeSheet(); openVinScanner(v=>{ openAddVehicle(Object.assign({}, ex, {vin:v})); }); };
+    b.querySelector("#vDecode").onclick=async()=>{
+      if(!state.apiKey){ closeSheet(); openKey(); return; }
+      const v=normVin(vin.value); if(v.length!==17){ stat.innerHTML=`<span class="vinbad">⚠️ Enter a full 17-character VIN first.</span>`; return; }
+      const dec=b.querySelector("#vDecode"); dec.disabled=true; const old=dec.textContent; dec.textContent="Decoding…";
+      try{ const d=await decodeVinWithClaude(v); if(d){ if(d.year) b.querySelector("#vYear").value=d.year; if(d.make) b.querySelector("#vMake").value=d.make; if(d.model) b.querySelector("#vModel").value=d.model; } dec.textContent=old; dec.disabled=false; }
+      catch(err){ stat.innerHTML=`<span class="vinbad">⚠️ ${esc(String(err.message||err))}</span>`; dec.textContent=old; dec.disabled=false; }
+    };
     b.querySelector("#vCancel").onclick=()=>{ existing?openGarage():closeSheet(); };
     b.querySelector("#vSave").onclick=()=>{
       const v=normVin(vin.value); if(v.length!==17){ stat.innerHTML=`<span class="vinbad">⚠️ A VIN is 17 characters — got ${v.length}.</span>`; return; }
       const nick=b.querySelector("#vNick").value.trim();
-      const arr=vehicles(); const yr=vinYear(v);
-      if(existing&&ex.id){ const i=arr.findIndex(x=>x.id===ex.id); if(i>=0){ arr[i]=Object.assign({}, arr[i], {vin:v, nick, year:yr||arr[i].year}); saveVehicles(arr); } }
-      else { const id="v"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36); arr.push({id, vin:v, nick, year:yr, ts:Date.now()}); saveVehicles(arr); state.activeVehicle=id; saveState(); }
+      const yr=parseInt(b.querySelector("#vYear").value,10)||vinYear(v)||null;
+      const make=b.querySelector("#vMake").value.trim(), model=b.querySelector("#vModel").value.trim();
+      const arr=vehicles();
+      if(existing&&ex.id){ const i=arr.findIndex(x=>x.id===ex.id); if(i>=0){ arr[i]=Object.assign({}, arr[i], {vin:v, nick, year:yr, make, model}); saveVehicles(arr); } }
+      else { const id="v"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36); arr.push({id, vin:v, nick, year:yr, make, model, ts:Date.now()}); saveVehicles(arr); state.activeVehicle=id; saveState(); }
       closeSheet(); if(route==="home") render(); openGarage();
     };
   });
+}
+async function decodeVinWithClaude(vin){
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+    headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:state.model,max_tokens:120,
+      system:"You decode vehicle VINs. Given a 17-character VIN, respond with ONLY a JSON object {\"year\":number,\"make\":\"string\",\"model\":\"string\"} — your best decode of model year, make, and model. If unsure of the model, give your best guess or empty string. No prose, no code fences.",
+      messages:[{role:"user",content:[{type:"text",text:"VIN: "+vin}]}]})});
+  if(!res.ok) throw new Error("API "+res.status);
+  const data=await res.json();
+  const txt=(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("");
+  let o; try{ o=extractJson(txt); }catch(e){ throw new Error("Couldn't decode the VIN. Fill the fields manually."); }
+  return { year:parseInt(o.year,10)||null, make:String(o.make||"").trim(), model:String(o.model||"").trim() };
 }
 
 function openGarage(){
@@ -947,6 +998,108 @@ function openGarage(){
     b.querySelectorAll("[data-delv]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); const id=x.dataset.delv; saveVehicles(vehicles().filter(v=>v.id!==id)); if(state.activeVehicle===id){ const rest=vehicles(); state.activeVehicle=rest[0]?rest[0].id:""; saveState(); } closeSheet(); if(route==="home") render(); openGarage(); });
     b.querySelectorAll("[data-edit]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); const v=vehicles().find(z=>z.id===x.dataset.edit); if(v){ closeSheet(); openAddVehicle(v); } });
     b.querySelector("#addV").onclick=()=>{ closeSheet(); openAddVehicle(null); };
+  });
+}
+
+/* ================= MARKETPLACE (curated catalog + on-device ratings/AI-moderated reviews) ================= */
+const MKT_CACHE="crv-market-cache", REV_KEY="crv-reviews";
+let _marketCat=null;
+async function loadMarket(){ if(_marketCat) return _marketCat;
+  try{ const res=await fetch("./marketplace.json",{cache:"no-cache"}); if(res.ok){ const j=await res.json(); localStorage.setItem(MKT_CACHE,JSON.stringify(j)); _marketCat=j; return j; } }catch(e){}
+  const cached=localStorage.getItem(MKT_CACHE); if(cached){ try{ _marketCat=JSON.parse(cached); return _marketCat; }catch(e){} }
+  _marketCat={version:0,guides:[{id:"mkt-crv-s1",builtinRef:"crv-s1",rating:{avg:0,count:0},reviews:[]}]}; return _marketCat; }
+const reviewsStore=()=>{ try{return JSON.parse(localStorage.getItem(REV_KEY))||{}}catch(e){return{}} };
+const userReview=id=>reviewsStore()[id]||null;
+function setUserReview(id,patch){ const o=reviewsStore(); o[id]=Object.assign({}, o[id]||{}, patch); localStorage.setItem(REV_KEY,JSON.stringify(o)); }
+function entryMeta(e){ if(e.builtinRef){ const g=guideById(e.builtinRef); return Object.assign({title:g.title,subtitle:g.subtitle,region:g.region,env:g.env,fits:g.fits}, e.meta||{}); } const g=e.guide||{}; return {title:g.title,subtitle:g.subtitle,region:g.region,env:g.env,fits:g.fits}; }
+function entryGuideJSON(e){ return e.builtinRef?exportGuide(guideById(e.builtinRef)):e.guide; }
+function aggRating(e){ const base=e.rating||{avg:0,count:0}; const ur=userReview(e.id); if(ur&&ur.stars){ const count=(base.count||0)+1; return {avg:((base.avg||0)*(base.count||0)+ur.stars)/count, count}; } return {avg:base.avg||0, count:base.count||0}; }
+function starHtml(v){ v=Math.round(v||0); let s=""; for(let i=1;i<=5;i++) s+=`<span class="st${i<=v?' on':''}">★</span>`; return `<span class="stars">${s}</span>`; }
+function installMarketGuide(e){ if(e.builtinRef){ setActive(e.builtinRef); return guideById(e.builtinRef); }
+  const existing=allGuides().find(g=>g.title===e.guide.title); if(existing){ setActive(existing.id); return existing; }
+  const g=createGuide(e.guide); setActive(g.id); return g; }
+async function moderateReview(text){
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+    headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:state.model,max_tokens:300,
+      system:`You moderate user reviews for a DIY car-repair guide marketplace. Approve genuine, on-topic feedback about a repair guide. REJECT if the text is abusive/harassing, hate speech, spam or advertising, contains personal data (full names, plates, addresses, phone numbers), is off-topic, or promotes unsafe/illegal actions. You may lightly fix typos and remove profanity without changing meaning. Respond with ONLY a JSON object: {"decision":"approved"|"rejected","reason":"short reason when rejected","cleaned":"the cleaned review text when approved"}. No prose, no code fences.`,
+      messages:[{role:"user",content:[{type:"text",text:text}]}]})});
+  if(!res.ok) throw new Error("API "+res.status);
+  const data=await res.json();
+  if(data.stop_reason==="refusal") return {decision:"rejected", reason:"flagged by the safety system", cleaned:text};
+  const t=(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("");
+  let o; try{ o=extractJson(t); }catch(e){ return {decision:"rejected", reason:"couldn't parse the moderation result — try again", cleaned:text}; }
+  return { decision:o.decision==="approved"?"approved":"rejected", reason:String(o.reason||""), cleaned:String(o.cleaned||text) };
+}
+function contributeReview(payload){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const json=JSON.stringify(payload,null,2);
+  try{ navigator.clipboard.writeText(json); }catch(e){}
+  const url="https://github.com/sharpninja/repairs/issues/new?title="+encodeURIComponent("Guide review: "+(payload.guideTitle||payload.guideId))+"&body="+encodeURIComponent("Proposed review (from the app):\n\n```json\n"+json+"\n```");
+  sheet("⧉ Contribute review", `<p class="fine">There's no shared server, so your reviews live on your device. To add yours to the public catalog, it's been <b>copied to your clipboard</b> — open an issue on the repo and paste it (maintainers fold approved reviews into the catalog).</p>
+    <div class="field"><textarea rows="8" readonly>${esc(json)}</textarea></div>
+    <div class="btnrow"><button class="btn" id="cClose">Close</button><a class="btn pri" href="${url}" target="_blank" rel="noopener">Open GitHub issue ↗</a></div>`,
+  (b)=>{ b.querySelector("#cClose").onclick=openMarket; });
+}
+async function openMarket(){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const veh=activeVehicle();
+  sheet("🛒 Marketplace", `<div id="mktBody"><p class="fine">Loading guides…</p></div>`, async (b)=>{
+    let cat; try{ cat=await loadMarket(); }catch(e){ cat=null; }
+    const box=b.querySelector("#mktBody"); if(!box) return;
+    if(!cat||!Array.isArray(cat.guides)){ box.innerHTML=`<p class="fine">Couldn't load the catalog and no offline copy is cached. Reconnect and reopen.</p>`; return; }
+    const entries=cat.guides;
+    const card=(e)=>{ const m=entryMeta(e), r=aggRating(e), fit=fitLabel(cleanFits(m.fits)), matches=veh&&fitScore(m.fits,veh)>0;
+      return `<div class="mkt" data-id="${esc(e.id)}"><div class="top"><div style="min-width:0"><b>${esc(m.title)}</b><br><small>${esc(m.subtitle||"")}</small></div><div class="rate">${starHtml(r.avg)}<span>${r.avg?r.avg.toFixed(1):"—"} (${r.count})</span></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${matches?`<span class="fitpill">Fits your ${esc(vehDesc(veh)||"vehicle")}</span>`:""}${fit?`<small>${esc(fit)}</small>`:""}${guideChips(m)}</div></div>`; };
+    let html="";
+    if(veh){ const forYou=entries.map(e=>({e,s:fitScore(entryMeta(e).fits,veh)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
+      html+=`<h3 style="margin:.2em 0">🚗 For your ${esc(vehDesc(veh)||"vehicle")}</h3>`+(forYou.length?forYou.map(x=>card(x.e)).join(""):`<p class="fine">No catalog guides match this vehicle yet — browse all below, or make one with ＋ New Repair.</p>`);
+    } else html+=`<p class="fine">Tip: set an active vehicle (🚗) to surface guides matched to your car.</p>`;
+    html+=`<h3 style="margin:.7em 0 .2em">All guides</h3>`+entries.map(card).join("");
+    html+=`<p class="fine" style="margin-top:12px">Ratings combine the community seed with your own. Your reviews are stored on-device and AI-moderated; open a guide and use <b>Contribute</b> to submit yours.</p>`;
+    box.innerHTML=html;
+    box.querySelectorAll(".mkt").forEach(c=>c.onclick=()=>{ const e=entries.find(x=>x.id===c.dataset.id); if(e) openMarketGuide(e); });
+  });
+}
+function openMarketGuide(e){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const m=entryMeta(e), gj=entryGuideJSON(e), r=aggRating(e), ur=userReview(e.id)||{};
+  const phases=(gj.phases||[]).map(p=>p.name).filter(Boolean);
+  const fit=fitLabel(cleanFits(m.fits));
+  const seed=(e.reviews||[]).slice();
+  const revHtml=seed.map(rv=>`<div class="review"><div class="rh"><b>${esc(rv.author||"anon")}</b>${starHtml(rv.stars)}</div><div>${esc(rv.text||"")}</div></div>`).join("")
+    + (ur.review&&ur.review.status==="approved"?`<div class="review"><div class="rh"><b>You</b>${starHtml(ur.stars||0)}</div><div>${esc(ur.review.text)}</div></div>`:"");
+  const installed = e.builtinRef==="crv-s1" || allGuides().some(g=>g.title===gj.title);
+  sheet(esc(m.title), `
+    <p class="fine">${esc(m.subtitle||"")}</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:.3em 0">${guideChips(m)}${fit?`<span class="fitpill">${esc(fit)}</span>`:""}</div>
+    <div class="rate" style="margin:.4em 0;color:var(--muted)">${starHtml(r.avg)} <b style="color:var(--ink)">${r.avg?r.avg.toFixed(1):"—"}</b> <small>(${r.count} rating${r.count===1?"":"s"})</small></div>
+    <div class="call tip"><span class="ic">🧭</span><div><span class="t">Phases</span>${phases.map(esc).join(" · ")||"—"}</div></div>
+    <div class="btnrow"><button class="btn pri" id="mInstall">${installed?"✓ In your library — open":"⬇ Install guide"}</button></div>
+    <h3 style="margin:.7em 0 .2em">Your rating</h3>
+    <div id="myStars" class="stars" style="font-size:1.7em"></div>
+    <div class="field" style="margin-top:10px"><label>Write a review (AI-moderated)</label><textarea id="revText" rows="3" placeholder="What worked, what to watch for…">${esc((ur.review&&ur.review.text)||"")}</textarea></div>
+    <div id="revStatus"></div>
+    <div class="btnrow"><button class="btn" id="revContribute">⧉ Contribute</button><button class="btn pri" id="revSubmit">Submit review</button></div>
+    <h3 style="margin:.7em 0 .2em">Reviews</h3>
+    <div id="revList">${revHtml||'<p class="fine">No reviews yet — be the first.</p>'}</div>`,
+  (b)=>{
+    const sp=b.querySelector("#myStars"); let picked=ur.stars||0;
+    const paint=()=>{ sp.innerHTML=""; for(let i=1;i<=5;i++){ const s=document.createElement("span"); s.className="st"+(i<=picked?" on":""); s.textContent="★"; s.onclick=()=>{ picked=i; setUserReview(e.id,{stars:i}); paint(); }; sp.appendChild(s); } };
+    paint();
+    b.querySelector("#mInstall").onclick=()=>{ installMarketGuide(e); closeSheet(); goHome(); };
+    b.querySelector("#revContribute").onclick=()=>{ contributeReview({guideId:e.id, guideTitle:m.title, stars:picked, review:(b.querySelector("#revText").value||"").trim()}); };
+    b.querySelector("#revSubmit").onclick=async()=>{
+      const txt=(b.querySelector("#revText").value||"").trim(); const st=b.querySelector("#revStatus");
+      if(picked<1){ st.innerHTML=`<div class="modverdict no">Pick a star rating first.</div>`; return; }
+      if(!txt){ setUserReview(e.id,{stars:picked}); st.innerHTML=`<div class="modverdict ok">✓ Rating saved.</div>`; return; }
+      if(!state.apiKey){ closeSheet(); openKey(); return; }
+      const btn=b.querySelector("#revSubmit"); btn.disabled=true; st.innerHTML=`<div class="fine">Checking your review with Claude…</div>`;
+      try{ const v=await moderateReview(txt);
+        if(v.decision==="approved"){ setUserReview(e.id,{stars:picked, review:{text:v.cleaned||txt, ts:Date.now(), status:"approved"}}); openMarketGuide(e); }
+        else { setUserReview(e.id,{stars:picked, review:{text:txt, ts:Date.now(), status:"rejected"}}); st.innerHTML=`<div class="modverdict no">⚠️ Not posted: ${esc(v.reason||"failed moderation")}. Your star rating was saved.</div>`; btn.disabled=false; }
+      }catch(err){ st.innerHTML=`<div class="modverdict no">⚠️ ${esc(String(err.message||err))}</div>`; btn.disabled=false; }
+    };
   });
 }
 
@@ -1035,6 +1188,7 @@ JSON shape:
   "safety": "string — the 1-2 most important safety rules (optional)",
   "region": "string — the market the vehicle/parts are for; one of: us, ca, uk, eu, au, mx, in, jp",
   "env": ["array — where the job is realistically done; any of: shop, garage, driveway, roadside"],
+  "fits": {"makes":["Honda"],"models":["CR-V"],"yearFrom":2017,"yearTo":2022,"universal":false},
   "phases": [
     { "name": "string — e.g. \\"Phase 1 · Lift & Wheels\\"",
       "color": "string — hex like \\"#4a86c5\\"",
@@ -1067,6 +1221,7 @@ Rules:
 - 3-8 phases, safety/prep first and a verification phase last.
 - Set "region" to the user's market (us, ca, uk, eu, au, mx, in, jp) — infer it from the prompt (language, spelling, currency, or an explicit region); it selects the Amazon store and hints at parts/units. Default to "us" only if there's no signal.
 - Set "env" to where the job is realistically done (shop / garage / driveway / roadside).
+- Set "fits" so the guide can be discovered by vehicle: the applicable makes, models, and model-year range. Set "universal":true for a job that applies to almost any vehicle (e.g. a generic oil change) and omit makes/models.
 - For tools, prefer library "id"s; fill parts with useful Amazon search terms.
 - Output valid JSON only.`;
 
@@ -1076,6 +1231,7 @@ const SCHEMA_EXAMPLE = `{
   "safety": "Chock the wheels and use jack stands — never rely on the jack alone.",
   "region": "us",
   "env": ["driveway", "garage"],
+  "fits": {"makes":["Subaru"],"models":["Outback"],"yearFrom":2015,"yearTo":2019},
   "phases": [
     { "name": "Phase 1 · Lift & Wheels", "color": "#4a86c5",
       "steps": [
@@ -1136,7 +1292,7 @@ const cleanTool=t=>{ if(t&&t.id&&LIB[t.id]) return libTool(t.id, (t.d!=null&&t.d
   return { n:String((t&&t.n)||"Tool"), d:String((t&&t.d)||""), q:String((t&&t.q)||(t&&t.n)||"") }; };
 function createGuide(o){
   const id="g"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
-  const g={ id, builtin:false, title:o.title, subtitle:o.subtitle||"", safety:o.safety||"", region:cleanRegion(o.region), env:cleanEnv(o.env),
+  const g={ id, builtin:false, title:o.title, subtitle:o.subtitle||"", safety:o.safety||"", region:cleanRegion(o.region), env:cleanEnv(o.env), fits:cleanFits(o.fits),
     phases:(o.phases||[]).map((p,i)=>({ id:"ph"+i, name:String(p.name||("Phase "+(i+1))),
       color:/^#[0-9a-fA-F]{3,8}$/.test(p.color)?p.color:"#8a8a80",
       steps:(p.steps||[]).map(s=>({ t:String(s.t||"Step"), allowMedia:s.allowMedia!==false, body:Array.isArray(s.body)?s.body:[] })) })),  // never trust s.html on import
@@ -1145,7 +1301,7 @@ function createGuide(o){
   const arr=userGuides(); arr.push(g); saveUserGuides(arr); return g;
 }
 function exportGuide(g){
-  return { title:g.title, subtitle:g.subtitle||"", ...(g.safety?{safety:g.safety}:{}), ...(cleanRegion(g.region)?{region:cleanRegion(g.region)}:{}), ...(cleanEnv(g.env).length?{env:cleanEnv(g.env)}:{}),
+  return { title:g.title, subtitle:g.subtitle||"", ...(g.safety?{safety:g.safety}:{}), ...(cleanRegion(g.region)?{region:cleanRegion(g.region)}:{}), ...(cleanEnv(g.env).length?{env:cleanEnv(g.env)}:{}), ...(cleanFits(g.fits)?{fits:cleanFits(g.fits)}:{}),
     phases:(g.phases||[]).map(p=>({ name:p.name, color:p.color, steps:(p.steps||[]).map(s=>({ t:s.t, allowMedia:s.allowMedia!==false, body:s.body||[] })) })),
     tools:(g.tools||[]).map(t=>t.id&&LIB[t.id]?{id:t.id,n:t.n,d:t.d,q:t.q}:{n:t.n,d:t.d,q:t.q}), parts:g.parts||[] };
 }
@@ -1206,8 +1362,9 @@ function openGuides(){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   const rows=allGuides().map(g=>`<label class="grow"><input type="radio" name="gsel" value="${g.id}" ${g.id===ACTIVE.id?"checked":""}><span><b>${esc(g.title)}</b><small>${esc(g.subtitle||"")}${g.builtin?" · built-in":""}</small>${guideChips(g)}</span>${g.builtin?"":`<button class="exp" data-exp="${g.id}" title="Share / export">⧉</button><button class="del" data-del="${g.id}" title="Delete">🗑</button>`}</label>`).join("");
   const canMerge=allGuides().length>=2;
-  sheet("Guides", rows+`<div class="btnrow"><button class="btn" id="addG">⬇ Add guide</button>${canMerge?`<button class="btn" id="mergeG">⤵ Merge</button>`:""}<button class="btn pri" id="newG">＋ New Repair</button></div>`,
+  sheet("Guides", rows+`<div class="btnrow"><button class="btn" id="mktBtn">🛒 Marketplace</button><button class="btn" id="addG">⬇ Add guide</button>${canMerge?`<button class="btn" id="mergeG">⤵ Merge</button>`:""}<button class="btn pri" id="newG">＋ New Repair</button></div>`,
   (b)=>{
+    b.querySelector("#mktBtn").onclick=()=>{ closeSheet(); openMarket(); };
     b.querySelectorAll('input[name=gsel]').forEach(r=>r.onchange=()=>{ setActive(r.value); closeSheet(); goHome(); });
     b.querySelectorAll("[data-del]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); const id=x.dataset.del; saveUserGuides(userGuides().filter(g=>g.id!==id)); if(ACTIVE.id===id) setActive("crv-s1"); closeSheet(); openGuides(); });
     b.querySelectorAll("[data-exp]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); openExport(guideById(x.dataset.exp)); });

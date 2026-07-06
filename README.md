@@ -33,6 +33,17 @@ on demand.
   shown as chips on the dashboard and in the switcher. The region also **picks the Amazon
   marketplace** for that guide's Tools & Parts links (e.g. a UK guide links to
   `amazon.co.uk`), so parts land in the right store.
+- **Marketplace + discovery by vehicle** — **🛒 Marketplace** browses a curated catalog
+  ([`docs/marketplace.json`](docs/marketplace.json)). Guides carry **fitment metadata**
+  (makes / models / year range, or *universal*), so with an active vehicle a **"For your
+  2018 Honda CR-V"** section surfaces the guides that match — install any with one tap.
+  The catalog is cached for **offline** browsing.
+- **Ratings & AI-moderated reviews** — rate a guide with **stars** and write a review;
+  **Claude moderates** it (rejecting abuse, spam, personal data, or unsafe advice, and
+  lightly cleaning the rest) before it's saved. Ratings shown combine the community seed
+  with your own. Since the app has **no backend**, your reviews are stored **on-device**;
+  a **⧉ Contribute** action copies yours and opens a prefilled repo issue to submit it to
+  the shared catalog.
 - **Vehicles by VIN** — save your cars by **VIN** in **🚗 My vehicles**. Read the VIN three
   ways: **scan the barcode** on the driver's door-jamb sticker (offline, via the browser's
   `BarcodeDetector`), **📷 read a stamped VIN** (dashboard plate or sticker) with Claude
@@ -112,6 +123,7 @@ relative, so it runs correctly under the `/<repo>/` subpath.
 | Path | What it is |
 |------|-----------|
 | [`docs/index.html`](docs/index.html) | **The entire app** — self-contained HTML/CSS/JS. Home dashboard, step flow, Tools & Parts, Session Log, New Repair, Guides. |
+| [`docs/marketplace.json`](docs/marketplace.json) | **Curated guide catalog** — the marketplace's guides + fitment metadata and seed ratings/reviews. Cached for offline. |
 | `docs/manifest.webmanifest` · `docs/sw.js` · `docs/icon-*.png` · [`docs/favicon.svg`](docs/favicon.svg) | PWA manifest, offline service worker, Honda-H icons and favicon. |
 | [`guide/`](guide/) | The built-in CR-V guide as a standalone **slideshow + printable PDF** (see [below](#also-available-as-a-slideshow--pdf)). |
 

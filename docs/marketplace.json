@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "note": "Community guide catalog. Ratings/reviews here are curated seeds; your own ratings and AI-moderated reviews are stored on your device and can be exported to contribute.",
+  "guides": [
+    {
+      "id": "mkt-crv-s1",
+      "builtinRef": "crv-s1",
+      "meta": {
+        "title": "2018 Honda CR-V 1.5T — Session 1",
+        "subtitle": "A/C compressor + condenser, ECT2 sensor, HG-1",
+        "region": "us",
+        "env": ["driveway", "garage"],
+        "fits": { "makes": ["Honda"], "models": ["CR-V"], "yearFrom": 2017, "yearTo": 2022 }
+      },
+      "rating": { "avg": 4.7, "count": 12 },
+      "reviews": [
+        { "author": "wrenchingdad", "stars": 5, "text": "The 'cap every open line instantly' warning saved me — did all three jobs on one coolant drain. Clear and safety-first.", "ts": 1717200000000 },
+        { "author": "civicsi_owner", "stars": 4, "text": "Great detail on the A/C oil being R-1234yf specific. Wished the ECT2 socket size was nailed down, but the 'measure the flats' note is honest.", "ts": 1717900000000 }
+      ]
+    },
+    {
+      "id": "mkt-outback-frontbrakes",
+      "guide": {
+        "title": "2015–2019 Subaru Outback 2.5i — Front Brakes",
+        "subtitle": "Front pads + rotors",
+        "safety": "Chock the rear wheels and use jack stands — never rely on the jack alone. Never let a hanging caliper dangle by its hose.",
+        "region": "us",
+        "env": ["driveway", "garage"],
+        "fits": { "makes": ["Subaru"], "models": ["Outback"], "yearFrom": 2015, "yearTo": 2019 },
+        "phases": [
+          { "name": "Phase 1 · Lift & Wheel", "color": "#4a86c5",
+            "steps": [
+              { "t": "Loosen lugs, lift, remove the wheel", "allowMedia": true,
+                "body": [
+                  { "type": "steps", "items": ["Crack the **lug nuts** 1/2 turn while the car is on the ground.", "Lift the front and set it on **jack stands**; chock the rears.", "Remove the wheel."] },
+                  { "type": "danger", "title": "Stands, not the jack", "text": "A jack can drop without warning. Use rated stands on level ground." }
+                ] } ] },
+          { "name": "Phase 2 · Pads & Rotor", "color": "#d97757",
+            "steps": [
+              { "t": "Remove caliper, hang it, swap pads & rotor", "allowMedia": true,
+                "body": [
+                  { "type": "steps", "items": ["Remove the two **caliper slide bolts**; lift the caliper off.", "**Hang the caliper** from the spring with a hook or zip tie — do not stress the hose.", "Remove the two caliper-bracket bolts, then the bracket.", "Pull the old rotor (a **retaining screw** or a rust bond may hold it).", "Fit the new rotor, bracket, and pads."] },
+                  { "type": "crit", "title": "Compress the piston", "text": "Push the caliper piston back with a C-clamp or piston tool before the caliper goes over the new, thicker pads. Watch the brake-fluid reservoir level as it rises." },
+                  { "type": "spec", "text": "Caliper bracket bolts ~89 ft-lb; slide/guide bolts ~27 ft-lb.", "verify": "Verify against the factory service manual for your exact VIN." }
+                ] } ] },
+          { "name": "Phase 3 · Verify", "color": "#3f8a49",
+            "steps": [
+              { "t": "Before you drive", "allowMedia": false,
+                "body": [
+                  { "type": "check", "items": ["Both sides done; hardware torqued to spec", "**Pump the brake pedal** until firm before moving", "Lug nuts torqued in a star pattern", "No leaks; wheels back on; hubcaps seated"] },
+                  { "type": "spec", "text": "Lug nuts ~89 ft-lb.", "verify": "Confirm the pattern and torque in the factory manual for your VIN." },
+                  { "type": "tip", "title": "Bed the brakes", "text": "Do several moderate 30→10 mph slowdowns (no full stops) to bed the pads, then let them cool." }
+                ] } ] }
+        ],
+        "tools": [
+          { "id": "jack-and-stands", "d": "Lift the front safely" },
+          { "id": "wheel-chocks", "d": "Chock the rears" },
+          { "id": "torque-wrench-half", "d": "Bracket & lug torque" },
+          { "id": "hex-torx-set", "d": "Caliper guide bolts are often Torx/hex" },
+          { "n": "Brake caliper piston tool / C-clamp", "d": "Compress the piston", "q": "brake caliper piston compression tool" },
+          { "id": "penetrating-oil", "d": "Rotor set screw / rust bond" }
+        ],
+        "parts": [
+          { "g": "Brakes", "items": [
+            { "n": "Front brake pads", "d": "Match 2.5i trim", "q": "2015 Subaru Outback front brake pads" },
+            { "n": "Front rotors (pair)", "d": "Match diameter to your VIN", "q": "2015 Subaru Outback front rotors" },
+            { "n": "Brake caliper grease", "d": "Slide pins + pad ears", "q": "silicone brake caliper grease" }
+          ] }
+        ]
+      },
+      "rating": { "avg": 4.5, "count": 8 },
+      "reviews": [
+        { "author": "boxer_wagon", "stars": 5, "text": "Did my '17 Outback in an afternoon. The piston-compression reminder and the bed-in step are the parts people skip.", "ts": 1716000000000 },
+        { "author": "newdiy", "stars": 4, "text": "Straightforward. Add a note to check the guide-pin boots while you're in there.", "ts": 1716600000000 }
+      ]
+    },
+    {
+      "id": "mkt-oil-change-universal",
+      "guide": {
+        "title": "Engine Oil & Filter Change — Universal",
+        "subtitle": "Drain, replace filter, refill to spec",
+        "safety": "Work on a cool-to-warm engine (not scalding hot). Support the vehicle on jack stands if you go underneath — never just the jack.",
+        "region": "us",
+        "env": ["driveway", "garage"],
+        "fits": { "universal": true },
+        "phases": [
+          { "name": "Phase 1 · Prep", "color": "#4a86c5",
+            "steps": [
+              { "t": "Warm briefly, park level, gather", "allowMedia": true,
+                "body": [
+                  { "type": "steps", "items": ["Run the engine 2–3 minutes so the oil flows, then shut off.", "Park **level**; if lifting, use **jack stands**.", "Confirm your **oil type/viscosity and capacity** and the correct **filter** for your VIN."] },
+                  { "type": "spec", "text": "Capacity and viscosity vary by engine.", "verify": "Look up the exact oil spec and capacity for your VIN before buying." }
+                ] } ] },
+          { "name": "Phase 2 · Drain & Filter", "color": "#d97757",
+            "steps": [
+              { "t": "Drain oil, replace filter, reinstall plug", "allowMedia": true,
+                "body": [
+                  { "type": "steps", "items": ["Position the **drain pan**, remove the drain plug, let it fully drain.", "Remove the **oil filter** (spin-off or cartridge); oil a new gasket/O-ring and install.", "Reinstall the drain plug with a **new crush washer**; snug — do not overtighten.", "Torque the plug and filter to spec."] },
+                  { "type": "danger", "title": "New crush washer", "text": "Reusing a flattened washer is a common slow-leak. Use a fresh one." },
+                  { "type": "spec", "text": "Drain plug torque is typically ~25–30 ft-lb (varies).", "verify": "Use the plug torque for your engine from the service manual." }
+                ] } ] },
+          { "name": "Phase 3 · Refill & Verify", "color": "#3f8a49",
+            "steps": [
+              { "t": "Refill, check level, leak-check", "allowMedia": false,
+                "body": [
+                  { "type": "check", "items": ["Correct oil type & capacity added", "Run 30s, shut off, wait, check the **dipstick** and top to the full mark", "No leaks at the plug or filter", "Reset the **oil-life monitor** if equipped"] },
+                  { "type": "tip", "title": "Dispose responsibly", "text": "Take the used oil and filter to an auto-parts store or recycling center — most take it free." }
+                ] } ] }
+        ],
+        "tools": [
+          { "id": "drain-pan", "d": "Catch the old oil" },
+          { "id": "jack-and-stands", "d": "If you go underneath" },
+          { "id": "torque-wrench-ftlb", "d": "Drain plug & filter" },
+          { "id": "funnel-set", "d": "Clean refill" },
+          { "id": "gloves-glasses", "d": "PPE" },
+          { "n": "Oil filter wrench", "d": "Match your filter style", "q": "oil filter wrench set" }
+        ],
+        "parts": [
+          { "g": "Service", "items": [
+            { "n": "Engine oil (correct viscosity & amount)", "d": "Match your VIN", "q": "full synthetic engine oil 5w30" },
+            { "n": "Oil filter", "d": "OEM or quality equivalent", "q": "engine oil filter for my vehicle" },
+            { "n": "Drain plug crush washer", "d": "Fresh one each change", "q": "oil drain plug crush washer assortment" }
+          ] }
+        ]
+      },
+      "rating": { "avg": 4.9, "count": 34 },
+      "reviews": [
+        { "author": "firsttimer", "stars": 5, "text": "Clear enough that I did my first oil change with zero drama. The crush-washer warning is gold.", "ts": 1715000000000 }
+      ]
+    }
+  ]
+}
