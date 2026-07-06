@@ -18,6 +18,22 @@ Two RPCs (see [`proto/repairs/v1/submissions.proto`](proto/repairs/v1/submission
 | `SubmitReview` | Appends a star rating + review to an existing catalog guide, recomputes its aggregate rating, opens a PR. |
 | `SubmitRepair` | Adds a full guide (the app's export JSON) as a new catalog entry, opens a PR. |
 
+### Claude moderation of submissions (subscription CLI)
+
+Every submission PR is moderated by **Claude via the Claude Code CLI**, authenticated
+by a **Claude subscription** (a `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`) —
+**no Anthropic API key** is used server-side. Two paths, both idempotent:
+
+- **Inline** — right after the service opens a PR it labels it `app-submission` and runs
+  moderation (fire-and-forget; set `MODERATE_ON_SUBMIT=false` to disable).
+- **Monitor** — `npm run monitor` (a second container) polls open `app-submission` PRs
+  that don't yet carry an `ai:*` label and moderates any it finds — the backstop.
+
+Moderation reads the PR's diff/title/body, asks Claude for an `approve` / `flag` / `reject`
+verdict with a summary, then **posts a comment and an `ai:<verdict>` label**. Set
+`AUTO_CLOSE_REJECT=true` to auto-close rejected PRs (otherwise they're just labeled). A
+maintainer always makes the final merge decision.
+
 It serves **Connect, gRPC, and gRPC-Web** on the same port, with a CORS shim so
 the browser can call it cross-origin. The app calls the Connect JSON protocol
 with a plain `fetch` (no client library needed).
@@ -36,12 +52,24 @@ Copy `.env.example` to `.env` and fill it in:
    `GITHUB_TOKEN`.
 3. **`ALLOWED_ORIGIN`** — the exact origin of your deployed PWA (or `*`).
 
+For moderation, also set **`CLAUDE_CODE_OAUTH_TOKEN`**: on a machine logged into a
+Claude Pro/Max account run `claude setup-token` and paste the token into `.env`.
+
 ## Run with Docker
+
+Service only:
 
 ```bash
 cd server
 docker build -t repairs-submit-service .
 docker run --rm -p 8080:8080 --env-file .env repairs-submit-service
+```
+
+Service **+ moderation monitor** together:
+
+```bash
+cd server
+docker compose up --build
 ```
 
 Then in the app: **⚙️ → Community submissions** → set **Backend URL** to the

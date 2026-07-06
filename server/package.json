@@ -6,7 +6,8 @@
   "description": "gRPC/Connect service that turns Google-authenticated app submissions into GitHub pull requests against the guide catalog.",
   "scripts": {
     "generate": "buf generate",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "monitor": "node src/monitor.js"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.2.3",

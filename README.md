@@ -46,8 +46,10 @@ on demand.
   sign in with **Google** and use **🚀 Submit as PR** (on a review) or **🚀 Submit to
   marketplace** (on a guide, via *Guides → Share/export*) to open a **GitHub pull request**
   adding your rating/review or full repair to the shared catalog. Reviews are AI-moderated
-  first; a maintainer merges. Without the service configured, everything stays on-device
-  (a **⧉ Contribute** action still copies your JSON and opens a prefilled issue).
+  in the app first, and the backend **moderates every submission PR again with Claude** (via
+  the Claude Code CLI on a subscription — no API key) posting an `approve`/`flag`/`reject`
+  verdict and label before a maintainer merges. Without the service configured, everything
+  stays on-device (a **⧉ Contribute** action still copies your JSON and opens a prefilled issue).
 - **Vehicles by VIN** — save your cars by **VIN** in **🚗 My vehicles**. Read the VIN three
   ways: **scan the barcode** on the driver's door-jamb sticker (offline, via the browser's
   `BarcodeDetector`), **📷 read a stamped VIN** (dashboard plate or sticker) with Claude

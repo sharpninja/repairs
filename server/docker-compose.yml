@@ -1,0 +1,16 @@
+# Two processes from one image: the submit service (opens PRs) and the monitor
+# (polls submission PRs and moderates them with the Claude Code CLI).
+# Both read the same .env. `docker compose up --build`.
+services:
+  submit:
+    build: .
+    env_file: .env
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  monitor:
+    build: .
+    env_file: .env
+    command: ["node", "src/monitor.js"]
+    restart: unless-stopped

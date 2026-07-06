@@ -1,5 +1,5 @@
 # ---- build: install deps + generate protobuf-es code from the .proto ----
-FROM node:22-alpine AS build
+FROM node:22-slim AS build
 WORKDIR /app
 COPY package.json ./
 RUN npm install
@@ -10,13 +10,20 @@ COPY src ./src
 # drop dev deps (buf) now that codegen is done
 RUN npm prune --omit=dev
 
-# ---- runtime ----
-FROM node:22-alpine
+# ---- runtime (slim, not alpine, so the Claude Code CLI's bundled tools work) ----
+FROM node:22-slim
 WORKDIR /app
 ENV NODE_ENV=production
+# Claude Code CLI — moderation runs through it, authenticated by a Claude
+# subscription via CLAUDE_CODE_OAUTH_TOKEN (no Anthropic API key).
+RUN npm install -g @anthropic-ai/claude-code && apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates git \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/gen ./gen
 COPY --from=build /app/src ./src
 COPY package.json ./
 EXPOSE 8080
+# Default: the submit service. Run the monitor as a second container with
+#   docker run ... repairs-submit-service node src/monitor.js
 CMD ["node", "src/server.js"]

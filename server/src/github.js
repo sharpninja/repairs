@@ -3,11 +3,23 @@
 // "Contents" + "Pull requests" read/write on the target repo, or a GitHub App
 // installation token. Users never see or hold this credential.
 import { Octokit } from "@octokit/rest";
+import { moderatePullRequest } from "./moderate.js";
 
 const OWNER = process.env.GITHUB_OWNER || "sharpninja";
 const REPO = process.env.GITHUB_REPO || "repairs";
 const BASE = process.env.GITHUB_BASE || "main";
 const FILE = process.env.MARKETPLACE_PATH || "docs/marketplace.json";
+const SUBMISSION_LABEL = process.env.SUBMISSION_LABEL || "app-submission";
+
+// Label the PR as an app submission and (unless disabled) kick off Claude
+// moderation immediately. Fire-and-forget so the RPC returns fast; the monitor
+// process is the backstop for anything missed.
+async function afterPR(kit, prNumber) {
+  try { await kit.issues.addLabels({ owner: OWNER, repo: REPO, issue_number: prNumber, labels: [SUBMISSION_LABEL] }); } catch (e) {}
+  if (process.env.MODERATE_ON_SUBMIT !== "false") {
+    moderatePullRequest(kit, OWNER, REPO, prNumber).catch((e) => console.error("inline moderation #" + prNumber + ":", e.message));
+  }
+}
 
 function octo() {
   const t = process.env.GITHUB_TOKEN;
@@ -53,6 +65,7 @@ export async function openReviewPR({ user, guideId, guideTitle, stars, text }) {
       `Guide: \`${guideId}\`\nRating: ${stars}★\n\n> ${String(text).replace(/\n/g, "\n> ")}\n\n` +
       `_Client-side AI-moderated before submission. Please verify before merging._`,
   });
+  await afterPR(kit, pr.data.number);
   return pr.data;
 }
 
@@ -71,5 +84,6 @@ export async function openRepairPR({ user, guide }) {
       `Catalog id: \`${id}\`\nPhases: ${(guide.phases || []).map((p) => p.name).join(" · ")}\n\n` +
       `⚠️ Review for safety and accuracy before merging.`,
   });
+  await afterPR(kit, pr.data.number);
   return pr.data;
 }
