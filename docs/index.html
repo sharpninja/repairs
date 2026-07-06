@@ -195,6 +195,7 @@
   .grow input{min-width:22px;height:22px;accent-color:var(--accent);flex:0 0 auto}
   .grow span{flex:1;min-width:0}.grow span b{display:block}.grow span small{color:var(--muted);font-size:.82em}
   .grow .del{background:none;border:none;color:var(--danger);font-size:1.15em;cursor:pointer;flex:0 0 auto}
+  .grow .exp{background:none;border:none;color:var(--accent);font-size:1.1em;cursor:pointer;flex:0 0 auto}
   .btnrow{display:flex;gap:10px;margin-top:14px}
   .btn{flex:1;padding:13px;border-radius:13px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
   .btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -836,10 +837,16 @@ function validGuide(o){ return o&&typeof o.title==="string"&&Array.isArray(o.pha
 function createGuide(o){
   const id="g"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
   const g={ id, builtin:false, title:o.title, subtitle:o.subtitle||"", safety:o.safety||"",
-    phases:(o.phases||[]).map((p,i)=>({ id:"ph"+i, name:p.name||("Phase "+(i+1)), color:p.color||"#8a8a80",
-      steps:(p.steps||[]).map(s=>({ t:s.t||"Step", allowMedia:s.allowMedia!==false, body:Array.isArray(s.body)?s.body:[{type:"note",text:String(s.body||"")}] })) })),
+    phases:(o.phases||[]).map((p,i)=>({ id:"ph"+i, name:String(p.name||("Phase "+(i+1))),
+      color:/^#[0-9a-fA-F]{3,8}$/.test(p.color)?p.color:"#8a8a80",
+      steps:(p.steps||[]).map(s=>({ t:String(s.t||"Step"), allowMedia:s.allowMedia!==false, body:Array.isArray(s.body)?s.body:[] })) })),  // never trust s.html on import
     tools:Array.isArray(o.tools)?o.tools:[], parts:Array.isArray(o.parts)?o.parts:[] };
   const arr=userGuides(); arr.push(g); saveUserGuides(arr); return g;
+}
+function exportGuide(g){
+  return { title:g.title, subtitle:g.subtitle||"", ...(g.safety?{safety:g.safety}:{}),
+    phases:(g.phases||[]).map(p=>({ name:p.name, color:p.color, steps:(p.steps||[]).map(s=>({ t:s.t, allowMedia:s.allowMedia!==false, body:s.body||[] })) })),
+    tools:g.tools||[], parts:g.parts||[] };
 }
 
 function openNew(){
@@ -875,12 +882,47 @@ function openNew(){
 
 function openGuides(){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
-  const rows=allGuides().map(g=>`<label class="grow"><input type="radio" name="gsel" value="${g.id}" ${g.id===ACTIVE.id?"checked":""}><span><b>${esc(g.title)}</b><small>${esc(g.subtitle||"")}${g.builtin?" · built-in":""}</small></span>${g.builtin?"":`<button class="del" data-del="${g.id}" title="Delete">🗑</button>`}</label>`).join("");
-  sheet("Guides", rows+`<div class="btnrow"><button class="btn pri" id="newG">＋ New Repair</button></div>`,
+  const rows=allGuides().map(g=>`<label class="grow"><input type="radio" name="gsel" value="${g.id}" ${g.id===ACTIVE.id?"checked":""}><span><b>${esc(g.title)}</b><small>${esc(g.subtitle||"")}${g.builtin?" · built-in":""}</small></span>${g.builtin?"":`<button class="exp" data-exp="${g.id}" title="Share / export">⧉</button><button class="del" data-del="${g.id}" title="Delete">🗑</button>`}</label>`).join("");
+  sheet("Guides", rows+`<div class="btnrow"><button class="btn" id="addG">⬇ Add guide</button><button class="btn pri" id="newG">＋ New Repair</button></div>`,
   (b)=>{
     b.querySelectorAll('input[name=gsel]').forEach(r=>r.onchange=()=>{ setActive(r.value); closeSheet(); goHome(); });
     b.querySelectorAll("[data-del]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); const id=x.dataset.del; saveUserGuides(userGuides().filter(g=>g.id!==id)); if(ACTIVE.id===id) setActive("crv-s1"); closeSheet(); openGuides(); });
+    b.querySelectorAll("[data-exp]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); openExport(guideById(x.dataset.exp)); });
+    b.querySelector("#addG").onclick=openAdd;
     b.querySelector("#newG").onclick=openNew;
+  });
+}
+
+function openExport(g){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const json=JSON.stringify(exportGuide(g),null,2);
+  sheet("Share: "+esc(g.title), `
+    <p class="fine">Copy this JSON or download it — anyone can add it via <b>Guides → ⬇ Add guide</b> on their own device.</p>
+    <div class="field"><textarea id="expJson" rows="12" readonly>${esc(json)}</textarea></div>
+    <div id="expStatus" class="fine"></div>
+    <div class="btnrow"><button class="btn" id="expCopy">⧉ Copy</button><button class="btn pri" id="expDl">⬇ Download .json</button></div>`,
+  (b)=>{
+    const ta=b.querySelector("#expJson"), st=b.querySelector("#expStatus");
+    b.querySelector("#expCopy").onclick=async()=>{ try{ await navigator.clipboard.writeText(json); st.textContent="Copied to clipboard."; }catch(e){ ta.focus(); ta.select(); st.textContent="Couldn't auto-copy — the text is selected, copy it manually."; } };
+    b.querySelector("#expDl").onclick=()=>{ const blob=new Blob([json],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=(g.title||"guide").replace(/[^\w.-]+/g,"_").slice(0,48)+".json"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000); st.textContent="Downloaded."; };
+  });
+}
+
+function openAdd(){
+  sheet("Add a guide", `
+    <p class="fine">Paste a guide's JSON — exported from this app (Guides → ⧉) or written in the New Repair <a href="#" id="loadEx">data format</a> — to add it to your library.</p>
+    <div class="field"><label>Guide JSON</label><textarea id="impJson" rows="12" placeholder='{ "title": "…", "phases": [ … ] }'></textarea></div>
+    <div id="impStatus" class="fine"></div>
+    <div class="btnrow"><button class="btn" id="iCancel">Cancel</button><button class="btn pri" id="iGo">Add guide</button></div>`,
+  (b)=>{
+    b.querySelector("#loadEx").onclick=(e)=>{ e.preventDefault(); b.querySelector("#impJson").value=SCHEMA_EXAMPLE; };
+    b.querySelector("#iCancel").onclick=closeSheet;
+    b.querySelector("#iGo").onclick=()=>{
+      const st=b.querySelector("#impStatus"); let obj;
+      try{ obj=extractJson(b.querySelector("#impJson").value); }catch(e){ st.innerHTML=`<span style="color:var(--danger)">⚠️ That isn't valid JSON.</span>`; return; }
+      if(!validGuide(obj)){ st.innerHTML=`<span style="color:var(--danger)">⚠️ Needs a title and at least one phase with steps.</span>`; return; }
+      const g=createGuide(obj); setActive(g.id); closeSheet(); goHome();
+    };
   });
 }
 
