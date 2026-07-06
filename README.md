@@ -26,7 +26,8 @@ in-app Claude helper. Lives in `docs/` so it deploys straight from **GitHub Page
 | [`docs/manifest.webmanifest`](docs/manifest.webmanifest) · [`docs/sw.js`](docs/sw.js) · `docs/icon-*.png` · [`docs/favicon.svg`](docs/favicon.svg) | PWA manifest, offline service worker, Honda-H icons and favicon. |
 
 **App features**
-- **Completion tracking** — overall % ring, per-phase progress, resume, reset. On-device.
+- **New Repair (Claude-generated guides)** — tap **＋ New Repair** to describe any vehicle + job; Claude drafts a full phased, safety-first guide in the app's format and it becomes a followable guide instantly (progress, media, Tools & Parts, and the contextual helper all work for it). The **⇄ Guides** picker switches between the built-in CR-V guide and your generated ones. The sheet ships an editable **boilerplate prompt** and shows the **data format** Claude fills in. Generated content renders through a safe typed-block renderer — the model returns structured JSON, never raw HTML. See [Data format](#new-repair-data-format) below.
+- **Completion tracking** — overall % ring, per-phase progress, resume, reset. Per-guide, on-device.
 - **Contemporaneous logging** — on most steps, capture a **📷 photo**, **🎙️ voice note**, or **🎬 video clip** as you work. Everything is timestamped and stored on-device (IndexedDB) and collected chronologically in the **Session Log**.
 - **Tools & Parts** — a categorized shopping list with **Amazon search links** for every tool and part (with a "verify fitment by VIN" caveat, since the compressor/condenser/ECT2 are 1.5T-specific and the A/C oil must be the R-1234yf type).
 - **Claude helper (vision)** — the *Ask Claude* button opens a chat primed with this exact job and its caveats. Attach a captured photo (or grab a frame from a video clip) and ask *"does this O-ring look seated right?"* — uses **claude-opus-4-8** with vision. Requires **your own Anthropic API key** (entered once via ⚙️, stored only in your browser).
@@ -50,6 +51,42 @@ python3 -m http.server 8099
 ```
 
 `file://` won't enable the camera, mic, install, or service worker — use `localhost` or HTTPS.
+
+<a id="new-repair-data-format"></a>
+**New Repair — data format**
+
+The New Repair sheet sends your prompt to `claude-opus-4-8` with a system prompt that
+constrains the reply to a single JSON object. The app validates it, then renders each
+step from **typed content blocks** (no raw HTML from the model). Shape:
+
+```jsonc
+{
+  "title": "2015 Subaru Outback 2.5i — Front Brakes",
+  "subtitle": "Front pads + rotors",
+  "safety": "Chock the wheels and use jack stands — never rely on the jack alone.",
+  "phases": [
+    { "name": "Phase 1 · Lift & Wheels", "color": "#4a86c5",
+      "steps": [
+        { "t": "Loosen lugs, lift, remove wheel", "allowMedia": true,
+          "body": [
+            { "type": "steps",  "items": ["Crack the **lug nuts** 1/2 turn…", "…"] },
+            { "type": "check",  "items": ["Lugs torqued to spec", "…"] },
+            { "type": "danger", "title": "Stands, not the jack", "text": "A jack can drop…" },
+            { "type": "crit",   "title": "…", "text": "…" },
+            { "type": "tip",    "title": "…", "text": "…" },
+            { "type": "spec",   "text": "Caliper bolts ~80 ft-lb", "verify": "Confirm vs the FSM for your VIN." },
+            { "type": "note",   "text": "Plain paragraph." }
+          ] } ] } ],
+  "tools": [ { "n": "Torque wrench (ft-lb)", "d": "Caliper & lug torque", "q": "amazon search terms" } ],
+  "parts": [ { "g": "Brakes", "items": [ { "n": "Front brake pads", "d": "Match your trim", "q": "…" } ] } ]
+}
+```
+
+Block types: `steps` (numbered), `check` (checklist — counts toward progress), `danger`/`crit`/`tip`
+(🛑/⚠️/💡 callouts), `spec` (torque/fluid value + a "verify against the FSM" note), `note`
+(paragraph). `**double asterisks**` render as bold. The system prompt tells Claude to lead with
+safety, keep one action per step, and flag any spec that must be verified against the factory
+service manual rather than presenting an invented number as certain.
 
 ### Printable / slideshow guide
 

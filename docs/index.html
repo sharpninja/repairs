@@ -184,6 +184,17 @@
   .field{margin:12px 0}
   .field label{display:block;font-weight:700;margin-bottom:6px;font-size:.92em}
   .field input{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:16px}
+  .field textarea{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:15px;font-family:inherit;resize:vertical;line-height:1.45}
+  .gbtns{display:flex;gap:8px;justify-content:center;margin-top:14px}
+  .pill2{background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:9px 15px;font-weight:800;font-size:.84em;cursor:pointer}
+  .pill2:active{transform:scale(.96)}
+  details.fmtd{margin:10px 0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 13px}
+  details.fmtd summary{cursor:pointer;font-weight:700;font-size:.9em}
+  pre.fmt{white-space:pre-wrap;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);overflow:auto;max-height:40vh;margin:.6em 0 0}
+  .grow{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 14px;margin:8px 0;cursor:pointer;box-shadow:var(--shadow)}
+  .grow input{min-width:22px;height:22px;accent-color:var(--accent);flex:0 0 auto}
+  .grow span{flex:1;min-width:0}.grow span b{display:block}.grow span small{color:var(--muted);font-size:.82em}
+  .grow .del{background:none;border:none;color:var(--danger);font-size:1.15em;cursor:pointer;flex:0 0 auto}
   .btnrow{display:flex;gap:10px;margin-top:14px}
   .btn{flex:1;padding:13px;border-radius:13px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
   .btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -410,11 +421,38 @@ const PARTS = [
   ]},
 ];
 
-/* flatten steps */
-const STEPS=[];
-PHASES.forEach((ph,pi)=>ph.steps.forEach((st,si)=>{ st.phase=ph;st.pi=pi;st.si=si;st.id=ph.id+"-"+si;st.gi=STEPS.length;STEPS.push(st);}));
-const TOTAL_STEPS=STEPS.length;
+/* ================= GUIDES (built-in + Claude-generated) ================= */
+const GKEY="crv-guides";
+const userGuides=()=>{ try{return JSON.parse(localStorage.getItem(GKEY))||[]}catch(e){return[]} };
+const saveUserGuides=a=>localStorage.setItem(GKEY,JSON.stringify(a));
+const BUILTIN={ id:"crv-s1", builtin:true, title:"2018 Honda CR-V 1.5T",
+  subtitle:"Session 1 · A/C + condenser, ECT2, HG-1.",
+  safety:"1) Never open A/C under pressure. 2) Cap every open line instantly. 3) New oiled O-ring at every fitting. 4) Hand-rotate the new compressor. 5) HG-1 cold, ½ bottle.",
+  phases:PHASES, tools:TOOLS, parts:PARTS };
+const allGuides=()=>[BUILTIN,...userGuides()];
+const guideById=id=>allGuides().find(g=>g.id===id)||BUILTIN;
+
+let ACTIVE, STEPS=[], TOTAL_STEPS=0;
+function rebuild(){ STEPS=[]; ACTIVE.phases.forEach((ph,pi)=>{ if(!ph.id) ph.id="ph"+pi; if(!Array.isArray(ph.steps)) ph.steps=[]; ph.steps.forEach((st,si)=>{ st.phase=ph;st.pi=pi;st.si=si;st.id=ACTIVE.id+"::"+ph.id+"-"+si;st.gi=STEPS.length;STEPS.push(st);}); }); TOTAL_STEPS=STEPS.length; }
+function setActive(id){ ACTIVE=guideById(id); state.activeGuide=ACTIVE.id; saveState(); rebuild(); }
 const stepById=id=>STEPS.find(s=>s.id===id);
+
+/* Render a Claude-generated step body (typed blocks) into SAFE HTML — the model
+   never emits raw HTML; every string is escaped, only **bold** is honored. */
+function bodyToHtml(body){
+  if(!Array.isArray(body)) return "";
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const rich=s=>esc(s).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+  return body.map(b=>{
+    if(!b||!b.type) return "";
+    if(b.type==="steps") return `<ol class="steps">${(b.items||[]).map(i=>`<li>${rich(i)}</li>`).join("")}</ol>`;
+    if(b.type==="check") return `<ul class="check" data-check>${(b.items||[]).map(i=>`<li><input type="checkbox"><label>${rich(i)}</label></li>`).join("")}</ul>`;
+    if(b.type==="danger"||b.type==="crit"||b.type==="tip"){ const ic=b.type==="danger"?"🛑":b.type==="crit"?"⚠️":"💡"; return `<div class="call ${b.type}"><span class="ic">${ic}</span><div>${b.title?`<span class="t">${esc(b.title)}</span>`:""}${rich(b.text)}</div></div>`; }
+    if(b.type==="spec") return `<div class="specbox">${rich(b.text)}${b.verify?` <span class="verify">${esc(b.verify)}</span>`:""}</div>`;
+    return `<p>${rich(b.text)}</p>`;
+  }).join("");
+}
+const stepInner=st=> st.html ? st.html : bodyToHtml(st.body);
 
 /* ================= STATE ================= */
 const LS="crvapp1";
@@ -434,7 +472,7 @@ function getMedia(stepId){ return new Promise((res)=>{ const out=[]; const tx=db
 function delMedia(id){ return new Promise((res)=>{ const tx=db.transaction("media","readwrite"); tx.objectStore("media").delete(id); tx.oncomplete=()=>res(); });}
 
 /* ================= PROGRESS ================= */
-const nChecks=st=>(st.html.match(/type="checkbox"/g)||[]).length;
+function nChecks(st){ if(st.html) return (st.html.match(/type="checkbox"/g)||[]).length; if(Array.isArray(st.body)){ let n=0; st.body.forEach(b=>{ if(b&&b.type==="check") n+=(b.items||[]).length; }); return n; } return 0; }
 function stepComplete(st){ const n=nChecks(st); if(n){ for(let i=0;i<n;i++) if(!state.checks[st.id+"#"+i]) return false; return true; } return !!state.done[st.id]; }
 function phaseProgress(ph){ return {done:ph.steps.filter(stepComplete).length,total:ph.steps.length}; }
 function overallPct(){ let d=0; STEPS.forEach(s=>{if(stepComplete(s))d++;}); return Math.round(d/TOTAL_STEPS*100); }
@@ -455,44 +493,53 @@ function render(){
 }
 
 function renderHome(){
-  const p=overallPct();
+  const p=overallPct(); const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   let rows="";
-  PHASES.forEach(ph=>{ const pr=phaseProgress(ph); const pct=Math.round(pr.done/pr.total*100); const all=pr.done===pr.total;
-    rows+=`<button class="prow ${all?'doneall':''}" data-gi="${ph.steps[0].gi}"><span class="dot" style="background:${ph.color}">${all?'✓':ph.id.slice(1)}</span><span class="meta"><b>${ph.name}</b><span class="bar"><i style="width:${pct}%"></i></span></span><span class="cnt">${pr.done}/${pr.total}</span></button>`; });
+  ACTIVE.phases.forEach((ph,pi)=>{ const pr=phaseProgress(ph); const pct=pr.total?Math.round(pr.done/pr.total*100):0; const all=pr.total&&pr.done===pr.total; const dnum=(String(ph.name||"").match(/\d+/)||[pi])[0];
+    rows+=`<button class="prow ${all?'doneall':''}" data-gi="${ph.steps[0]?ph.steps[0].gi:0}"><span class="dot" style="background:${ph.color||'#8a8a80'}">${all?'✓':dnum}</span><span class="meta"><b>${esc(ph.name)}</b><span class="bar"><i style="width:${pct}%"></i></span></span><span class="cnt">${pr.done}/${pr.total}</span></button>`; });
+  const hasTools=(ACTIVE.tools&&ACTIVE.tools.length)||(ACTIVE.parts&&ACTIVE.parts.length);
   view.innerHTML=`
     <div class="hero">
       <div class="ring" style="--v:${p}"><b>${p}%</b><small>complete</small></div>
-      <h1>2018 Honda CR-V 1.5T</h1>
-      <p class="lead" style="margin:.3em 0 0">Session 1 · A/C + condenser, ECT2, HG-1.<br>Tap a phase to start.</p>
+      <h1>${esc(ACTIVE.title)}</h1>
+      <p class="lead" style="margin:.3em 0 0">${esc(ACTIVE.subtitle||"")}<br>Tap a phase to start.</p>
+      <div class="gbtns"><button class="pill2" id="guidesBtn">⇄ Guides</button><button class="pill2" id="newBtn">＋ New Repair</button></div>
     </div>
     <div class="tiles">
-      <button class="tile" id="toolsT"><span class="em">🧰</span><b>Tools &amp; Parts</b><span>Shopping list + Amazon links</span></button>
+      ${hasTools?`<button class="tile" id="toolsT"><span class="em">🧰</span><b>Tools &amp; Parts</b><span>Shopping list + Amazon links</span></button>`:""}
       <button class="tile" id="logT"><span class="em">📋</span><b>Session Log</b><span>Your photos, voice &amp; video</span></button>
     </div>
     <div class="phaselist">${rows}</div>
-    <div class="call danger" style="margin-top:16px"><span class="ic">🛑</span><div><span class="t">The 5 rules</span>1) Never open A/C under pressure. 2) Cap every open line instantly. 3) New oiled O-ring at every fitting. 4) Hand-rotate the new compressor. 5) HG-1 cold, ½ bottle.</div></div>
+    ${ACTIVE.safety?`<div class="call danger" style="margin-top:16px"><span class="ic">🛑</span><div><span class="t">Safety</span>${esc(ACTIVE.safety)}</div></div>`:""}
     <div class="btnrow"><button class="btn" id="resetBtn">Reset progress</button><button class="btn" id="keyBtn">⚙️ Claude API key</button></div>
-    <p class="fine" style="margin-top:14px">Progress &amp; media (photos, voice, video) are stored on this device only. Camera/mic and install-to-home-screen need HTTPS or localhost. The Claude helper is the only feature that uses the internet — it calls the Anthropic API with your own key.</p>`;
+    <p class="fine" style="margin-top:14px">Progress &amp; media are stored on this device only. Camera/mic and install-to-home-screen need HTTPS or localhost. Only the Claude features (help &amp; New Repair) use the internet — via your own Anthropic API key.</p>`;
   view.querySelectorAll(".prow").forEach(b=>b.onclick=()=>go(+b.dataset.gi));
-  document.getElementById("toolsT").onclick=()=>{route="tools";render();window.scrollTo(0,0);};
+  const tt=document.getElementById("toolsT"); if(tt) tt.onclick=()=>{route="tools";render();window.scrollTo(0,0);};
   document.getElementById("logT").onclick=()=>{route="log";render();window.scrollTo(0,0);};
+  document.getElementById("guidesBtn").onclick=openGuides;
+  document.getElementById("newBtn").onclick=openNew;
   document.getElementById("resetBtn").onclick=resetProgress;
   document.getElementById("keyBtn").onclick=openKey;
 }
 
 function renderTools(){
-  const tools=TOOLS.map(t=>`<div class="prod"><div class="pi"><b>${t.n}</b><small>${t.d}</small></div><a class="buy" target="_blank" rel="noopener" href="${AMZ(t.q)}">Amazon ↗</a></div>`).join("");
-  const parts=PARTS.map(g=>`<div class="toolgrp"><h3>${g.g}</h3>${g.items.map(t=>`<div class="prod"><div class="pi"><b>${t.n}</b><small>${t.d}</small></div><a class="buy" target="_blank" rel="noopener" href="${AMZ(t.q)}">Amazon ↗</a></div>`).join("")}</div>`).join("");
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const prod=t=>`<div class="prod"><div class="pi"><b>${esc(t.n)}</b><small>${esc(t.d||"")}</small></div><a class="buy" target="_blank" rel="noopener" href="${AMZ(t.q||t.n||"")}">Amazon ↗</a></div>`;
+  const tools=(ACTIVE.tools||[]).map(prod).join("")||`<p class="fine">No tools listed for this guide.</p>`;
+  const parts=(ACTIVE.parts||[]).map(g=>`<div class="toolgrp"><h3>${esc(g.g||"Parts")}</h3>${(g.items||[]).map(prod).join("")}</div>`).join("");
+  const warn = ACTIVE.id==="crv-s1"
+    ? `Links are Amazon <b>searches</b>, not specific listings — verify the compressor/condenser/ECT2 match your VIN (1.5&nbsp;T, not 2.4L) and that A/C oil is the <b>R-1234yf</b> type before buying.`
+    : `Links are Amazon <b>searches</b>, not specific listings — verify every part matches your exact vehicle (engine/trim) before buying.`;
   view.innerHTML=`
     <h2>🧰 Tools &amp; Parts</h2>
-    <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Check fitment first</span>Links are Amazon <b>searches</b>, not specific listings — verify the compressor/condenser/ECT2 match your VIN (1.5&nbsp;T, not 2.4L) and that A/C oil is the <b>R-1234yf</b> type before buying.</div></div>
+    <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Check fitment first</span>${warn}</div></div>
     <div class="toolgrp"><h3>Tools</h3>${tools}</div>
-    <h2 style="margin-top:22px">Parts</h2>${parts}
+    ${parts?`<h2 style="margin-top:22px">Parts</h2>${parts}`:""}
     <p class="fine" style="margin-top:14px">These open Amazon in a new tab and need internet. No affiliate tags — plain searches.</p>`;
 }
 
 async function renderLog(){
-  const all=await getMedia(null);
+  const all=(await getMedia(null)).filter(m=>String(m.stepId).startsWith(ACTIVE.id+"::"));
   all.sort((a,b)=>b.ts-a.ts);
   if(!all.length){ view.innerHTML=`<h2>📋 Session Log</h2><p class="lead">No captures yet.</p><p class="fine">On most steps, tap <b>Photo</b>, <b>Voice</b>, or <b>Video</b> to log your work as you go — everything shows here in order, timestamped.</p>`; return; }
   view.innerHTML=`<h2>📋 Session Log</h2><p class="fine" style="margin-bottom:8px">${all.length} capture${all.length>1?'s':''}, newest first. Stored on this device.</p><div class="medialist" id="ml"></div>`;
@@ -532,14 +579,15 @@ function mediaEl(m, showStep){
 }
 
 function renderStep(st){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   document.getElementById("topTitle").textContent=st.phase.name;
-  const fig=st.diagram?`<figure>${DIAGRAMS[st.diagram]}</figure>`:"";
+  const fig=(st.diagram&&DIAGRAMS[st.diagram])?`<figure>${DIAGRAMS[st.diagram]}</figure>`:"";
   const log=st.allowMedia?`<div class="logbar"><div class="logbtns">
       <button class="lbtn" data-cap="photo">📷 Photo</button>
       <button class="lbtn" data-cap="audio">🎙️ Voice</button>
       <button class="lbtn" data-cap="video">🎬 Video</button></div>
       <div class="medialist" id="medialist"></div></div>`:"";
-  view.innerHTML=`<span class="kicker" style="background:${st.phase.color}">${st.phase.name}</span><h2>${st.t}</h2>${fig}${st.html}${log}`;
+  view.innerHTML=`<span class="kicker" style="background:${st.phase.color||'#8a8a80'}">${esc(st.phase.name)}</span><h2>${esc(st.t)}</h2>${fig}${stepInner(st)}${log}`;
   view.querySelectorAll('input[type=checkbox]').forEach((cb,i)=>{
     const key=st.id+"#"+i; cb.checked=!!state.checks[key];
     if(cb.checked) cb.closest('li').querySelector('label').classList.add('done');
@@ -626,6 +674,15 @@ Key confirmed facts and safety rules:
 - Cooling system has NO bleed bolt — self-bleeds via a pressurized expansion/degas tank. Fill through the tank, cap loose, heater HIGH, idle until the radiator fan cycles twice, top off. Honda Type 2 (blue) 50/50. HG-1 goes in COLD, half bottle.
 - A/C torque values are typical-Honda (line flanges ~9.8-12 N·m, compressor mounts ~24-25 N·m/18 lb-ft, condenser fittings ~9.8 N·m) — verify against the factory service manual for the VIN.
 Be concise and practical for someone in a driveway with a phone. Lead with the answer, prioritize safety, and say when a spec must be verified against the factory manual. If they attach a photo, describe what you see and whether it looks correct (O-ring seated, fitting clean, connector fully seated) and flag anything risky. You are not a substitute for a professional.`;
+BUILTIN.context = GUIDE_CONTEXT;
+function helperSystem(){
+  if(ACTIVE && ACTIVE.context) return ACTIVE.context;
+  let s=`You are the in-app assistant for a DIY repair guide: "${ACTIVE.title}". ${ACTIVE.subtitle||""}\nThe guide's phases and steps:\n`;
+  ACTIVE.phases.forEach(ph=>{ s+=`- ${ph.name}: `+ph.steps.map(st=>st.t).join("; ")+"\n"; });
+  if(ACTIVE.safety) s+=`Safety notes: ${ACTIVE.safety}\n`;
+  s+=`Help a person in a driveway with a phone. Be concise, lead with the answer, prioritize safety, and tell them to verify torque and fluid specs against the factory service manual for their exact vehicle. If they attach a photo, say whether it looks correct and flag risks. You are not a substitute for a professional.`;
+  return s;
+}
 let chatHistory=[], pendingImage=null;
 
 function openKey(){
@@ -667,7 +724,7 @@ async function sendToClaude(text,ctx,log,typing,foot){
   try{
     const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
       headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model:"claude-opus-4-8",max_tokens:1024,system:GUIDE_CONTEXT+"\n\n"+ctx,messages:chatHistory.map(m=>({role:m.role,content:m.content}))})});
+      body:JSON.stringify({model:"claude-opus-4-8",max_tokens:1024,system:helperSystem()+"\n\n"+ctx,messages:chatHistory.map(m=>({role:m.role,content:m.content}))})});
     typing.classList.add("hidden");
     if(!res.ok){ throw new Error("API "+res.status+": "+(await res.text()).slice(0,300)); }
     const data=await res.json();
@@ -692,10 +749,146 @@ function closeSheet(){ const s=document.getElementById("sheet"); if(s) s.remove(
 function resetProgress(){ sheet("Reset progress?", `<p>Clears all checkmarks and step progress on this device. Your saved photos, voice notes, and videos are kept. Continue?</p><div class="btnrow"><button class="btn" id="rc">Cancel</button><button class="btn dgr" id="ry">Reset</button></div>`,
   (b)=>{ b.querySelector("#rc").onclick=closeSheet; b.querySelector("#ry").onclick=()=>{ state.checks={};state.done={}; saveState(); closeSheet(); render(); }; }); }
 
+/* ================= NEW REPAIR (Claude-generated guides) ================= */
+const BOILERPLATE = `Create a DIY repair guide for:
+Vehicle: <year make model engine — e.g. 2015 Subaru Outback 2.5i>
+Job(s): <what to repair — e.g. replace front brake pads and rotors>
+
+Audience: someone in their driveway with common hand tools, reading on a phone.
+Requirements:
+- Break it into clear phases: prep & safety first, then the job, then reassembly and a final verification/checklist phase.
+- One action per step. Put critical safety warnings inline as callouts.
+- Give torque values and specs where they matter; if a value is model-specific or you're unsure, provide a typical value but tell me to verify it against the factory service manual for my VIN.
+- Include a Tools list and a Parts list with good Amazon search terms.
+- Note anything that really should be done by a shop.`;
+
+const SCHEMA_SYSTEM = `You generate structured DIY vehicle repair guides for a phone app. Respond with a SINGLE JSON object and NOTHING else — no prose, no markdown, no code fences.
+
+JSON shape:
+{
+  "title": "string — vehicle + job",
+  "subtitle": "string — one short line",
+  "safety": "string — the 1-2 most important safety rules (optional)",
+  "phases": [
+    { "name": "string — e.g. \\"Phase 1 · Lift & Wheels\\"",
+      "color": "string — hex like \\"#4a86c5\\"",
+      "steps": [
+        { "t": "string — the step title (one action)",
+          "allowMedia": true,
+          "body": [
+            {"type":"steps","items":["string","..."]},
+            {"type":"check","items":["string","..."]},
+            {"type":"danger","title":"string","text":"string"},
+            {"type":"crit","title":"string","text":"string"},
+            {"type":"tip","title":"string","text":"string"},
+            {"type":"spec","text":"string","verify":"string"},
+            {"type":"note","text":"string"}
+          ] } ] } ],
+  "tools": [ {"n":"name","d":"why it's needed","q":"amazon search terms"} ],
+  "parts": [ {"g":"group name","items":[ {"n":"name","d":"note","q":"amazon search terms"} ]} ]
+}
+
+Block types: "steps" = numbered sub-steps; "check" = a checklist (these count toward progress — include at least one, e.g. a final "before you drive" list); "danger" = critical safety; "crit" = easy to get wrong; "tip" = helpful; "spec" = a torque/fluid value with a "verify" note; "note" = a plain paragraph.
+
+Rules:
+- Wrap emphasis in **double asterisks** for bold.
+- Put safety-critical warnings as "danger" blocks, inline where they apply.
+- Give real torque and fluid specs where they matter. If a number is model-specific or you are not certain, still give a typical value but add a "spec" block whose "verify" note tells the user to confirm it against the factory service manual for their VIN. Never present an invented number as certain.
+- Keep each step to one action; keep text concise for a phone.
+- 3-8 phases, safety/prep first and a verification phase last.
+- Fill tools and parts with useful Amazon search terms.
+- Output valid JSON only.`;
+
+const SCHEMA_EXAMPLE = `{
+  "title": "2015 Subaru Outback 2.5i — Front Brakes",
+  "subtitle": "Front pads + rotors",
+  "safety": "Chock the wheels and use jack stands — never rely on the jack alone.",
+  "phases": [
+    { "name": "Phase 1 · Lift & Wheels", "color": "#4a86c5",
+      "steps": [
+        { "t": "Loosen lugs, lift, remove wheel", "allowMedia": true,
+          "body": [
+            {"type":"steps","items":[
+              "Crack the **lug nuts** 1/2 turn while on the ground.",
+              "Lift and set the car on **jack stands**; chock the rears.",
+              "Remove the wheel."
+            ]},
+            {"type":"danger","title":"Stands, not the jack","text":"A jack can drop. Use rated stands on level ground."}
+          ] } ] },
+    { "name": "Phase 4 · Verify", "color": "#3f8a49",
+      "steps": [
+        { "t": "Before you drive", "allowMedia": false,
+          "body": [
+            {"type":"check","items":[
+              "Lugs torqued to spec",
+              "**Pump the brake pedal** until firm before moving",
+              "No leaks; wheels back on"
+            ]},
+            {"type":"spec","text":"Caliper bracket bolts ~80 ft-lb; lug nuts ~65 ft-lb.","verify":"Verify against the factory service manual for your VIN."}
+          ] } ] }
+  ],
+  "tools": [ {"n":"Torque wrench (ft-lb)","d":"Caliper & lug torque","q":"1/2 inch drive torque wrench ft-lb"} ],
+  "parts": [ {"g":"Brakes","items":[ {"n":"Front brake pads","d":"Match your trim","q":"2015 Subaru Outback front brake pads"} ]} ]
+}`;
+
+function extractJson(txt){ let s=(txt||"").trim(); const a=s.indexOf("{"), b=s.lastIndexOf("}"); if(a>=0&&b>a) s=s.slice(a,b+1); return JSON.parse(s); }
+function validGuide(o){ return o&&typeof o.title==="string"&&Array.isArray(o.phases)&&o.phases.length&&o.phases.every(p=>p&&Array.isArray(p.steps)&&p.steps.length); }
+function createGuide(o){
+  const id="g"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
+  const g={ id, builtin:false, title:o.title, subtitle:o.subtitle||"", safety:o.safety||"",
+    phases:(o.phases||[]).map((p,i)=>({ id:"ph"+i, name:p.name||("Phase "+(i+1)), color:p.color||"#8a8a80",
+      steps:(p.steps||[]).map(s=>({ t:s.t||"Step", allowMedia:s.allowMedia!==false, body:Array.isArray(s.body)?s.body:[{type:"note",text:String(s.body||"")}] })) })),
+    tools:Array.isArray(o.tools)?o.tools:[], parts:Array.isArray(o.parts)?o.parts:[] };
+  const arr=userGuides(); arr.push(g); saveUserGuides(arr); return g;
+}
+
+function openNew(){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  sheet("＋ New Repair Guide", `
+    <p class="fine">Describe the vehicle and the job — Claude drafts a phased, safety-first guide in this app's format and you can start following it right away. Uses your Anthropic API key (same one as the helper).</p>
+    <div class="field"><label>Getting-started prompt (edit freely)</label><textarea id="genPrompt" rows="11">${esc(BOILERPLATE)}</textarea></div>
+    <details class="fmtd"><summary>Data format Claude fills in</summary><pre class="fmt">${esc(SCHEMA_EXAMPLE)}</pre></details>
+    <div id="genStatus" class="fine" style="margin-top:8px"></div>
+    <div class="btnrow"><button class="btn" id="gCancel">Cancel</button><button class="btn pri" id="gGo">✨ Generate</button></div>`,
+  (b)=>{
+    b.querySelector("#gCancel").onclick=closeSheet;
+    const go=b.querySelector("#gGo"), status=b.querySelector("#genStatus");
+    go.onclick=async()=>{
+      if(!state.apiKey){ closeSheet(); openKey(); return; }
+      const prompt=b.querySelector("#genPrompt").value.trim(); if(!prompt) return;
+      go.disabled=true; status.textContent="✨ Generating with Claude… this can take 20–40s.";
+      try{
+        const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+          headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+          body:JSON.stringify({model:"claude-opus-4-8",max_tokens:8192,system:SCHEMA_SYSTEM,messages:[{role:"user",content:[{type:"text",text:prompt}]}]})});
+        if(!res.ok) throw new Error("API "+res.status+": "+(await res.text()).slice(0,200));
+        const data=await res.json();
+        if(data.stop_reason==="refusal") throw new Error("Claude declined this request.");
+        const txt=(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("");
+        let obj; try{ obj=extractJson(txt); }catch(e){ throw new Error("Couldn't parse the guide (it may have been cut off). Try a more focused request or run it again."); }
+        if(!validGuide(obj)) throw new Error("The generated guide was missing phases or steps. Try again.");
+        const g=createGuide(obj); setActive(g.id); closeSheet(); goHome();
+      }catch(err){ go.disabled=false; status.innerHTML=`<span style="color:var(--danger)">⚠️ ${esc(String(err.message||err))}</span>`; }
+    };
+  });
+}
+
+function openGuides(){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const rows=allGuides().map(g=>`<label class="grow"><input type="radio" name="gsel" value="${g.id}" ${g.id===ACTIVE.id?"checked":""}><span><b>${esc(g.title)}</b><small>${esc(g.subtitle||"")}${g.builtin?" · built-in":""}</small></span>${g.builtin?"":`<button class="del" data-del="${g.id}" title="Delete">🗑</button>`}</label>`).join("");
+  sheet("Guides", rows+`<div class="btnrow"><button class="btn pri" id="newG">＋ New Repair</button></div>`,
+  (b)=>{
+    b.querySelectorAll('input[name=gsel]').forEach(r=>r.onchange=()=>{ setActive(r.value); closeSheet(); goHome(); });
+    b.querySelectorAll("[data-del]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); const id=x.dataset.del; saveUserGuides(userGuides().filter(g=>g.id!==id)); if(ACTIVE.id===id) setActive("crv-s1"); closeSheet(); openGuides(); });
+    b.querySelector("#newG").onclick=openNew;
+  });
+}
+
 /* ================= BOOT ================= */
 document.getElementById("homeBtn").onclick=goHome;
 document.getElementById("themeBtn").onclick=cycleTheme;
 document.getElementById("ask").onclick=()=>openChat(null);
+setActive(state.activeGuide||"crv-s1");
 openDB().then(render).catch(render);
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
