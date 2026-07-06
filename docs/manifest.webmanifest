@@ -1,0 +1,16 @@
+{
+  "name": "CR-V 1.5T Repair — Session 1",
+  "short_name": "CR-V Repair",
+  "description": "Offline DIY guide for a 2018 Honda CR-V 1.5T: A/C compressor + condenser, ECT2 sensor, and Bar's Leaks HG-1. Progress tracking, per-step camera, and an in-app Claude helper.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
