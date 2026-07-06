@@ -2,7 +2,8 @@
 
 A small **gRPC / Connect** service (Node, Dockerized) that turns
 **Google-authenticated** submissions from the Repairs PWA into **GitHub pull
-requests** against the guide catalog ([`docs/marketplace.json`](../docs/marketplace.json)).
+requests** against the guide catalog in the **data repo** (`sharpninja/repairs-data`,
+`marketplace.json` on the **`approved`** branch — separate from the app code repo).
 
 - The browser signs the user in with **Google Identity Services** and sends the
   Google **ID token** with the payload.
@@ -47,9 +48,11 @@ Copy `.env.example` to `.env` and fill it in:
    origin (e.g. `https://sharpninja.github.io`) to **Authorized JavaScript
    origins**. Put the client ID in `GOOGLE_CLIENT_ID` — and the **same** value in
    the app under **⚙️ → Community submissions → Google client ID**.
-2. **GitHub credential** — a fine-grained PAT scoped to the repo with **Contents**
-   and **Pull requests** = Read/Write (or a GitHub App installation token) in
-   `GITHUB_TOKEN`.
+2. **GitHub credential** — a **GitHub App** (recommended) installed on the **data
+   repo** `sharpninja/repairs-data` with **Contents + Pull requests + Issues =
+   Read/Write**, or a fine-grained PAT with the same scopes. `./setup.sh` can mint a
+   scoped token for you; the service auto-refreshes when the `GITHUB_APP_*` vars are set.
+   The data repo is bootstrapped with [`scripts/init-data-repo.sh`](../scripts/init-data-repo.sh).
 3. **`ALLOWED_ORIGIN`** — the exact origin of your deployed PWA (or `*`).
 
 For moderation, also set **`CLAUDE_CODE_OAUTH_TOKEN`**: on a machine logged into a

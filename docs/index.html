@@ -620,9 +620,9 @@ function saveState(){ localStorage.setItem(LS, JSON.stringify(state)); }
 let state=load(); state.checks=state.checks||{}; state.done=state.done||{}; state.apiKey=state.apiKey||"";
 state.wakeWord=state.wakeWord||"hey claude"; if(state.voiceReplies===undefined) state.voiceReplies=true;
 state.activeVehicle=state.activeVehicle||"";
-state.submitApi=state.submitApi||""; state.googleClientId=state.googleClientId||"";
-/* Community PR submission: set these in ⚙️ → Community (or bake defaults here). */
-const CONFIG={ submitApi:"", googleClientId:"" };
+state.submitApi=state.submitApi||""; state.googleClientId=state.googleClientId||""; state.dataUrl=state.dataUrl||"";
+/* Community PR submission + data source: set these in ⚙️ → Community (or bake defaults here). */
+const CONFIG={ submitApi:"", googleClientId:"", dataUrl:"" };
 const submitApi=()=>(state.submitApi||CONFIG.submitApi||"").trim();
 const googleClientId=()=>(state.googleClientId||CONFIG.googleClientId||"").trim();
 const MODELS=[
@@ -891,9 +891,11 @@ function openKey(){
       <p class="fine">Optional. To submit ratings, reviews, and repairs as GitHub pull requests, run the <b>submit service</b> (see <code>server/</code>) and enter its URL plus your Google OAuth client ID. Leave blank to keep everything on-device.</p>
       <div class="field"><label>Backend URL</label><input id="subApiIn" placeholder="https://submit.example.com" value="${(state.submitApi||"").replace(/"/g,'&quot;')}"></div>
       <div class="field"><label>Google client ID</label><input id="gcidIn" placeholder="xxxx.apps.googleusercontent.com" value="${(state.googleClientId||"").replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Catalog data URL</label><input id="dataUrlIn" placeholder="${DEFAULT_DATA_URL}" value="${(state.dataUrl||"").replace(/"/g,'&quot;')}"></div>
+      <p class="fine">The catalog is published on the <b>approved</b> branch of the data repo and read directly. Leave blank to use the default; a bundled copy is the offline fallback.</p>
     </details>
     <div class="btnrow"><button class="btn" id="kc">Cancel</button><button class="btn pri" id="ks">Save</button></div>`,
-  (b)=>{ b.querySelector("#ks").onclick=()=>{ state.apiKey=b.querySelector("#keyIn").value.trim(); state.model=b.querySelector("#modelIn").value; state.submitApi=b.querySelector("#subApiIn").value.trim(); state.googleClientId=b.querySelector("#gcidIn").value.trim(); saveState(); closeSheet(); }; b.querySelector("#kc").onclick=closeSheet; });
+  (b)=>{ b.querySelector("#ks").onclick=()=>{ state.apiKey=b.querySelector("#keyIn").value.trim(); state.model=b.querySelector("#modelIn").value; state.submitApi=b.querySelector("#subApiIn").value.trim(); state.googleClientId=b.querySelector("#gcidIn").value.trim(); state.dataUrl=b.querySelector("#dataUrlIn").value.trim(); _marketCat=null; saveState(); closeSheet(); }; b.querySelector("#kc").onclick=closeSheet; });
 }
 
 /* ---- VIN reading: door-jamb barcode (offline BarcodeDetector) + dashboard-stamp OCR via Claude ---- */
@@ -1017,9 +1019,15 @@ function openGarage(){
 
 /* ================= MARKETPLACE (curated catalog + on-device ratings/AI-moderated reviews) ================= */
 const MKT_CACHE="crv-market-cache", REV_KEY="crv-reviews";
+/* Catalog data lives in a SEPARATE data repo, published on its "approved" branch,
+   which the app reads directly. docs/marketplace.json is only a bundled offline seed. */
+const DEFAULT_DATA_URL="https://raw.githubusercontent.com/sharpninja/repairs-data/approved/marketplace.json";
+const dataUrl=()=>(state.dataUrl||CONFIG.dataUrl||DEFAULT_DATA_URL).trim();
 let _marketCat=null;
 async function loadMarket(){ if(_marketCat) return _marketCat;
-  try{ const res=await fetch("./marketplace.json",{cache:"no-cache"}); if(res.ok){ const j=await res.json(); localStorage.setItem(MKT_CACHE,JSON.stringify(j)); _marketCat=j; return j; } }catch(e){}
+  // Prefer the approved data branch; fall back to the bundled seed, then cache, then built-in.
+  const sources=[dataUrl(), "./marketplace.json"].filter(Boolean);
+  for(const u of sources){ try{ const res=await fetch(u,{cache:"no-cache"}); if(res.ok){ const j=await res.json(); if(j&&Array.isArray(j.guides)){ localStorage.setItem(MKT_CACHE,JSON.stringify(j)); _marketCat=j; return j; } } }catch(e){} }
   const cached=localStorage.getItem(MKT_CACHE); if(cached){ try{ _marketCat=JSON.parse(cached); return _marketCat; }catch(e){} }
   _marketCat={version:0,guides:[{id:"mkt-crv-s1",builtinRef:"crv-s1",rating:{avg:0,count:0},reviews:[]}]}; return _marketCat; }
 const reviewsStore=()=>{ try{return JSON.parse(localStorage.getItem(REV_KEY))||{}}catch(e){return{}} };
@@ -1036,7 +1044,7 @@ function contributeReview(payload){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   const json=JSON.stringify(payload,null,2);
   try{ navigator.clipboard.writeText(json); }catch(e){}
-  const url="https://github.com/sharpninja/repairs/issues/new?title="+encodeURIComponent("Guide review: "+(payload.guideTitle||payload.guideId))+"&body="+encodeURIComponent("Proposed review (from the app):\n\n```json\n"+json+"\n```");
+  const url="https://github.com/sharpninja/repairs-data/issues/new?title="+encodeURIComponent("Guide review: "+(payload.guideTitle||payload.guideId))+"&body="+encodeURIComponent("Proposed review (from the app):\n\n```json\n"+json+"\n```");
   sheet("⧉ Contribute review", `<p class="fine">There's no shared server, so your reviews live on your device. To add yours to the public catalog, it's been <b>copied to your clipboard</b> — open an issue on the repo and paste it (maintainers fold approved reviews into the catalog).</p>
     <div class="field"><textarea rows="8" readonly>${esc(json)}</textarea></div>
     <div class="btnrow"><button class="btn" id="cClose">Close</button><a class="btn pri" href="${url}" target="_blank" rel="noopener">Open GitHub issue ↗</a></div>`,

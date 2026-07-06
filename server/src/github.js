@@ -7,10 +7,12 @@ import { createAppAuth } from "@octokit/auth-app";
 import { readFileSync } from "node:fs";
 import { moderatePullRequest } from "./moderate.js";
 
+// Data lives in a separate repo, published on its "approved" branch. Submissions
+// open PRs against that branch; merging publishes to what the app reads.
 const OWNER = process.env.GITHUB_OWNER || "sharpninja";
-const REPO = process.env.GITHUB_REPO || "repairs";
-const BASE = process.env.GITHUB_BASE || "main";
-const FILE = process.env.MARKETPLACE_PATH || "docs/marketplace.json";
+const REPO = process.env.GITHUB_REPO || "repairs-data";
+const BASE = process.env.GITHUB_BASE || "approved";
+const FILE = process.env.MARKETPLACE_PATH || "marketplace.json";
 const SUBMISSION_LABEL = process.env.SUBMISSION_LABEL || "app-submission";
 
 // Label the PR as an app submission and (unless disabled) kick off Claude

@@ -33,11 +33,12 @@ on demand.
   shown as chips on the dashboard and in the switcher. The region also **picks the Amazon
   marketplace** for that guide's Tools & Parts links (e.g. a UK guide links to
   `amazon.co.uk`), so parts land in the right store.
-- **Marketplace + discovery by vehicle** — **🛒 Marketplace** browses a curated catalog
-  ([`docs/marketplace.json`](docs/marketplace.json)). Guides carry **fitment metadata**
-  (makes / models / year range, or *universal*), so with an active vehicle a **"For your
-  2018 Honda CR-V"** section surfaces the guides that match — install any with one tap.
-  The catalog is cached for **offline** browsing.
+- **Marketplace + discovery by vehicle** — **🛒 Marketplace** browses a curated catalog.
+  Guides carry **fitment metadata** (makes / models / year range, or *universal*), so with
+  an active vehicle a **"For your 2018 Honda CR-V"** section surfaces the guides that match —
+  install any with one tap. The catalog is read from a **separate data repo's published
+  branch** (see [Code/data split](#codedata-split)) and cached for **offline** browsing,
+  with [`docs/marketplace.json`](docs/marketplace.json) as the bundled seed/fallback.
 - **Ratings & reviews** — rate a guide with **stars** and write a review. Ratings shown
   combine the community seed with your own, stored **on-device**.
 - **Submit to the catalog by PR (optional)** — with the [submit service](server/) running,
@@ -130,7 +131,8 @@ relative, so it runs correctly under the `/<repo>/` subpath.
 | Path | What it is |
 |------|-----------|
 | [`docs/index.html`](docs/index.html) | **The entire app** — self-contained HTML/CSS/JS. Home dashboard, step flow, Tools & Parts, Session Log, New Repair, Guides. |
-| [`docs/marketplace.json`](docs/marketplace.json) | **Curated guide catalog** — the marketplace's guides + fitment metadata and seed ratings/reviews. Cached for offline. |
+| [`docs/marketplace.json`](docs/marketplace.json) | **Bundled seed** of the guide catalog — offline fallback. The live catalog is served from the separate data repo's `approved` branch. |
+| [`scripts/init-data-repo.sh`](scripts/init-data-repo.sh) | Bootstraps the `sharpninja/repairs-data` repo + `approved` branch from the seed (uses the GitHub CLI). |
 | `docs/manifest.webmanifest` · `docs/sw.js` · `docs/icon-*.png` · [`docs/favicon.svg`](docs/favicon.svg) | PWA manifest, offline service worker, Honda-H icons and favicon. |
 | [`guide/`](guide/) | The built-in CR-V guide as a standalone **slideshow + printable PDF** (see [below](#also-available-as-a-slideshow--pdf)). |
 | [`server/`](server/) | **Optional** Dockerized **gRPC / Connect** submit service — Google sign-in → session key → GitHub PRs, with Claude moderation, per-user trust, and rate limiting. The app works fully without it. |
@@ -155,6 +157,33 @@ for you, using the optional [`server/`](server/) service:
 Because GitHub write access can't come from a Google login alone (and browsers can't call
 GitHub's token endpoints directly), this one feature needs a tiny backend — everything else
 in the app is backend-free.
+
+---
+
+## Code/data split
+
+Code and data live in **two repos**:
+
+- **`sharpninja/repairs`** (this repo) — the app, the submit service, tests. Ships a
+  bundled **seed** catalog at [`docs/marketplace.json`](docs/marketplace.json) for offline
+  first-load.
+- **`sharpninja/repairs-data`** — the **published data**. The catalog lives on its
+  **`approved`** branch, and the app reads it directly:
+  `https://raw.githubusercontent.com/sharpninja/repairs-data/approved/marketplace.json`
+  (override in **⚙️ → Community submissions → Catalog data URL**).
+
+**Publishing flow:** community submissions open **pull requests against `approved`** in the
+data repo; the submit service opens and Claude-moderates them; **merging a PR publishes** the
+change to what every app reads. No app redeploy needed to update data.
+
+**Bootstrap the data repo** (needs the GitHub CLI, `gh auth login`):
+
+```bash
+scripts/init-data-repo.sh sharpninja repairs-data docs/marketplace.json
+```
+
+Then install your **GitHub App** (or scope the PAT) on `repairs-data`; the submit service
+already defaults to `GITHUB_REPO=repairs-data`, `GITHUB_BASE=approved`.
 
 ---
 

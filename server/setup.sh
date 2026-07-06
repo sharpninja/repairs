@@ -76,7 +76,7 @@ gh_generate() {
   command -v node >/dev/null 2>&1 || { warn "node is needed to generate a token — paste a PAT instead."; return 1; }
   local owner repo app pem out token inst esc
   owner="$(get_env GITHUB_OWNER)"; repo="$(get_env GITHUB_REPO)"
-  [ -n "$owner" ] || owner="sharpninja"; [ -n "$repo" ] || repo="repairs"
+  [ -n "$owner" ] || owner="sharpninja"; [ -n "$repo" ] || repo="repairs-data"
   warn "Create a GitHub App with repo permissions: Contents RW, Pull requests RW, Issues RW, Metadata R;"
   warn "install it on ${owner}/${repo}; download its private key (.pem). Then:"
   read -r -p "GitHub App ID: " app

@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 
 const appId = process.env.GITHUB_APP_ID;
 const owner = process.env.GITHUB_OWNER || "sharpninja";
-const repo = process.env.GITHUB_REPO || "repairs";
+const repo = process.env.GITHUB_REPO || "repairs-data";
 const keyFile = process.env.GITHUB_APP_PRIVATE_KEY_FILE;
 const keyInline = process.env.GITHUB_APP_PRIVATE_KEY;
 

@@ -9,7 +9,7 @@ import { noteMerged } from "./store.js";
 const emailFromBody = (body) => (String(body || "").match(/\(([^\s()]+@[^\s()]+)\)/) || [])[1] || "";
 
 const OWNER = process.env.GITHUB_OWNER || "sharpninja";
-const REPO = process.env.GITHUB_REPO || "repairs";
+const REPO = process.env.GITHUB_REPO || "repairs-data";
 const LABEL = process.env.SUBMISSION_LABEL || "app-submission";
 const INTERVAL = Number(process.env.MONITOR_INTERVAL_MS || 60000);
 

@@ -46,7 +46,8 @@ const initScript = ({ jwt, seedSession, seedSubmission }) => `
   // ---- pre-seed app state so boot-time session negotiation + polling run ----
   localStorage.setItem("crvapp1", JSON.stringify({
     apiKey: "sk-test", model: "claude-sonnet-5", activeGuide: "crv-s1",
-    submitApi: "https://backend.example.com", googleClientId: "cid.apps.googleusercontent.com"
+    submitApi: "https://backend.example.com", googleClientId: "cid.apps.googleusercontent.com",
+    dataUrl: "./marketplace.json"   // read the local seed in tests (not the remote approved branch)
   }));
   ${seedSession ? `localStorage.setItem("crv-session", JSON.stringify({ key: "old-key", email: "tester@example.com", exp: Date.now() + 3600000 }));` : ""}
   ${seedSubmission ? `localStorage.setItem("crv-submissions", JSON.stringify([{ number: 7, url: "", title: "My guide", kind: "repair", ts: 1, merged: false, state: "open", notified: false }]));` : ""}
