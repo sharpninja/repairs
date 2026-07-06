@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf9f5">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#262624">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>CR-V 1.5T Session 1 — Repair App</title>
+<style>
+  /* ---------- Claude-ecosystem palette: light default, dark via media/attr ---------- */
+  :root{
+    --bg:#faf9f5; --card:#ffffff; --card2:#f1efe8; --ink:#20201e; --muted:#75736c;
+    --line:#e7e4da; --accent:#d97757; --accent-ink:#ffffff; --accent-soft:#f6e7e0;
+    --danger:#b23b2e; --danger-bg:#fbe9e6; --danger-ink:#7e241b;
+    --crit:#a76a16; --crit-bg:#fbf0da; --crit-ink:#734810;
+    --tip:#2e7d55; --tip-bg:#e3f3ea; --tip-ink:#1b4d34;
+    --serif: "Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --pad: clamp(16px, 4.5vw, 32px);
+    --h1: clamp(26px, 7.5vw, 44px);
+    --h2: clamp(21px, 6vw, 34px);
+    --body: clamp(17px, 4.4vw, 22px);
+    --big: clamp(19px, 5vw, 26px);
+    --shadow: 0 1px 2px rgba(20,19,17,.05), 0 6px 20px rgba(20,19,17,.05);
+  }
+  /* Dark palette — forced via data-theme="dark" */
+  :root[data-theme="dark"]{
+    --bg:#262624; --card:#30302e; --card2:#3a3a36; --ink:#f4f3ee; --muted:#a6a49a;
+    --line:#403f3a; --accent:#e08a68; --accent-ink:#241812; --accent-soft:#3a2a22;
+    --danger:#e5645a; --danger-bg:#38201c; --danger-ink:#ffd7d1;
+    --crit:#e0a63f; --crit-bg:#392f18; --crit-ink:#ffe8c2;
+    --tip:#5cc78d; --tip-bg:#123324; --tip-ink:#c6f0da;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+  /* Dark palette — system preference, unless the user forced light */
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#262624; --card:#30302e; --card2:#3a3a36; --ink:#f4f3ee; --muted:#a6a49a;
+      --line:#403f3a; --accent:#e08a68; --accent-ink:#241812; --accent-soft:#3a2a22;
+      --danger:#e5645a; --danger-bg:#38201c; --danger-ink:#ffd7d1;
+      --crit:#e0a63f; --crit-bg:#392f18; --crit-ink:#ffe8c2;
+      --tip:#5cc78d; --tip-bg:#123324; --tip-ink:#c6f0da;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:var(--body);line-height:1.45;-webkit-text-size-adjust:100%;overscroll-behavior-y:none}
+  button{font-family:inherit}
+  a{color:var(--accent)}
+  .hidden{display:none !important}
+
+  #top{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--bg) 82%,transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+    padding:calc(8px + env(safe-area-inset-top)) var(--pad) 8px;display:flex;align-items:center;gap:10px}
+  #top .ib{background:var(--card);border:1px solid var(--line);color:var(--ink);width:44px;height:44px;
+    border-radius:12px;font-size:19px;cursor:pointer;flex:0 0 auto;display:grid;place-content:center}
+  #top .ib:active{transform:scale(.94)}
+  #top .title{font-weight:800;font-size:.84em;color:var(--muted);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  #top .pct{font-weight:900;font-variant-numeric:tabular-nums;color:var(--accent);flex:0 0 auto;min-width:44px;text-align:right}
+  #topbar{height:4px;background:var(--line)}
+  #topbar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+
+  main{max-width:860px;margin:0 auto;padding:var(--pad) var(--pad) 128px}
+  h1{font-family:var(--serif);font-size:var(--h1);line-height:1.06;margin:.1em 0;font-weight:700;letter-spacing:-.01em}
+  h2{font-size:var(--h2);line-height:1.12;margin:.15em 0;font-weight:800}
+  .lead{color:var(--muted);font-size:var(--big)}
+  .kicker{display:inline-flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+    font-size:clamp(12px,3.2vw,15px);color:#fff;padding:7px 13px;border-radius:999px;align-self:flex-start}
+  ul,ol{margin:.2em 0;padding-left:1.15em}
+  li{margin:.4em 0}
+  strong{font-weight:800}
+
+  .call{border-radius:14px;padding:13px 15px;border:1.5px solid;font-weight:600;display:flex;gap:11px;align-items:flex-start;margin:10px 0;font-size:var(--body)}
+  .call .ic{font-size:1.35em;line-height:1}
+  .call .t{display:block;font-weight:900;text-transform:uppercase;letter-spacing:.04em;font-size:.76em;margin-bottom:2px}
+  .danger{background:var(--danger-bg);border-color:var(--danger);color:var(--danger-ink)}.danger .t{color:var(--danger)}
+  .crit{background:var(--crit-bg);border-color:var(--crit);color:var(--crit-ink)}.crit .t{color:var(--crit)}
+  .tip{background:var(--tip-bg);border-color:var(--tip);color:var(--tip-ink)}.tip .t{color:var(--tip)}
+  .specbox{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:12px;padding:11px 15px;margin:10px 0;box-shadow:var(--shadow)}
+  .specbox b{color:var(--accent)}
+  .verify{color:var(--crit);font-size:.84em;font-weight:700}
+
+  .steps{counter-reset:s;list-style:none;padding:0;margin:.3em 0}
+  .steps>li{counter-increment:s;position:relative;padding:11px 12px 11px 52px;margin:.4em 0;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  .steps>li::before{content:counter(s);position:absolute;left:11px;top:11px;width:30px;height:30px;background:var(--accent);color:var(--accent-ink);border-radius:9px;display:grid;place-content:center;font-weight:900;font-size:.85em}
+
+  figure{margin:12px 0;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center;box-shadow:var(--shadow)}
+  figure svg{width:100%;height:auto;max-height:44vh;color:var(--ink)}
+  figcaption{color:var(--muted);font-size:.82em;margin-top:8px}
+
+  .check{list-style:none;padding:0;margin:.3em 0}
+  .check li{display:flex;gap:13px;align-items:flex-start;padding:12px 14px;margin:.4em 0;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  .check input{appearance:none;-webkit-appearance:none;min-width:30px;height:30px;margin-top:1px;border:2.5px solid var(--muted);border-radius:8px;background:transparent;cursor:pointer;display:inline-grid;place-content:center;transition:.15s;flex:0 0 auto}
+  .check input:checked{background:var(--tip);border-color:var(--tip)}
+  .check input:checked::after{content:"";width:9px;height:17px;border:solid #fff;border-width:0 5px 5px 0;transform:rotate(45deg) translateY(-2px)}
+  .check label{cursor:pointer;flex:1}
+  .check .done{opacity:.5;text-decoration:line-through}
+
+  .hero{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px 20px;margin-bottom:16px;box-shadow:var(--shadow);text-align:center}
+  .ring{--v:0;width:130px;height:130px;border-radius:50%;margin:2px auto 12px;background:conic-gradient(var(--accent) calc(var(--v)*1%),var(--line) 0);display:grid;place-content:center;position:relative}
+  .ring::before{content:"";position:absolute;inset:12px;background:var(--card);border-radius:50%}
+  .ring b{position:relative;font-size:30px;font-weight:900;font-variant-numeric:tabular-nums}
+  .ring small{position:relative;display:block;text-align:center;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+  .tile{display:flex;flex-direction:column;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;text-align:left;color:var(--ink);box-shadow:var(--shadow)}
+  .tile .em{font-size:22px}
+  .tile b{font-size:.98em}
+  .tile span{color:var(--muted);font-size:.78em}
+
+  .phaselist{display:grid;gap:10px}
+  .prow{display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 15px;cursor:pointer;text-align:left;width:100%;color:var(--ink);box-shadow:var(--shadow)}
+  .prow:active{transform:scale(.995)}
+  .prow .dot{width:38px;height:38px;border-radius:11px;display:grid;place-content:center;font-weight:900;flex:0 0 auto;color:#fff}
+  .prow .meta{flex:1;min-width:0}.prow .meta b{display:block;font-size:1em}
+  .prow .meta .bar{height:6px;background:var(--line);border-radius:3px;margin-top:7px;overflow:hidden}
+  .prow .meta .bar>i{display:block;height:100%;background:var(--tip);width:0}
+  .prow .cnt{font-size:.8em;color:var(--muted);font-variant-numeric:tabular-nums;flex:0 0 auto}
+  .prow.doneall .dot{background:var(--tip)!important}
+
+  #nav{position:fixed;left:0;right:0;bottom:0;z-index:45;display:flex;gap:10px;align-items:center;padding:10px var(--pad) calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 45%)}
+  #nav button{flex:1;font-size:clamp(15px,4.2vw,19px);font-weight:800;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;box-shadow:var(--shadow)}
+  #nav .primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);flex:1.3}
+  #nav button:disabled{opacity:.4}
+
+  /* media logging */
+  .logbar{margin:14px 0}
+  .logbtns{display:flex;gap:8px;flex-wrap:wrap}
+  .lbtn{display:inline-flex;gap:8px;align-items:center;background:var(--card);border:1px dashed var(--accent);color:var(--accent);border-radius:13px;padding:11px 15px;font-weight:800;cursor:pointer;font-size:.92em;box-shadow:var(--shadow)}
+  .medialist{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .mitem{display:flex;gap:11px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:9px 11px;box-shadow:var(--shadow)}
+  .mitem .mth{width:56px;height:56px;border-radius:9px;overflow:hidden;background:#000;flex:0 0 auto;display:grid;place-content:center;color:#fff;font-size:22px}
+  .mitem .mth img,.mitem .mth video{width:100%;height:100%;object-fit:cover;display:block}
+  .mitem .minfo{flex:1;min-width:0}
+  .mitem .minfo b{display:block;font-size:.92em}
+  .mitem .minfo small{color:var(--muted);font-size:.78em}
+  .mitem audio,.mitem video.play{width:100%;margin-top:6px}
+  .mitem .mact{display:flex;gap:6px;flex:0 0 auto}
+  .mitem .mact button{background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:7px 9px;font-size:.8em;font-weight:700;cursor:pointer}
+  .mitem .mact .del{color:var(--danger)}
+
+  #ask{position:fixed;right:16px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:46;background:var(--accent);color:var(--accent-ink);border:none;border-radius:999px;padding:13px 18px;font-weight:900;font-size:15px;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;display:flex;gap:8px;align-items:center}
+
+  .sheet{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+  .sheet .panel{background:var(--bg);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:860px;max-height:92dvh;display:flex;flex-direction:column;animation:up .22s ease}
+  @keyframes up{from{transform:translateY(30px);opacity:.5}to{transform:none;opacity:1}}
+  .sheet .head{display:flex;align-items:center;gap:10px;padding:14px var(--pad);border-bottom:1px solid var(--line)}
+  .sheet .head b{flex:1;font-size:1.05em}
+  .sheet .head .cl{background:var(--card);border:1px solid var(--line);color:var(--ink);width:38px;height:38px;border-radius:11px;font-size:18px;cursor:pointer}
+  .sheet .body{padding:14px var(--pad);overflow:auto;-webkit-overflow-scrolling:touch}
+
+  /* tools & parts */
+  .toolgrp{margin:16px 0}
+  .toolgrp h3{font-size:1.05em;margin:.2em 0 .5em}
+  .prod{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 13px;margin:8px 0;box-shadow:var(--shadow)}
+  .prod .pi{flex:1;min-width:0}
+  .prod .pi b{display:block}
+  .prod .pi small{color:var(--muted);font-size:.82em}
+  .prod a.buy{flex:0 0 auto;align-self:center;background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:800;font-size:.82em;padding:9px 13px;border-radius:11px;white-space:nowrap}
+
+  /* chat */
+  #chatlog{display:flex;flex-direction:column;gap:12px}
+  .msg{max-width:88%;padding:11px 14px;border-radius:15px;font-size:.97em;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
+  .msg.u{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:5px}
+  .msg.a{align-self:flex-start;background:var(--card2);border:1px solid var(--line);border-bottom-left-radius:5px}
+  .msg.a strong{color:var(--accent)}
+  .msg img{max-width:160px;border-radius:10px;display:block;margin-bottom:8px}
+  .msg.err{background:var(--danger-bg);border:1px solid var(--danger);color:var(--danger-ink)}
+  .typing{align-self:flex-start;color:var(--muted);font-style:italic;padding:6px 4px}
+  .chatinput{display:flex;gap:8px;padding:12px var(--pad) calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);align-items:flex-end}
+  .chatinput textarea{flex:1;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:14px;padding:11px 13px;font-size:16px;resize:none;max-height:120px;font-family:inherit}
+  .chatinput .send{background:var(--accent);color:var(--accent-ink);border:none;border-radius:14px;width:52px;height:48px;font-size:20px;font-weight:900;cursor:pointer;flex:0 0 auto}
+  .chatinput .send:disabled{opacity:.4}
+  .attachchip{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:.8em;color:var(--muted);margin:0 var(--pad) 8px}
+  .attachchip img{width:26px;height:26px;border-radius:6px;object-fit:cover}
+  .field{margin:12px 0}
+  .field label{display:block;font-weight:700;margin-bottom:6px;font-size:.92em}
+  .field input{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:16px}
+  .btnrow{display:flex;gap:10px;margin-top:14px}
+  .btn{flex:1;padding:13px;border-radius:13px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
+  .btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .btn.dgr{background:var(--danger-bg);border-color:var(--danger);color:var(--danger-ink)}
+  .fine{color:var(--muted);font-size:.82em}
+
+  /* recorder overlay */
+  #rec{position:fixed;inset:0;z-index:90;background:#000;display:flex;flex-direction:column;color:#fff}
+  #rec video{flex:1;width:100%;object-fit:cover;background:#000}
+  #rec .audioface{flex:1;display:grid;place-content:center;text-align:center}
+  #rec .audioface .mic{font-size:64px;animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  #rec .timer{font-variant-numeric:tabular-nums;font-size:22px;font-weight:800;margin-top:12px}
+  #rec .rc{display:flex;gap:16px;justify-content:center;align-items:center;padding:18px 0 calc(24px + env(safe-area-inset-bottom))}
+  #rec .shutter{width:72px;height:72px;border-radius:50%;background:#fff;border:5px solid #bbb;cursor:pointer}
+  #rec .shutter.recording{background:#e5534b;border-color:#fff;border-radius:16px}
+  #rec .rx{position:absolute;top:calc(14px + env(safe-area-inset-top));left:14px;background:#000a;color:#fff;border:none;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer}
+  #rec .flip{background:#000a;color:#fff;border:1px solid #666;border-radius:999px;padding:12px 18px;font-weight:800;cursor:pointer}
+  #rec .badge{position:absolute;top:calc(16px + env(safe-area-inset-top));right:16px;background:#e5534b;color:#fff;font-weight:800;padding:6px 12px;border-radius:999px;font-size:.85em}
+</style>
+</head>
+<body>
+<div id="top">
+  <button class="ib" id="homeBtn" title="Home">☰</button>
+  <div class="title" id="topTitle">2018 CR-V 1.5T · Session 1</div>
+  <button class="ib" id="themeBtn" title="Theme">🖥️</button>
+  <div class="pct" id="topPct">0%</div>
+</div>
+<div id="topbar"><i id="topbarFill"></i></div>
+
+<main id="view"></main>
+<button id="ask">💬 Ask Claude</button>
+
+<nav id="nav" class="hidden">
+  <button id="prev">‹ Back</button>
+  <button id="next" class="primary">Next ›</button>
+</nav>
+
+<script>
+/* ================= THEME (system / light / dark) ================= */
+const THEME_KEY="crv-theme";
+function applyTheme(){
+  const t=localStorage.getItem(THEME_KEY)||"system";
+  if(t==="system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme",t);
+  const b=document.getElementById("themeBtn");
+  if(b) b.textContent = t==="system"?"🖥️":(t==="dark"?"🌙":"☀️");
+}
+function cycleTheme(){
+  const order=["system","light","dark"];
+  const cur=localStorage.getItem(THEME_KEY)||"system";
+  localStorage.setItem(THEME_KEY, order[(order.indexOf(cur)+1)%3]); applyTheme();
+}
+applyTheme();
+
+/* ================= CONTENT MODEL ================= */
+const PHASES = [
+  {id:"p0", name:"Phase 0 · Prep & Safety", color:"#8a8a80", steps:[
+    {t:"Cold engine. Confirm. Stage parts.", allowMedia:true, html:`
+      <div class="call danger"><span class="ic">🛑</span><div><span class="t">Engine must be stone cold</span>The cooling system is pressurized hot. No draining, no cap off, no HG-1 until you can hold the radiator hose comfortably.</div></div>
+      <ul class="check" data-check>
+        <li><input type="checkbox"><label>Refrigerant recovered — gauge reads <strong>0 psi</strong> (confirm with the recovery shop)</label></li>
+        <li><input type="checkbox"><label>Battery <strong>NEGATIVE (−) terminal disconnected</strong>, cable tucked aside</label></li>
+        <li><input type="checkbox"><label>Two <strong>drain pans</strong> ready (1 coolant, 1 old compressor oil)</label></li>
+        <li><input type="checkbox"><label>Parts staged: compressor, condenser w/ drier, O-ring kit, <strong>correct R-1234yf A/C oil</strong>, coolant, ECT2 + O-ring, HG-1</label></li>
+        <li><input type="checkbox"><label>Clear <strong>mL measuring cup</strong> for the old compressor oil</label></li>
+      </ul>
+      <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Your system is R-1234yf</span>Do <b>not</b> use generic R-134a PAG46. Honda R-1234yf systems spec their own oil (ND-OIL 12 / POE per Honda service info). Confirm the exact oil for your VIN and let the shop set the final charge.</div></div>`},
+  ]},
+  {id:"p1", name:"Phase 1 · Lift & Drain", color:"#4a86c5", steps:[
+    {t:"Jack stands → splash shield → coolant", allowMedia:true, html:`
+      <ol class="steps">
+        <li>Raise the front and set on <strong>jack stands</strong> on level, solid ground. Chock the rear wheels.</li>
+        <li>Remove the <strong>lower splash shield / undertray</strong> (8/10 mm bolts + push clips).</li>
+        <li>Place <strong>drain pan #1</strong> under the radiator's driver-side lower tank.</li>
+        <li>Open the <strong>radiator petcock</strong>; loosen the cap/fill neck to speed flow.</li>
+      </ol>
+      <div class="call danger"><span class="ic">🛑</span><div><span class="t">Never work under a car on the jack alone</span>Rated stands, chocked wheels, level ground — every time.</div></div>
+      <div class="call tip"><span class="ic">💡</span><div><span class="t">Note the volume</span>Roughly how much drains tells you how much to put back. System holds ~6.2 L (≈6.5 qt).</div></div>`},
+  ]},
+  {id:"p2", name:"Phase 2 · Front Bumper", color:"#b08536", steps:[
+    {t:"Free the bumper for condenser room", allowMedia:true, diagram:"bumper", html:`
+      <ol class="steps">
+        <li>Remove <strong>top-edge fasteners</strong> along the radiator support (push clips / 8 mm).</li>
+        <li>Turn the wheels; remove <strong>2–3 screws per wheel-well</strong> where the liner meets the bumper.</li>
+        <li>Pull the <strong>lower push-clips</strong> along the bottom lip.</li>
+        <li>Release the side clips (pull the corner outward at the fender) and lower the cover.</li>
+      </ol>
+      <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Plastic clips break — that's normal</span>Have <b>replacement clips</b> ready; note which ones broke.</div></div>`},
+  ]},
+  {id:"p3", name:"Phase 3 · A/C", color:"#c0564a", steps:[
+    {t:"A/C ▸ Open lines → CAP INSTANTLY", allowMedia:true, diagram:"acloc", html:`
+      <ol class="steps">
+        <li>Unplug the <strong>compressor clutch connector</strong>.</li>
+        <li>Unbolt the <strong>suction &amp; discharge line flanges</strong> at the compressor.</li>
+      </ol>
+      <div class="call danger"><span class="ic">🛑</span><div><span class="t">Never open a line under pressure</span>Confirm 0 psi first. Pressurized refrigerant can cause frostbite / eye injury.</div></div>
+      <div class="call danger"><span class="ic">🛑</span><div><span class="t">CAP EVERY OPEN LINE IMMEDIATELY</span>The second a fitting is open, plug it. Moisture in an open system ruins the new parts and the recharge.</div></div>`},
+    {t:"A/C ▸ Remove compressor · drain & MEASURE oil", allowMedia:true, html:`
+      <ol class="steps">
+        <li>Remove the <strong>4 compressor mounting bolts</strong>; lift it out.</li>
+        <li>Tip it and <strong>drain the oil into your mL cup</strong>. Rotate the shaft to get most of it out.</li>
+        <li><strong>Write the measured amount down</strong> — the shop needs it to balance total system oil.</li>
+      </ol>
+      <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Measure, don't guess</span>Old oil out is your reference so the new system isn't over/under-filled. <b>Tip:</b> record a quick voice note of the number.</div></div>`},
+    {t:"A/C ▸ Remove the old condenser", allowMedia:true, html:`
+      <ol class="steps">
+        <li>Disconnect the <strong>two condenser lines</strong> — <strong>cap instantly</strong>.</li>
+        <li>Remove the <strong>upper mounting bolts / brackets</strong>.</li>
+        <li>Lift the condenser <strong>up and out</strong> of its lower rubber mounts.</li>
+      </ol>
+      <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Mind the radiator fins</span>Don't drag the condenser across the radiator — bent fins hurt cooling.</div></div>
+      <div class="call tip"><span class="ic">💡</span><div><span class="t">New condenser = fresh drier</span>Exactly why we replace it with the system open.</div></div>`},
+    {t:"A/C ▸ Prep the new compressor", allowMedia:true, html:`
+      <ol class="steps">
+        <li><strong>Set the oil charge</strong> to match the system (final balance confirmed at the shop with your measured number).</li>
+        <li>Pour the measured oil into the <strong>SUCTION port</strong>.</li>
+        <li><strong>HAND-ROTATE the pulley 8–10 full turns</strong> to pre-lube the internals.</li>
+      </ol>
+      <div class="call danger"><span class="ic">🛑</span><div><span class="t">Hand-rotate before it ever runs</span>Skipping this can seize a dry compressor on first start. 8–10 slow turns, by hand. <b>Tip:</b> record a short video of the turns as proof.</div></div>
+      <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Right oil for R-1234yf</span>Use the Honda-spec R-1234yf oil (ND-OIL 12 / POE) — <b>not</b> generic R-134a PAG46. Confirm on the underhood label.</div></div>`},
+    {t:"A/C ▸ Oil condenser · install · torque", allowMedia:true, html:`
+      <ol class="steps">
+        <li>Add <strong>~1 oz (≈30 mL)</strong> of the correct oil to the new condenser.</li>
+        <li>Install condenser, then compressor. Torque the <strong>4 compressor bolts</strong>.</li>
+        <li>At <strong>every</strong> fitting install a <strong>NEW, oiled O-ring</strong>. Reconnect flanges &amp; clutch plug.</li>
+      </ol>
+      <div class="specbox"><b>Torque (typical Honda A/C — verify vs service manual):</b> line flanges ≈9.8–12 N·m (7–9 lb-ft) · compressor mounts ≈24–25 N·m (18 lb-ft) · condenser fittings ≈9.8 N·m (7 lb-ft). <span class="verify">Confirm for your VIN before final torque.</span></div>
+      <div class="call danger"><span class="ic">🛑</span><div><span class="t">A missed O-ring is the #1 leak</span>Every fitting. New. Oiled. No reused O-rings, ever. Photograph each seated O-ring.</div></div>`},
+  ]},
+  {id:"p4", name:"Phase 4 · ECT Sensor 2", color:"#3f9a71", steps:[
+    {t:"Swap the lower-radiator ECT2", allowMedia:true, diagram:"ect2", html:`
+      <ol class="steps">
+        <li><strong>Unplug</strong> the ECT2 connector.</li>
+        <li>Unscrew the old sensor with a <strong>deep socket — measure the flats first</strong> (reports split 17 mm vs 19 mm; bring both).</li>
+        <li>Fit the <strong>new O-ring</strong>; thread the new sensor in by hand, then snug.</li>
+      </ol>
+      <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Don't overtighten the plastic tank</span>It threads into a plastic radiator tank. No metal-boss torque spec — seat on the O-ring, then <b>hand-tight + a small nudge only</b>. Overtightening cracks the tank.</div></div>`},
+  ]},
+  {id:"p5", name:"Phase 5 · Reassemble", color:"#7d6bd6", steps:[
+    {t:"Bumper → splash shield → battery", allowMedia:true, html:`
+      <ul class="check" data-check>
+        <li><input type="checkbox"><label>Reinstall bumper cover — <strong>replace every broken clip</strong></label></li>
+        <li><input type="checkbox"><label>Wheel-well screws, top-edge fasteners, lower clips all in</label></li>
+        <li><input type="checkbox"><label>Reinstall the <strong>lower splash shield / undertray</strong></label></li>
+        <li><input type="checkbox"><label>Radiator <strong>petcock CLOSED</strong> before refilling</label></li>
+        <li><input type="checkbox"><label><strong>Reconnect the battery (−)</strong>, snug it</label></li>
+      </ul>
+      <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Petcock closed?</span>Easy to forget — fresh coolant will pour onto the floor if it's open.</div></div>`},
+  ]},
+  {id:"p6", name:"Phase 6 · Coolant + HG-1 + Bleed", color:"#c07b1e", steps:[
+    {t:"Refill 50/50 · HG-1 cold · burp the air", allowMedia:true, html:`
+      <ol class="steps">
+        <li>Engine <strong>COLD</strong>: fill through the <strong>expansion / degas tank</strong> with 50/50 <strong>Honda Type 2 (blue)</strong>. <b>No bleed bolt</b> — it self-bleeds. Cap <b>loose</b>.</li>
+        <li>Add <strong>½ bottle Bar's Leaks HG-1</strong> now, while cold (~6.2 L ≈ 6.5 qt = ½-bottle bracket).</li>
+        <li>Start it. Air purges back to the degas tank as it warms.</li>
+        <li>Heater <strong>HIGH</strong>, fan <strong>HIGH</strong>. Idle ~<strong>15 min</strong>, watching the gauge, until the <strong>radiator fan cycles twice</strong>.</li>
+        <li>Shut off, cool, <strong>top the tank to MAX</strong>. Re-check over the next few drive cycles.</li>
+      </ol>
+      <div class="call danger"><span class="ic">🛑</span><div><span class="t">HG-1 goes in COLD, ½ bottle</span>Never pour stop-leak into a hot/running-hot engine.</div></div>
+      <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Watch that gauge</span>Climbing hot or upper hose staying cold = air pocket. Stop, cool, re-burp. Do not overheat.</div></div>`},
+  ]},
+  {id:"p7", name:"Phase 7 · Verify & Leak Check", color:"#3f8a49", steps:[
+    {t:"Final checks before it moves", allowMedia:true, html:`
+      <ul class="check" data-check>
+        <li><input type="checkbox"><label><strong>Every A/C O-ring new &amp; oiled</strong> (the #1 leak source)</label></li>
+        <li><input type="checkbox"><label>All A/C <strong>fittings torqued</strong> (flanges + compressor bolts)</label></li>
+        <li><input type="checkbox"><label>You <strong>hand-rotated the compressor</strong> 8–10 turns</label></li>
+        <li><input type="checkbox"><label>No <strong>coolant leaks</strong> at ECT2, petcock, hoses after warm idle</label></li>
+        <li><input type="checkbox"><label>Coolant topped off; reserve at MAX; cap tight</label></li>
+        <li><input type="checkbox"><label>Old compressor oil amount <strong>written down</strong> for the shop</label></li>
+      </ul>
+      <div class="call danger"><span class="ic">🛑</span><div><span class="t">DO NOT turn the A/C on</span>The system is open/empty. Running it dry destroys the new compressor. Straight to the shop.</div></div>`},
+    {t:"Before you drive · then the shop", allowMedia:false, html:`
+      <ul class="check" data-check>
+        <li><input type="checkbox"><label>Battery reconnected, tools out of the engine bay</label></li>
+        <li><input type="checkbox"><label>Car off the stands, wheels torqued if removed, on the ground</label></li>
+        <li><input type="checkbox"><label>Splash shield &amp; bumper fully fastened</label></li>
+        <li><input type="checkbox"><label>Coolant full, no leaks, temp normal at idle</label></li>
+        <li><input type="checkbox"><label><strong>A/C left OFF</strong> — no exceptions</label></li>
+        <li><input type="checkbox"><label>Measured old-oil note + receipts in hand for the shop</label></li>
+      </ul>
+      <div class="call tip"><span class="ic">💡</span><div><span class="t">At the shop</span>They evacuate under vacuum, leak-test, <b>set the final R-1234yf oil charge</b>, and recharge. Then — and only then — the A/C runs.</div></div>`},
+  ]},
+];
+
+const DIAGRAMS = {
+  bumper:`<svg viewBox="0 0 640 360" role="img" aria-label="Bumper fastener map"><defs><style>.e{fill:none;stroke:currentColor;stroke-width:3}.l{fill:currentColor;font:600 15px sans-serif}.c{fill:var(--accent);stroke:var(--bg);stroke-width:1.5}.s{fill:var(--crit);stroke:var(--bg);stroke-width:1.5}.k{font:700 14px sans-serif;fill:currentColor}</style></defs><path class="e" d="M60 70 H580" stroke-dasharray="6 6" opacity=".5"/><text class="l" x="60" y="58" opacity=".7">under hood lip / rad support</text><path class="e" d="M60 90 Q40 90 40 130 V250 Q40 300 100 300 H540 Q600 300 600 250 V130 Q600 90 580 90 Z"/><rect x="230" y="140" width="180" height="70" rx="10" class="e" opacity=".6"/><text class="l" x="320" y="182" text-anchor="middle" opacity=".6">grille</text><g class="c"><circle cx="120" cy="100" r="7"/><circle cx="220" cy="96" r="7"/><circle cx="320" cy="94" r="7"/><circle cx="420" cy="96" r="7"/><circle cx="520" cy="100" r="7"/></g><g class="s"><circle cx="70" cy="180" r="7"/><circle cx="66" cy="220" r="7"/><circle cx="570" cy="180" r="7"/><circle cx="574" cy="220" r="7"/></g><g class="c"><circle cx="160" cy="296" r="7"/><circle cx="260" cy="300" r="7"/><circle cx="380" cy="300" r="7"/><circle cx="480" cy="296" r="7"/></g><circle cx="80" cy="335" r="7" class="c"/><text class="k" x="94" y="340">push clip</text><circle cx="230" cy="335" r="7" class="s"/><text class="k" x="244" y="340">screw (8mm)</text></svg>`,
+  acloc:`<svg viewBox="0 0 640 340" role="img" aria-label="A/C layout"><defs><style>.o{fill:none;stroke:currentColor;stroke-width:3}.t{fill:currentColor;font:600 14px sans-serif}.hl{fill:var(--accent);fill-opacity:.3;stroke:var(--accent);stroke-width:2.5}.h2{fill:var(--danger);fill-opacity:.3;stroke:var(--danger);stroke-width:2.5}.b{font:800 14px sans-serif}.d{stroke:currentColor;stroke-width:1.5;fill:none}</style></defs><text class="t" x="20" y="26" opacity=".7">◄ FRONT</text><path class="o" d="M60 60 V300" opacity=".5"/><rect x="95" y="80" width="34" height="200" rx="6" class="hl"/><text class="b" x="112" y="70" text-anchor="middle" fill="var(--accent)">CONDENSER</text><text class="t" x="112" y="300" text-anchor="middle" font-size="11" opacity=".8">(+ drier)</text><rect x="152" y="80" width="34" height="200" rx="6" class="o"/><text class="t" x="169" y="70" text-anchor="middle" font-size="12" opacity=".8">radiator</text><rect x="300" y="90" width="300" height="180" rx="14" class="o"/><text class="t" x="450" y="140" text-anchor="middle" opacity=".8">engine (L15B7)</text><circle cx="360" cy="235" r="34" class="h2"/><text class="b" x="360" y="240" text-anchor="middle" fill="var(--danger)">A/C</text><text class="b" x="360" y="300" text-anchor="middle" fill="var(--danger)">COMPRESSOR</text><path class="o" d="M394 235 Q470 180 470 235" opacity=".6"/><text class="t" x="500" y="215" font-size="12" opacity=".7">belt</text><path class="d" d="M129 235 H326" stroke-dasharray="5 5"/><text class="t" x="205" y="255" font-size="12" opacity=".7">refrigerant lines</text></svg>`,
+  ect2:`<svg viewBox="0 0 640 340" role="img" aria-label="ECT2 location"><defs><style>.o{fill:none;stroke:currentColor;stroke-width:3}.t{fill:currentColor;font:600 14px sans-serif}.core{fill:currentColor;fill-opacity:.06;stroke:currentColor;stroke-width:2.5}.tank{fill:currentColor;fill-opacity:.12;stroke:currentColor;stroke-width:2.5}.h2{fill:var(--danger);fill-opacity:.32;stroke:var(--danger);stroke-width:2.5}.b{font:800 16px sans-serif;fill:var(--danger)}.d{stroke:var(--danger);stroke-width:2;fill:none}</style></defs><rect x="120" y="70" width="400" height="150" rx="4" class="core"/><g stroke="currentColor" stroke-width="1" opacity=".35"><line x1="160" y1="70" x2="160" y2="220"/><line x1="210" y1="70" x2="210" y2="220"/><line x1="260" y1="70" x2="260" y2="220"/><line x1="310" y1="70" x2="310" y2="220"/><line x1="360" y1="70" x2="360" y2="220"/><line x1="410" y1="70" x2="410" y2="220"/><line x1="460" y1="70" x2="460" y2="220"/></g><text class="t" x="320" y="55" text-anchor="middle" opacity=".8">radiator core</text><rect x="110" y="52" width="420" height="22" rx="8" class="tank"/><rect x="110" y="216" width="420" height="30" rx="10" class="tank"/><text class="t" x="300" y="236" text-anchor="middle" font-size="12">LOWER TANK (plastic)</text><path class="o" d="M110 231 Q60 231 55 280 H30" opacity=".7"/><text class="t" x="20" y="300" font-size="12" opacity=".7">lower hose</text><rect x="150" y="246" width="26" height="30" rx="4" class="h2"/><rect x="154" y="276" width="18" height="16" rx="3" class="h2"/><path class="d" d="M240 300 L180 285"/><text class="b" x="248" y="296">ECT SENSOR 2</text><text class="t" x="248" y="316" font-size="12" fill="var(--danger)">unplug, then unscrew</text><circle cx="470" cy="260" r="8" class="o" opacity=".7"/><text class="t" x="486" y="264" font-size="12" opacity=".7">petcock</text></svg>`
+};
+
+/* ================= TOOLS & PARTS (Amazon search links) ================= */
+const AMZ = q => "https://www.amazon.com/s?k=" + encodeURIComponent(q);
+const TOOLS = [
+  {n:"Metric socket set + ratchet (8–19 mm)", d:"Splash shield, bumper, compressor bolts", q:"metric socket set 1/4 3/8 drive ratchet"},
+  {n:"Deep sockets — 17 mm & 19 mm", d:"ECT2 sensor: measure the flats, bring both", q:"17mm 19mm deep impact socket 3/8"},
+  {n:'1/4" torque wrench (inch-lb)', d:"A/C line flanges ≈7–9 lb-ft", q:"1/4 inch drive torque wrench inch pound"},
+  {n:'3/8" torque wrench (ft-lb)', d:"Compressor mount bolts ≈18 lb-ft", q:"3/8 drive torque wrench ft-lb"},
+  {n:"3-ton jack + jack stands (pair)", d:"Lift the front safely", q:"3 ton jack stands pair"},
+  {n:"Wheel chocks", d:"Chock the rear before lifting", q:"wheel chocks pair"},
+  {n:"A/C line cap & plug kit", d:"Cap every open line instantly", q:"AC line cap plug kit r1234yf assortment"},
+  {n:"Trim / panel clip removal tool set", d:"Bumper push-clips without breakage", q:"trim clip removal tool kit fastener remover"},
+  {n:"Drain pans (×2)", d:"Coolant + old compressor oil", q:"low profile oil drain pan"},
+  {n:"Graduated measuring cup (mL)", d:"Measure the old compressor oil", q:"graduated measuring cup ml oil measuring beaker"},
+  {n:"No-spill coolant funnel kit", d:"Fill/bleed the cooling system cleanly", q:"no spill coolant funnel kit"},
+  {n:"Nitrile gloves + safety glasses", d:"Refrigerant residue & debris", q:"nitrile gloves safety glasses combo"},
+];
+const PARTS = [
+  {g:"A/C", items:[
+    {n:"A/C compressor — 2018 CR-V 1.5T (R-1234yf)", d:"Match the 1.5T turbo, not the 2.4L", q:"2018 Honda CR-V 1.5T A/C compressor"},
+    {n:"A/C condenser with receiver/drier", d:"2017–2022 CR-V; includes fresh drier", q:"2018 Honda CR-V condenser with drier"},
+    {n:"A/C O-ring kit (R-1234yf / HNBR)", d:"New oiled O-ring at every fitting", q:"R1234yf HNBR AC o-ring kit Honda"},
+    {n:"R-1234yf A/C oil — Honda ND-OIL 12 / POE", d:"NOT generic R-134a PAG46 — confirm by VIN", q:"Honda ND-OIL 12 R1234yf compressor oil"},
+  ]},
+  {g:"Cooling / ECT2", items:[
+    {n:"ECT Sensor 2 (radiator) — OEM/Denso", d:"Lower radiator tank sensor + O-ring", q:"Honda CR-V ECT sensor 2 radiator coolant temperature"},
+    {n:"Honda Type 2 blue coolant (pre-mixed 50/50)", d:"Do not substitute green coolant", q:"Honda Type 2 coolant premixed 50/50 blue"},
+    {n:"Bar's Leaks HG-1 head gasket repair", d:"½ bottle, added cold", q:"Bar's Leaks HG-1 head gasket repair"},
+  ]},
+  {g:"Fasteners / clips", items:[
+    {n:"Honda bumper clip / retainer assortment", d:"Replace every broken push-clip", q:"Honda bumper clip retainer assortment"},
+    {n:"Splash shield clips & bolts", d:"Undertray hardware you'll lose one of", q:"Honda splash shield engine cover clips bolts"},
+  ]},
+];
+
+/* flatten steps */
+const STEPS=[];
+PHASES.forEach((ph,pi)=>ph.steps.forEach((st,si)=>{ st.phase=ph;st.pi=pi;st.si=si;st.id=ph.id+"-"+si;st.gi=STEPS.length;STEPS.push(st);}));
+const TOTAL_STEPS=STEPS.length;
+const stepById=id=>STEPS.find(s=>s.id===id);
+
+/* ================= STATE ================= */
+const LS="crvapp1";
+function load(){ try{return JSON.parse(localStorage.getItem(LS))||{}}catch(e){return {}} }
+function saveState(){ localStorage.setItem(LS, JSON.stringify(state)); }
+let state=load(); state.checks=state.checks||{}; state.done=state.done||{}; state.apiKey=state.apiKey||"";
+
+/* ================= IndexedDB media ================= */
+let db;
+function openDB(){ return new Promise((res)=>{
+  const r=indexedDB.open("crv-media",1);
+  r.onupgradeneeded=e=>{ const d=e.target.result; if(!d.objectStoreNames.contains("media")){ const s=d.createObjectStore("media",{keyPath:"id",autoIncrement:true}); s.createIndex("stepId","stepId"); } };
+  r.onsuccess=e=>{db=e.target.result;res(db)}; r.onerror=()=>res(null);
+});}
+function putMedia(rec){ return new Promise((res)=>{ const tx=db.transaction("media","readwrite"); tx.objectStore("media").add(rec); tx.oncomplete=()=>res(); tx.onerror=()=>res(); });}
+function getMedia(stepId){ return new Promise((res)=>{ const out=[]; const tx=db.transaction("media","readonly"); const cur=tx.objectStore("media").openCursor(); cur.onsuccess=e=>{const c=e.target.result; if(c){ if(!stepId||c.value.stepId===stepId) out.push(c.value); c.continue(); } else res(out.sort((a,b)=>a.ts-b.ts)); }; });}
+function delMedia(id){ return new Promise((res)=>{ const tx=db.transaction("media","readwrite"); tx.objectStore("media").delete(id); tx.oncomplete=()=>res(); });}
+
+/* ================= PROGRESS ================= */
+const nChecks=st=>(st.html.match(/type="checkbox"/g)||[]).length;
+function stepComplete(st){ const n=nChecks(st); if(n){ for(let i=0;i<n;i++) if(!state.checks[st.id+"#"+i]) return false; return true; } return !!state.done[st.id]; }
+function phaseProgress(ph){ return {done:ph.steps.filter(stepComplete).length,total:ph.steps.length}; }
+function overallPct(){ let d=0; STEPS.forEach(s=>{if(stepComplete(s))d++;}); return Math.round(d/TOTAL_STEPS*100); }
+function refreshTop(){ const p=overallPct(); document.getElementById("topPct").textContent=p+"%"; document.getElementById("topbarFill").style.width=p+"%"; }
+
+/* ================= ROUTER ================= */
+let cur=null, route="home"; // route: home | step | tools | log
+const view=document.getElementById("view"), nav=document.getElementById("nav");
+function go(gi){ route="step"; cur=gi; render(); window.scrollTo(0,0); }
+function goHome(){ route="home"; cur=null; render(); window.scrollTo(0,0); }
+function render(){
+  refreshTop();
+  nav.classList.toggle("hidden", route!=="step");
+  if(route==="home"){ document.getElementById("topTitle").textContent="2018 CR-V 1.5T · Session 1"; renderHome(); }
+  else if(route==="tools"){ document.getElementById("topTitle").textContent="Tools & Parts"; renderTools(); }
+  else if(route==="log"){ document.getElementById("topTitle").textContent="Session Log"; renderLog(); }
+  else renderStep(STEPS[cur]);
+}
+
+function renderHome(){
+  const p=overallPct();
+  let rows="";
+  PHASES.forEach(ph=>{ const pr=phaseProgress(ph); const pct=Math.round(pr.done/pr.total*100); const all=pr.done===pr.total;
+    rows+=`<button class="prow ${all?'doneall':''}" data-gi="${ph.steps[0].gi}"><span class="dot" style="background:${ph.color}">${all?'✓':ph.id.slice(1)}</span><span class="meta"><b>${ph.name}</b><span class="bar"><i style="width:${pct}%"></i></span></span><span class="cnt">${pr.done}/${pr.total}</span></button>`; });
+  view.innerHTML=`
+    <div class="hero">
+      <div class="ring" style="--v:${p}"><b>${p}%</b><small>complete</small></div>
+      <h1>2018 Honda CR-V 1.5T</h1>
+      <p class="lead" style="margin:.3em 0 0">Session 1 · A/C + condenser, ECT2, HG-1.<br>Tap a phase to start.</p>
+    </div>
+    <div class="tiles">
+      <button class="tile" id="toolsT"><span class="em">🧰</span><b>Tools &amp; Parts</b><span>Shopping list + Amazon links</span></button>
+      <button class="tile" id="logT"><span class="em">📋</span><b>Session Log</b><span>Your photos, voice &amp; video</span></button>
+    </div>
+    <div class="phaselist">${rows}</div>
+    <div class="call danger" style="margin-top:16px"><span class="ic">🛑</span><div><span class="t">The 5 rules</span>1) Never open A/C under pressure. 2) Cap every open line instantly. 3) New oiled O-ring at every fitting. 4) Hand-rotate the new compressor. 5) HG-1 cold, ½ bottle.</div></div>
+    <div class="btnrow"><button class="btn" id="resetBtn">Reset progress</button><button class="btn" id="keyBtn">⚙️ Claude API key</button></div>
+    <p class="fine" style="margin-top:14px">Progress &amp; media (photos, voice, video) are stored on this device only. Camera/mic and install-to-home-screen need HTTPS or localhost. The Claude helper is the only feature that uses the internet — it calls the Anthropic API with your own key.</p>`;
+  view.querySelectorAll(".prow").forEach(b=>b.onclick=()=>go(+b.dataset.gi));
+  document.getElementById("toolsT").onclick=()=>{route="tools";render();window.scrollTo(0,0);};
+  document.getElementById("logT").onclick=()=>{route="log";render();window.scrollTo(0,0);};
+  document.getElementById("resetBtn").onclick=resetProgress;
+  document.getElementById("keyBtn").onclick=openKey;
+}
+
+function renderTools(){
+  const tools=TOOLS.map(t=>`<div class="prod"><div class="pi"><b>${t.n}</b><small>${t.d}</small></div><a class="buy" target="_blank" rel="noopener" href="${AMZ(t.q)}">Amazon ↗</a></div>`).join("");
+  const parts=PARTS.map(g=>`<div class="toolgrp"><h3>${g.g}</h3>${g.items.map(t=>`<div class="prod"><div class="pi"><b>${t.n}</b><small>${t.d}</small></div><a class="buy" target="_blank" rel="noopener" href="${AMZ(t.q)}">Amazon ↗</a></div>`).join("")}</div>`).join("");
+  view.innerHTML=`
+    <h2>🧰 Tools &amp; Parts</h2>
+    <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Check fitment first</span>Links are Amazon <b>searches</b>, not specific listings — verify the compressor/condenser/ECT2 match your VIN (1.5&nbsp;T, not 2.4L) and that A/C oil is the <b>R-1234yf</b> type before buying.</div></div>
+    <div class="toolgrp"><h3>Tools</h3>${tools}</div>
+    <h2 style="margin-top:22px">Parts</h2>${parts}
+    <p class="fine" style="margin-top:14px">These open Amazon in a new tab and need internet. No affiliate tags — plain searches.</p>`;
+}
+
+async function renderLog(){
+  const all=await getMedia(null);
+  all.sort((a,b)=>b.ts-a.ts);
+  if(!all.length){ view.innerHTML=`<h2>📋 Session Log</h2><p class="lead">No captures yet.</p><p class="fine">On most steps, tap <b>Photo</b>, <b>Voice</b>, or <b>Video</b> to log your work as you go — everything shows here in order, timestamped.</p>`; return; }
+  view.innerHTML=`<h2>📋 Session Log</h2><p class="fine" style="margin-bottom:8px">${all.length} capture${all.length>1?'s':''}, newest first. Stored on this device.</p><div class="medialist" id="ml"></div>`;
+  const box=document.getElementById("ml");
+  all.forEach(m=>box.appendChild(mediaEl(m,true)));
+}
+
+function fmtTime(ts){ const d=new Date(ts); return d.toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function mediaEl(m, showStep){
+  const st=stepById(m.stepId);
+  const wrap=document.createElement("div"); wrap.className="mitem";
+  const label=(m.type==='photo'?'📷 Photo':m.type==='audio'?'🎙️ Voice note':'🎬 Video');
+  const url=m.blob?URL.createObjectURL(m.blob):m.dataUrl;
+  let thumb, body="";
+  if(m.type==='photo'){ thumb=`<img src="${m.dataUrl}">`; }
+  else if(m.type==='audio'){ thumb=`🎙️`; body=`<audio controls preload="none" src="${url}"></audio>`; }
+  else { thumb=`<video src="${url}" muted playsinline preload="metadata"></video>`; }
+  wrap.innerHTML=`<div class="mth">${thumb}</div>
+    <div class="minfo"><b>${label}</b><small>${showStep&&st?st.phase.name+' · ':''}${fmtTime(m.ts)}</small>${body}
+      ${m.type==='video'?`<video class="play hidden" controls playsinline src="${url}"></video>`:''}</div>
+    <div class="mact">${(m.type==='photo'||m.type==='video')?`<button data-ask>Ask</button>`:''}<button class="del" data-del>Del</button></div>`;
+  const del=wrap.querySelector("[data-del]");
+  del.onclick=async()=>{ await delMedia(m.id); wrap.remove(); };
+  const ask=wrap.querySelector("[data-ask]");
+  if(ask) ask.onclick=async()=>{
+    if(m.type==='photo'){ openChat(m.dataUrl); }
+    else { // capture current frame of the video
+      const v=wrap.querySelector("video.play"); v.classList.remove("hidden"); v.currentTime=Math.min(0.1,(v.duration||1)/2);
+      const c=document.createElement("canvas"); c.width=v.videoWidth||640;c.height=v.videoHeight||360;
+      await new Promise(r=>{ v.onloadeddata=r; setTimeout(r,300); });
+      c.getContext("2d").drawImage(v,0,0,c.width,c.height); openChat(c.toDataURL("image/jpeg",0.82));
+    }
+  };
+  const vthumb=wrap.querySelector(".mth video");
+  if(vthumb) vthumb.onclick=()=>{ const pl=wrap.querySelector("video.play"); pl.classList.toggle("hidden"); if(!pl.classList.contains("hidden")) pl.play(); };
+  return wrap;
+}
+
+function renderStep(st){
+  document.getElementById("topTitle").textContent=st.phase.name;
+  const fig=st.diagram?`<figure>${DIAGRAMS[st.diagram]}</figure>`:"";
+  const log=st.allowMedia?`<div class="logbar"><div class="logbtns">
+      <button class="lbtn" data-cap="photo">📷 Photo</button>
+      <button class="lbtn" data-cap="audio">🎙️ Voice</button>
+      <button class="lbtn" data-cap="video">🎬 Video</button></div>
+      <div class="medialist" id="medialist"></div></div>`:"";
+  view.innerHTML=`<span class="kicker" style="background:${st.phase.color}">${st.phase.name}</span><h2>${st.t}</h2>${fig}${st.html}${log}`;
+  view.querySelectorAll('input[type=checkbox]').forEach((cb,i)=>{
+    const key=st.id+"#"+i; cb.checked=!!state.checks[key];
+    if(cb.checked) cb.closest('li').querySelector('label').classList.add('done');
+    cb.onchange=()=>{ state.checks[key]=cb.checked; saveState(); cb.closest('li').querySelector('label').classList.toggle('done',cb.checked); refreshTop(); };
+  });
+  document.getElementById("prev").disabled=st.gi===0;
+  const nx=document.getElementById("next"); nx.textContent=st.gi===TOTAL_STEPS-1?"Finish ✓":"Next ›";
+  document.getElementById("prev").onclick=()=>{ if(st.gi>0) go(st.gi-1); };
+  nx.onclick=()=>{ state.done[st.id]=true; saveState(); refreshTop(); if(st.gi<TOTAL_STEPS-1) go(st.gi+1); else goHome(); };
+  if(st.allowMedia){ view.querySelectorAll("[data-cap]").forEach(b=>b.onclick=()=>startCapture(st.id,b.dataset.cap)); refreshStepMedia(st.id); }
+}
+async function refreshStepMedia(stepId){
+  const box=document.getElementById("medialist"); if(!box) return;
+  const list=await getMedia(stepId); box.innerHTML=""; list.forEach(m=>box.appendChild(mediaEl(m,false)));
+}
+
+/* ================= CAPTURE (photo / audio / video) ================= */
+function pickMime(kind){
+  const opts = kind==='video'
+    ? ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4']
+    : ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'];
+  for(const m of opts){ if(window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; }
+  return '';
+}
+async function startCapture(stepId, kind){
+  let stream;
+  const constraints = kind==='photo'?{video:{facingMode:'environment'},audio:false}
+    : kind==='audio'?{audio:true}
+    : {video:{facingMode:'environment'},audio:true};
+  try{ stream=await navigator.mediaDevices.getUserMedia(constraints); }
+  catch(e){ alert((kind==='audio'?"Microphone":"Camera")+" unavailable: "+e.message+"\n\nNeeds HTTPS or localhost + permission."); return; }
+  if((kind==='audio'||kind==='video') && !window.MediaRecorder){ alert("Recording isn't supported in this browser."); stream.getTracks().forEach(t=>t.stop()); return; }
+
+  const ov=document.createElement("div"); ov.id="rec";
+  ov.innerHTML=`<button class="rx">✕</button>${kind==='audio'?'<div class="badge hidden">● REC</div>':''}
+    ${kind==='audio'?`<div class="audioface"><div class="mic">🎙️</div><div class="timer">0:00</div><div class="fine" style="color:#bbb;margin-top:8px">Tap the red button to start &amp; stop</div></div>`
+      :`<video autoplay playsinline muted></video>${kind==='video'?'<div class="badge hidden">● REC</div>':''}`}
+    <div class="rc">${kind==='video'?'<button class="flip">⟲ Flip</button>':''}<button class="shutter" aria-label="capture"></button></div>`;
+  document.body.appendChild(ov);
+  const video=ov.querySelector("video"), shutter=ov.querySelector(".shutter"), badge=ov.querySelector(".badge"), timerEl=ov.querySelector(".timer");
+  let facing='environment';
+  function stopStream(){ if(stream) stream.getTracks().forEach(t=>t.stop()); }
+  function close(){ stopStream(); ov.remove(); }
+  ov.querySelector(".rx").onclick=()=>{ if(rec&&rec.state==='recording'){ rec.stop(); } close(); };
+  if(video){ video.srcObject=stream; }
+  const flip=ov.querySelector(".flip");
+  if(flip) flip.onclick=async()=>{ facing=facing==='environment'?'user':'environment'; stopStream(); try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing},audio:kind==='video'}); video.srcObject=stream; }catch(e){} };
+
+  if(kind==='photo'){
+    shutter.onclick=async()=>{
+      const w=video.videoWidth||1280,h=video.videoHeight||720,s=Math.min(1,1280/Math.max(w,h));
+      const c=document.createElement("canvas"); c.width=w*s;c.height=h*s; c.getContext("2d").drawImage(video,0,0,c.width,c.height);
+      await putMedia({type:'photo',stepId,ts:Date.now(),dataUrl:c.toDataURL("image/jpeg",0.82)}); close(); refreshStepMedia(stepId);
+    };
+    return;
+  }
+  // audio / video recording
+  let rec, chunks=[], startT=0, tick;
+  const mime=pickMime(kind);
+  function fmt(ms){ const s=Math.floor(ms/1000); return Math.floor(s/60)+":"+String(s%60).padStart(2,'0'); }
+  shutter.onclick=()=>{
+    if(!rec || rec.state==='inactive'){
+      try{ rec=new MediaRecorder(stream, mime?{mimeType:mime}:undefined); }catch(e){ alert("Recorder error: "+e.message); return; }
+      chunks=[]; rec.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+      rec.onstop=async()=>{ const blob=new Blob(chunks,{type:mime||(kind==='video'?'video/webm':'audio/webm')});
+        await putMedia({type:kind,stepId,ts:Date.now(),blob,mime:blob.type}); close(); refreshStepMedia(stepId); };
+      rec.start(); startT=Date.now(); shutter.classList.add("recording"); if(badge) badge.classList.remove("hidden");
+      tick=setInterval(()=>{ if(timerEl) timerEl.textContent=fmt(Date.now()-startT); },250);
+    } else {
+      clearInterval(tick); rec.stop(); shutter.classList.remove("recording");
+    }
+  };
+}
+
+/* ================= CLAUDE HELPER ================= */
+const GUIDE_CONTEXT = `You are the in-app assistant for a DIY repair app covering a 2018 Honda CR-V 1.5L Turbo (L15B7), "Session 1" — three jobs done together because they share a coolant drain and front-end teardown:
+1) A/C compressor + condenser replacement (refrigerant already professionally recovered; the car is driven to a shop afterward to evacuate & recharge, so this session ends with the A/C system OPEN and EMPTY).
+2) Engine Coolant Temperature Sensor 2 (ECT2) replacement in the lower (plastic) radiator tank.
+3) Bar's Leaks HG-1 head-gasket stop-leak, half a bottle, added to a COLD engine (system ~6.2 L / 6.5 qt).
+Key confirmed facts and safety rules:
+- The A/C refrigerant is R-1234yf (user confirmed). Do NOT recommend generic R-134a PAG46 oil; Honda R-1234yf systems use their own oil (ND-OIL 12 / POE per Honda service info) — tell the user to confirm the exact oil for their VIN and let the shop set the final oil charge.
+- Never open A/C lines under pressure; confirm 0 psi. Cap every open line immediately. New, oiled O-ring at every A/C fitting (a missed O-ring is the #1 leak). Hand-rotate the new compressor 8-10 turns before it ever runs. DO NOT turn the A/C on after this session — the system is empty; running it dry destroys the compressor.
+- ECT2 socket is unresolved between 17 mm and 19 mm — advise measuring the flats. It threads into a PLASTIC tank: new O-ring, hand-tight plus a small nudge, do not overtighten.
+- Cooling system has NO bleed bolt — self-bleeds via a pressurized expansion/degas tank. Fill through the tank, cap loose, heater HIGH, idle until the radiator fan cycles twice, top off. Honda Type 2 (blue) 50/50. HG-1 goes in COLD, half bottle.
+- A/C torque values are typical-Honda (line flanges ~9.8-12 N·m, compressor mounts ~24-25 N·m/18 lb-ft, condenser fittings ~9.8 N·m) — verify against the factory service manual for the VIN.
+Be concise and practical for someone in a driveway with a phone. Lead with the answer, prioritize safety, and say when a spec must be verified against the factory manual. If they attach a photo, describe what you see and whether it looks correct (O-ring seated, fitting clean, connector fully seated) and flag anything risky. You are not a substitute for a professional.`;
+let chatHistory=[], pendingImage=null;
+
+function openKey(){
+  const cur=state.apiKey||"";
+  sheet("Claude API key",`<div class="field"><label>Anthropic API key</label><input id="keyIn" type="password" placeholder="sk-ant-..." value="${cur.replace(/"/g,'&quot;')}"></div>
+    <p class="fine">Stored only in this browser and sent directly to api.anthropic.com from your device. Uses model <b>claude-opus-4-8</b> with vision. Get a key at console.anthropic.com; API usage is billed to your account.</p>
+    <div class="btnrow"><button class="btn" id="kc">Cancel</button><button class="btn pri" id="ks">Save</button></div>`,
+  (b)=>{ b.querySelector("#ks").onclick=()=>{ state.apiKey=b.querySelector("#keyIn").value.trim(); saveState(); closeSheet(); }; b.querySelector("#kc").onclick=closeSheet; });
+}
+
+function openChat(attachImg){
+  if(attachImg) pendingImage=attachImg;
+  const ctx = route==="step" ? `Current step: "${STEPS[cur].t}" (${STEPS[cur].phase.name}).` : "";
+  sheet("💬 Ask Claude", `<div id="chatlog"></div><div class="typing hidden" id="typing">Claude is thinking…</div>`,
+  (body,panel)=>{
+    const foot=document.createElement("div");
+    foot.innerHTML=`<div class="attachchip hidden" id="attach"></div><div class="chatinput"><textarea id="chatIn" rows="1" placeholder="Ask about this step…"></textarea><button class="send" id="chatSend">➤</button></div>`;
+    panel.appendChild(foot);
+    const log=body.querySelector("#chatlog"), ta=foot.querySelector("#chatIn"), send=foot.querySelector("#chatSend"), typing=body.querySelector("#typing");
+    ta.oninput=()=>{ ta.style.height="auto"; ta.style.height=Math.min(120,ta.scrollHeight)+"px"; };
+    renderChat(log); showAttach(foot);
+    function submit(){ const t=ta.value.trim(); if(!t&&!pendingImage) return; ta.value=""; ta.style.height="auto"; sendToClaude(t,ctx,log,typing,foot); }
+    send.onclick=submit; ta.onkeydown=e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); submit(); } };
+    if(!chatHistory.length) log.insertAdjacentHTML("beforeend", msgHtml("a","Hi — I'm your Session-1 helper. Ask about the A/C swap, ECT2 sensor, coolant bleed, or HG-1. Attach a photo of a fitting or O-ring and I'll check it. What's up?"));
+    setTimeout(()=>ta.focus(),150);
+  }, true);
+}
+function showAttach(foot){ const c=foot.querySelector("#attach"); if(pendingImage){ c.classList.remove("hidden"); c.innerHTML=`<img src="${pendingImage}"> photo attached <button style="background:none;border:none;color:var(--muted);cursor:pointer" id="ua">✕</button>`; c.querySelector("#ua").onclick=()=>{ pendingImage=null; c.classList.add("hidden"); }; } else c.classList.add("hidden"); }
+function msgHtml(role,text,img){ const s=(text||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>"); return `<div class="msg ${role}">${img?`<img src="${img}">`:""}${s}</div>`; }
+function renderChat(log){ log.innerHTML=""; chatHistory.forEach(m=>{ const t=m.content.filter(b=>b.type==="text").map(b=>b.text).join(""); log.insertAdjacentHTML("beforeend", msgHtml(m.role==="user"?"u":"a", t, m._img||null)); }); }
+
+async function sendToClaude(text,ctx,log,typing,foot){
+  if(!state.apiKey){ closeSheet(); openKey(); return; }
+  const content=[]; const img=pendingImage;
+  if(img){ const [meta,b64]=img.split(","); const mt=(meta.match(/data:(.*?);/)||[])[1]||"image/jpeg"; content.push({type:"image",source:{type:"base64",media_type:mt,data:b64}}); }
+  content.push({type:"text",text:text||"Please look at this photo and tell me if it looks correct for this step."});
+  const um={role:"user",content}; um._img=img; chatHistory.push(um); pendingImage=null; showAttach(foot);
+  renderChat(log); log.scrollTop=log.scrollHeight; typing.classList.remove("hidden");
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+      headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:"claude-opus-4-8",max_tokens:1024,system:GUIDE_CONTEXT+"\n\n"+ctx,messages:chatHistory.map(m=>({role:m.role,content:m.content}))})});
+    typing.classList.add("hidden");
+    if(!res.ok){ throw new Error("API "+res.status+": "+(await res.text()).slice(0,300)); }
+    const data=await res.json();
+    if(data.stop_reason==="refusal"){ log.insertAdjacentHTML("beforeend", msgHtml("a","I can't help with that. For safety-critical steps, confirm with a professional.")); return; }
+    const t=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim()||"(no response)";
+    chatHistory.push({role:"assistant",content:[{type:"text",text:t}]}); renderChat(log); log.scrollTop=log.scrollHeight;
+  }catch(err){ typing.classList.add("hidden"); log.insertAdjacentHTML("beforeend", `<div class="msg err">⚠️ ${String(err.message||err)}<br><span class="fine">Check your API key (⚙️ on the home screen) and network.</span></div>`); log.scrollTop=log.scrollHeight; }
+}
+
+/* ================= SHEET ================= */
+function sheet(title,bodyHtml,wire,chat){
+  closeSheet();
+  const s=document.createElement("div"); s.className="sheet"; s.id="sheet";
+  s.innerHTML=`<div class="panel"><div class="head"><b>${title}</b><button class="cl">✕</button></div><div class="body">${bodyHtml}</div></div>`;
+  document.body.appendChild(s);
+  const panel=s.querySelector(".panel"), body=s.querySelector(".body");
+  s.querySelector(".cl").onclick=closeSheet; s.onclick=e=>{ if(e.target===s) closeSheet(); };
+  if(chat){ body.style.flex="1"; }
+  wire&&wire(body,panel);
+}
+function closeSheet(){ const s=document.getElementById("sheet"); if(s) s.remove(); }
+function resetProgress(){ sheet("Reset progress?", `<p>Clears all checkmarks and step progress on this device. Your saved photos, voice notes, and videos are kept. Continue?</p><div class="btnrow"><button class="btn" id="rc">Cancel</button><button class="btn dgr" id="ry">Reset</button></div>`,
+  (b)=>{ b.querySelector("#rc").onclick=closeSheet; b.querySelector("#ry").onclick=()=>{ state.checks={};state.done={}; saveState(); closeSheet(); render(); }; }); }
+
+/* ================= BOOT ================= */
+document.getElementById("homeBtn").onclick=goHome;
+document.getElementById("themeBtn").onclick=cycleTheme;
+document.getElementById("ask").onclick=()=>openChat(null);
+openDB().then(render).catch(render);
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>

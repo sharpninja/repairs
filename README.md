@@ -12,31 +12,44 @@ share a coolant drain and front-end teardown:
 
 ## Files
 
-### The app (recommended)
+### The app (recommended) — in [`docs/`](docs/)
 
-An installable, **fully offline** Progressive Web App with completion tracking, a
-per-step camera, and an in-app Claude helper.
+An installable, **fully offline** Progressive Web App, styled to match the Claude
+ecosystem (coral accent, warm-paper light theme / charcoal dark theme, serif display),
+with completion tracking, contemporaneous media logging, a tools & parts list, and an
+in-app Claude helper. Lives in `docs/` so it deploys straight from **GitHub Pages
+(branch → `/docs`)**.
 
 | File | What it is |
 |------|-----------|
-| [`app/index.html`](app/index.html) | The app. Home dashboard with an overall progress ring + per-phase bars; step-by-step flow with big text, diagrams, and warnings; tappable checkboxes and progress saved on-device (localStorage). |
-| [`app/manifest.webmanifest`](app/manifest.webmanifest) · [`app/sw.js`](app/sw.js) · `app/icon-*.png` | PWA manifest, offline service worker, and icons — make it installable to a phone home screen and runnable with no network. |
+| [`docs/index.html`](docs/index.html) | The whole app (self-contained HTML/CSS/JS). Home dashboard with a progress ring + per-phase bars; step-by-step flow with diagrams and warnings; Tools & Parts and Session Log views. Progress saved on-device (localStorage). |
+| [`docs/manifest.webmanifest`](docs/manifest.webmanifest) · [`docs/sw.js`](docs/sw.js) · `docs/icon-*.png` · [`docs/favicon.svg`](docs/favicon.svg) | PWA manifest, offline service worker, Honda-H icons and favicon. |
 
 **App features**
-- **Completion tracking** — overall % ring, per-phase progress, resume where you left off, reset. Saved on the device.
-- **Camera** — on most steps, tap *Add a photo* to document the work (measured oil, a torqued fitting, a seated O-ring). Photos are stored on-device in IndexedDB, shown as thumbnails.
-- **Claude helper** — the *Ask Claude* button opens a chat that knows this exact job (including the R-1234yf/oil and ECT2-socket caveats). Attach a captured photo and ask *"does this O-ring look seated right?"* — it uses Claude's vision. Requires **your own Anthropic API key** (entered once via the ⚙️ button, stored only in your browser).
-- **Offline** — everything except the Claude helper works with no internet: the whole guide, progress, camera, and stored photos. Only the Claude call reaches `api.anthropic.com`.
+- **Completion tracking** — overall % ring, per-phase progress, resume, reset. On-device.
+- **Contemporaneous logging** — on most steps, capture a **📷 photo**, **🎙️ voice note**, or **🎬 video clip** as you work. Everything is timestamped and stored on-device (IndexedDB) and collected chronologically in the **Session Log**.
+- **Tools & Parts** — a categorized shopping list with **Amazon search links** for every tool and part (with a "verify fitment by VIN" caveat, since the compressor/condenser/ECT2 are 1.5T-specific and the A/C oil must be the R-1234yf type).
+- **Claude helper (vision)** — the *Ask Claude* button opens a chat primed with this exact job and its caveats. Attach a captured photo (or grab a frame from a video clip) and ask *"does this O-ring look seated right?"* — uses **claude-opus-4-8** with vision. Requires **your own Anthropic API key** (entered once via ⚙️, stored only in your browser).
+- **Theme** — System / Light / Dark, toggled from the header, following `prefers-color-scheme` by default.
+- **Offline** — everything except the Claude helper works with **no internet**: the whole guide, progress, camera/mic capture, and stored media. Only the Claude call reaches `api.anthropic.com`.
 
-**Running it** — the app must be served over **HTTPS or `localhost`** (camera, install, and the service worker all require a secure context — opening the file with `file://` won't enable them). Quickest local run:
+**Install from GitHub Pages (branch deploy)**
+1. Merge this branch into your default branch (the app must be in `docs/` on that branch).
+2. Repo **Settings → Pages → Build and deployment → Source: *Deploy from a branch***.
+3. **Branch:** your default branch, **Folder:** `/docs` → **Save**.
+4. Open `https://<user>.github.io/<repo>/` on your phone → browser menu → **Add to Home Screen**.
+
+Pages is served over HTTPS, so camera, microphone, install, and the service worker all work. (All app paths are relative, so it runs correctly under the `/<repo>/` subpath.)
+
+**Run it locally**
 
 ```bash
-cd app
+cd docs
 python3 -m http.server 8099
-# then open http://localhost:8099/  on the same machine
+# open http://localhost:8099/ (localhost is a secure context, so camera/mic/SW work)
 ```
 
-For phone use, host `app/` on any static HTTPS host (GitHub Pages, Netlify, etc.) and open it on the phone, then "Add to Home Screen".
+`file://` won't enable the camera, mic, install, or service worker — use `localhost` or HTTPS.
 
 ### Printable / slideshow guide
 
