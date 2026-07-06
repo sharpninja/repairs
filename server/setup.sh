@@ -20,14 +20,13 @@ err()  { printf '\033[1;31m%s\033[0m\n' "$*" >&2; }
 
 # ---- helpers to read/write KEY=VALUE in .env (portable, no in-place sed) ----
 get_env() { grep -E "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true; }
+# Rewrite KEY=VALUE. Uses grep+printf (not awk -v) so backslashes in the value
+# — e.g. a \n-escaped PEM private key — are written literally, not interpreted.
 set_env() {
   local key="$1" val="$2" tmp
   tmp="$(mktemp)"
-  awk -v k="$key" -v v="$val" '
-    $0 ~ "^"k"=" && !done { print k"="v; done=1; next }
-    { print }
-    END { if (!done) print k"="v }
-  ' "$ENV_FILE" > "$tmp"
+  grep -v -E "^${key}=" "$ENV_FILE" 2>/dev/null > "$tmp" || true
+  printf '%s=%s\n' "$key" "$val" >> "$tmp"
   mv "$tmp" "$ENV_FILE"
 }
 # A value counts as "unset" if empty or still the example placeholder.
@@ -71,8 +70,44 @@ warn "and add your app origin to 'Authorized JavaScript origins'."
 prompt GOOGLE_CLIENT_ID "Google OAuth client ID"
 
 say "== GitHub credential =="
-warn "Fine-grained PAT (or GitHub App token) with Contents + Pull requests: Read/Write on the repo."
-prompt GITHUB_TOKEN "GitHub token" secret
+# Generate a least-privilege installation token from a GitHub App, or paste a PAT.
+json_field() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log((JSON.parse(s)["'"$1"'"])??"")}catch(e){}})'; }
+gh_generate() {
+  command -v node >/dev/null 2>&1 || { warn "node is needed to generate a token — paste a PAT instead."; return 1; }
+  local owner repo app pem out token inst esc
+  owner="$(get_env GITHUB_OWNER)"; repo="$(get_env GITHUB_REPO)"
+  [ -n "$owner" ] || owner="sharpninja"; [ -n "$repo" ] || repo="repairs"
+  warn "Create a GitHub App with repo permissions: Contents RW, Pull requests RW, Issues RW, Metadata R;"
+  warn "install it on ${owner}/${repo}; download its private key (.pem). Then:"
+  read -r -p "GitHub App ID: " app
+  read -r -p "Path to the App private key (.pem): " pem
+  [ -n "$app" ] && [ -f "$pem" ] || { err "Need an App ID and an existing .pem path."; return 1; }
+  if [ ! -d node_modules ]; then say "Installing server deps (one-time)…"; npm install >/dev/null 2>&1 || { err "npm install failed."; return 1; }; fi
+  say "Minting a scoped installation token…"
+  out="$(GITHUB_APP_ID="$app" GITHUB_APP_PRIVATE_KEY_FILE="$pem" GITHUB_OWNER="$owner" GITHUB_REPO="$repo" node scripts/mint-token.mjs)" || return 1
+  token="$(printf '%s' "$out" | json_field token)"
+  inst="$(printf '%s' "$out" | json_field installationId)"
+  [ -n "$token" ] && [ -n "$inst" ] || { err "Token generation returned nothing."; return 1; }
+  esc="$(awk 'BEGIN{ORS="\\n"}{print}' "$pem")"   # PEM -> single line with literal \n
+  set_env GITHUB_APP_ID "$app"
+  set_env GITHUB_APP_PRIVATE_KEY "$esc"
+  set_env GITHUB_APP_INSTALLATION_ID "$inst"
+  set_env GITHUB_TOKEN "$token"
+  say "✓ Scoped token generated (installation #$inst). The service auto-refreshes via the App."
+}
+if needs GITHUB_TOKEN && needs GITHUB_APP_ID; then
+  echo "  1) Generate a scoped token from a GitHub App (recommended, least-privilege)"
+  echo "  2) Paste a fine-grained PAT"
+  read -r -p "Choose [1/2]: " ghchoice
+  if [ "$ghchoice" = "1" ]; then
+    gh_generate || { warn "Falling back to pasting a token."; prompt GITHUB_TOKEN "GitHub token" secret; }
+  else
+    warn "Fine-grained PAT scoped to the repo with Contents + Pull requests + Issues: Read/Write."
+    prompt GITHUB_TOKEN "GitHub token" secret
+  fi
+else
+  say "✓ GitHub credential already set."
+fi
 
 say "== Claude subscription token (for moderation) =="
 if needs CLAUDE_CODE_OAUTH_TOKEN; then
@@ -104,9 +139,9 @@ read -r -p "App origin for CORS [$(get_env ALLOWED_ORIGIN)]: " ORIGIN || true
 
 # ---- verify required values are present ----
 missing=()
-for k in GOOGLE_CLIENT_ID GITHUB_TOKEN CLAUDE_CODE_OAUTH_TOKEN; do
-  needs "$k" && missing+=("$k")
-done
+needs GOOGLE_CLIENT_ID && missing+=("GOOGLE_CLIENT_ID")
+needs CLAUDE_CODE_OAUTH_TOKEN && missing+=("CLAUDE_CODE_OAUTH_TOKEN")
+if needs GITHUB_TOKEN && needs GITHUB_APP_ID; then missing+=("GITHUB_TOKEN (or a GitHub App)"); fi
 if (( ${#missing[@]} )); then
   err "Still unset: ${missing[*]}. Edit $ENV_FILE and re-run."
   exit 1

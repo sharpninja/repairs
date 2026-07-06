@@ -3,6 +3,8 @@
 // "Contents" + "Pull requests" read/write on the target repo, or a GitHub App
 // installation token. Users never see or hold this credential.
 import { Octokit } from "@octokit/rest";
+import { createAppAuth } from "@octokit/auth-app";
+import { readFileSync } from "node:fs";
 import { moderatePullRequest } from "./moderate.js";
 
 const OWNER = process.env.GITHUB_OWNER || "sharpninja";
@@ -21,9 +23,24 @@ async function afterPR(kit, prNumber, submitter) {
   }
 }
 
+function appPrivateKey() {
+  const f = process.env.GITHUB_APP_PRIVATE_KEY_FILE;
+  if (f) return readFileSync(f, "utf8");
+  const k = process.env.GITHUB_APP_PRIVATE_KEY;
+  return k ? k.replace(/\\n/g, "\n") : "";
+}
+// Prefer GitHub App auth (installation tokens are least-privilege — limited to the
+// App's configured permissions — and auto-refresh, so nothing hourly-expiring is
+// baked in). Fall back to a GITHUB_TOKEN (PAT or a minted installation token).
 function octo() {
+  const appId = process.env.GITHUB_APP_ID;
+  const key = appPrivateKey();
+  const inst = process.env.GITHUB_APP_INSTALLATION_ID;
+  if (appId && key && inst) {
+    return new Octokit({ authStrategy: createAppAuth, auth: { appId, privateKey: key, installationId: Number(inst) } });
+  }
   const t = process.env.GITHUB_TOKEN;
-  if (!t) throw new Error("Server is missing GITHUB_TOKEN");
+  if (!t) throw new Error("Set GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY + GITHUB_APP_INSTALLATION_ID, or GITHUB_TOKEN");
   return new Octokit({ auth: t });
 }
 const slug = (s) => String(s || "guide").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "guide";
