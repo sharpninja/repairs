@@ -696,7 +696,7 @@ const amazonTag=()=>String(_amazonTag||"").trim();
 async function fetchAppConfig(){ if(!submitApi()) return; try{ const r=await submitRPC("GetAppConfig",{}); _amazonTag=(r&&r.amazonTag)||""; localStorage.setItem("crv-amzn",_amazonTag); }catch(e){} }
 
 /* ================= CLIENT ERROR TELEMETRY (deidentified) ================= */
-const APP_VERSION = "crv-s1-v15";
+const APP_VERSION = "crv-s1-v16";
 /* Deidentify a string before it leaves the device: strip Anthropic keys, emails, tokens, VINs. */
 function scrub(s){ return String(s==null?"":s)
   .replace(/sk-ant-[A-Za-z0-9_-]+/g,"[KEY]")
@@ -1391,6 +1391,10 @@ function submitSheet(title, previewHtml, rpc, payload, meta, back){
     <div id="subStatus" class="fine"></div>
     <div class="btnrow"><button class="btn" id="subCancel">Cancel</button><button class="btn pri" id="subGo" disabled>🚀 Submit</button></div>`,
   (b)=>{
+    // Keep Google sign-in from being torn down by a stray backdrop tap. Removing
+    // the in-progress GIS anchor (the #gsi iframe) mid-flow is what makes the
+    // login form close before it completes, so this sheet only closes via ✕/Cancel.
+    const _sh=b.parentElement&&b.parentElement.parentElement; if(_sh) _sh.onclick=null;
     const go=b.querySelector("#subGo"), st=b.querySelector("#subStatus"), gsi=b.querySelector("#gsi");
     const ready=()=>{ go.disabled=false; st.innerHTML=`Signed in as <b>${esc(_session&&_session.email||_gEmail)}</b>.`; gsi.style.display="none"; };
     if(loggedIn()){ ready(); }
