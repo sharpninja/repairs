@@ -27,6 +27,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/gen ./gen
 COPY --from=build /app/src ./src
 COPY package.json ./
+# Static legal pages (privacy/terms) served at /legal/* for the app-store listings.
+COPY legal ./legal
 # Persistent storage for sessions + trust/rate state (mount a volume here).
 RUN mkdir -p /app/data
 VOLUME ["/app/data"]
