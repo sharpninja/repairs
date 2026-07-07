@@ -5,12 +5,23 @@ A small **gRPC / Connect** service (Node, Dockerized) that turns
 requests** against the guide catalog in the **data repo** (`sharpninja/repairs-data`,
 `marketplace.json` on the **`approved`** branch — separate from the app code repo).
 
-- The browser signs the user in with **Google Identity Services** and sends the
-  Google **ID token** with the payload.
-- The service **verifies the ID token**, then uses a **server-held GitHub
-  credential** (a bot PAT or GitHub App) to branch, edit `marketplace.json`, and
-  open a PR — attributing the submission to the Google user in the PR body.
+- The browser signs the user in with **Google Identity Services** using the
+  **top-level redirect flow** (`ux_mode:"redirect"`): the page navigates to Google,
+  which POSTs the **ID token** to **`POST /auth/google/callback`**. This needs no
+  third-party cookies/storage, so it works under browser tracking prevention and in
+  an installed PWA (the old popup flow silently closes there).
+- The callback verifies the `g_csrf_token` double-submit cookie, verifies the ID
+  token, mints a session, and **303-redirects back into the app** (`APP_ORIGIN`) with a
+  single-use handoff code in the URL fragment. The app swaps it for its session key via
+  **`POST /auth/google/redeem`**, then submits carry that key (as before).
+- The service uses a **server-held GitHub credential** (a bot PAT or GitHub App) to
+  branch, edit `marketplace.json`, and open a PR — attributing the submission to the
+  Google user in the PR body.
 - Users never see or hold a GitHub credential; a maintainer reviews and merges.
+
+> Google Cloud Console for the redirect flow: on the same Web OAuth client, add the app
+> origin to **Authorized JavaScript origins** *and* the exact callback
+> `https://<backend-origin>/auth/google/callback` to **Authorized redirect URIs**.
 
 Two RPCs (see [`proto/repairs/v1/submissions.proto`](proto/repairs/v1/submissions.proto)):
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'; worker-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://*.googleusercontent.com https://www.gstatic.com; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com https://accounts.google.com https://www.googleapis.com https://raw.githubusercontent.com https://sharpninja.ngrok.app; frame-src https://accounts.google.com https://www.youtube-nocookie.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'self' https://sharpninja.ngrok.app https://accounts.google.com; manifest-src 'self'; worker-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://*.googleusercontent.com https://www.gstatic.com; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com https://accounts.google.com https://www.googleapis.com https://raw.githubusercontent.com https://sharpninja.ngrok.app; frame-src https://accounts.google.com https://www.youtube-nocookie.com;">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf9f5">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#262624">
@@ -697,7 +697,7 @@ const amazonTag=()=>String(_amazonTag||"").trim();
 async function fetchAppConfig(){ if(!submitApi()) return; try{ const r=await submitRPC("GetAppConfig",{}); _amazonTag=(r&&r.amazonTag)||""; localStorage.setItem("crv-amzn",_amazonTag); }catch(e){} }
 
 /* ================= CLIENT ERROR TELEMETRY (deidentified) ================= */
-const APP_VERSION = "crv-s1-v17";
+const APP_VERSION = "crv-s1-v18";
 /* Deidentify a string before it leaves the device: strip Anthropic keys, emails, tokens, VINs. */
 function scrub(s){ return String(s==null?"":s)
   .replace(/sk-ant-[A-Za-z0-9_-]+/g,"[KEY]")
@@ -1323,16 +1323,21 @@ function openMarketGuide(e){
   });
 }
 
-/* ---- Google sign-in + submit-to-PR (backend gRPC/Connect service) ---- */
-let _gCred=null, _gEmail="";
-function gjwtEmail(tok){ try{ const p=JSON.parse(atob(tok.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))); return p.email||""; }catch(e){ return ""; } }
+/* ---- Google sign-in (top-level REDIRECT) + submit-to-PR (backend gRPC/Connect service) ---- */
+let _gEmail="";
 function loadGIS(){ return new Promise((res,rej)=>{ if(window.google&&window.google.accounts&&google.accounts.id) return res();
   const s=document.createElement("script"); s.src="https://accounts.google.com/gsi/client"; s.async=true; s.defer=true;
   s.onload=()=>res(); s.onerror=()=>rej(new Error("Couldn't load Google sign-in (needs internet).")); document.head.appendChild(s); }); }
-async function renderGoogleButton(el, onToken){
+/* Redirect sign-in: GIS navigates the whole page to Google (top-level, first-party), which
+   POSTs the ID token to the backend /auth/google/callback. No popup, no third-party storage,
+   so it survives tracking prevention + installed PWAs (the popup flow silently closes there).
+   The backend 303s back into the app with a one-time code that redeemHandoff() swaps for the
+   session key on boot. In redirect mode the JS callback never fires, so there isn't one. */
+async function renderGoogleButton(el){
   const cid=googleClientId(); if(!cid) throw new Error("Google client ID isn't set (⚙️ → Community submissions).");
+  const base=submitApi(); if(!base) throw new Error("Submission backend isn't set (⚙️ → Community submissions).");
   await loadGIS();
-  google.accounts.id.initialize({ client_id:cid, callback:(r)=>{ if(r&&r.credential){ _gCred=r.credential; _gEmail=gjwtEmail(r.credential); onToken(r.credential); } } });
+  google.accounts.id.initialize({ client_id:cid, ux_mode:"redirect", login_uri:base.replace(/\/+$/,"")+"/auth/google/callback" });
   el.innerHTML=""; google.accounts.id.renderButton(el,{theme:"outline",size:"large",text:"signin_with",width:260});
 }
 async function submitRPC(method,payload){
@@ -1349,13 +1354,29 @@ let _session=null;
 function loadSession(){ try{ _session=JSON.parse(localStorage.getItem(SESS_KEY))||null; }catch(e){ _session=null; } if(_session&&_session.exp&&_session.exp<Date.now()) _session=null; return _session; }
 function saveSession(s){ _session=s; if(s){ localStorage.setItem(SESS_KEY,JSON.stringify(s)); _gEmail=s.email||_gEmail; } else localStorage.removeItem(SESS_KEY); }
 function loggedIn(){ return !!(_session&&_session.key&&(!_session.exp||_session.exp>Date.now())); }
-async function startSession(googleToken){ const r=await submitRPC("StartSession",{googleIdToken:googleToken}); saveSession({key:r.sessionKey, email:r.email||_gEmail, exp:Number(r.expiresAt)||0}); return _session; }
+/* Return leg of the redirect sign-in: the backend 303'd us back with a single-use handoff
+   code in the URL fragment. Swap it (once) for the real session key, then scrub it from the
+   URL so no bearer is left in history/address bar. No-op on a normal (no-fragment) load. */
+async function redeemHandoff(){
+  try{
+    const h=location.hash||"";
+    if(/[#&]autherror=/.test(h)){ try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} toast("Sign-in didn't complete. Please try again."); return false; }
+    const m=/[#&]authcode=([A-Za-z0-9_-]+)/.exec(h); if(!m) return false;
+    const code=m[1];
+    try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}   // strip immediately
+    const base=submitApi(); if(!base) return false;
+    const res=await fetch(base.replace(/\/+$/,"")+"/auth/google/redeem",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code})});
+    const txt=await res.text(); let d={}; try{ d=txt?JSON.parse(txt):{}; }catch(e){}
+    if(res.ok && d.sessionKey){ saveSession({key:d.sessionKey, email:d.email||"", exp:Number(d.expiresAt)||0}); return true; }
+  }catch(e){ /* not signed in; app continues logged-out */ }
+  return false;
+}
 async function negotiateSession(){ // on startup: rotate the stored session for a fresh key
   loadSession(); if(!_session||!submitApi()) return;
   try{ const r=await submitRPC("RefreshSession",{sessionKey:_session.key}); saveSession({key:r.sessionKey, email:r.email||_session.email, exp:Number(r.expiresAt)||0}); }
   catch(e){ saveSession(null); }
 }
-function signOut(){ saveSession(null); _gCred=null; _gEmail=""; }
+function signOut(){ saveSession(null); _gEmail=""; }
 
 /* ---- Track submitted PRs + notify when they go live (merged) ---- */
 const SUBS_KEY="crv-submissions";
@@ -1399,7 +1420,8 @@ function submitSheet(title, previewHtml, rpc, payload, meta, back){
     const go=b.querySelector("#subGo"), st=b.querySelector("#subStatus"), gsi=b.querySelector("#gsi");
     const ready=()=>{ go.disabled=false; st.innerHTML=`Signed in as <b>${esc(_session&&_session.email||_gEmail)}</b>.`; gsi.style.display="none"; };
     if(loggedIn()){ ready(); }
-    else renderGoogleButton(gsi, async(tok)=>{ st.textContent="Establishing session…"; try{ await startSession(tok); ready(); }catch(e){ st.innerHTML=`<span class="vinbad">⚠️ ${esc(e.message)}</span>`; } }).catch(e=>{ st.innerHTML=`<span class="vinbad">⚠️ ${esc(e.message)}</span>`; });
+    else { st.innerHTML=`Sign in with Google to submit. <span class="fine">This opens Google, then brings you back here signed in.</span>`;
+      renderGoogleButton(gsi).catch(e=>{ st.innerHTML=`<span class="vinbad">⚠️ ${esc(e.message)}</span>`; }); }
     b.querySelector("#subCancel").onclick=()=>{ back&&back(); };
     go.onclick=async()=>{ if(!loggedIn()){ st.textContent="Sign in first."; return; } go.disabled=true; st.textContent="Submitting…";
       try{ const r=await submitRPC(rpc, Object.assign({sessionKey:_session.key}, payload));
@@ -1901,9 +1923,10 @@ setActive(state.activeGuide||"crv-s1");
 openDB().then(render).catch(render);
 fetchAppConfig().catch(()=>{});   // pick up the server-provided Amazon Associate tag (no login needed)
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
-// On startup, if logged in, negotiate a fresh session key then poll our PRs and
-// notify when any have gone live (merged).
-negotiateSession().then(()=>{ if(loggedIn()) pollSubmissions(); });
+// On startup: first redeem any redirect-sign-in handoff code in the URL (logs the user
+// in on return from Google), then negotiate a fresh session key and poll our PRs,
+// notifying when any have gone live (merged).
+redeemHandoff().then(()=>negotiateSession()).then(()=>{ if(loggedIn()) pollSubmissions(); });
 </script>
 </body>
 </html>

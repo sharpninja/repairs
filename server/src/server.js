@@ -5,6 +5,7 @@ import { connectNodeAdapter } from "@connectrpc/connect-node";
 import routes from "./routes.js";
 import { adminHandler } from "./admin.js";
 import { legalHandler } from "./legal.js";
+import { handleGoogleCallback, handleGoogleRedeem } from "./oauth.js";
 
 // CORS allowlist: a comma-separated list of exact origins, or "*" to allow any.
 // With a list, the matching request Origin is echoed back (proper multi-origin CORS);
@@ -44,6 +45,17 @@ const server = http.createServer((req, res) => {
   }
   // Public legal pages (privacy policy + terms) for the app-store listings.
   if (legalHandler(req, res)) return;
+  // Top-level redirect Google sign-in. The callback is a browser form POST from Google
+  // (the Connect/gRPC-Web adapter can't parse it), so intercept both before the adapter.
+  const path = req.url.split("?")[0];
+  if (req.method === "POST" && path === "/auth/google/callback") {
+    handleGoogleCallback(req, res).catch(() => { try { res.writeHead(500, { "content-type": "text/plain" }); res.end("error"); } catch (e) {} });
+    return;
+  }
+  if (req.method === "POST" && path === "/auth/google/redeem") {
+    handleGoogleRedeem(req, res).catch(() => { try { res.writeHead(500, { "content-type": "text/plain" }); res.end("error"); } catch (e) {} });
+    return;
+  }
   adapter(req, res);
 });
 

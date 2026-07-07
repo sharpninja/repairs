@@ -3,7 +3,7 @@
    camera capture, and stored photos work with NO network. The only thing that
    needs the internet is the Claude helper's call to api.anthropic.com, which is
    always fetched live and never cached. */
-const CACHE = "crv-s1-v17";
+const CACHE = "crv-s1-v18";
 const SHELL = [
   "./",
   "./index.html",

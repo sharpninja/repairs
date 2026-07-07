@@ -63,7 +63,7 @@ const initScript = ({ jwt, seedSession, seedSubmission, seedVehicles, activeVehi
   // ---- Fake Google Identity Services ----
   window.google = { accounts: { id: {
     _cb: null,
-    initialize(o) { this._cb = o.callback; },
+    initialize(o) { this._cb = o.callback; window.__gis = o; },   // capture config (ux_mode/login_uri) for assertions
     renderButton(el) { el.innerHTML = '<button id="fakeG">Sign in with Google</button>'; el.querySelector("#fakeG").onclick = () => this._cb && this._cb({ credential: ${JSON.stringify(jwt)} }); },
     prompt() {}
   } } };
@@ -73,12 +73,17 @@ const initScript = ({ jwt, seedSession, seedSubmission, seedVehicles, activeVehi
   const realFetch = window.fetch;
   window.fetch = (u, o) => {
     u = String(u);
+    const J = (obj) => Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(obj)) });
+    // Top-level redirect sign-in: the app swaps a one-time handoff code for a session key.
+    if (u.includes("/auth/google/redeem")) {
+      window.__redeem = JSON.parse((o && o.body) || "{}");
+      return J({ sessionKey: "sess-redeem", email: "tester@example.com", expiresAt: String(Date.now() + 3600000) });
+    }
     // Submit/gRPC backend
     if (u.includes("/repairs.v1.SubmissionService/")) {
       const method = u.split("/").pop();
       const body = JSON.parse((o && o.body) || "{}");
       window.__rpc[method] = body;
-      const J = (obj) => Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(obj)) });
       if (method === "StartSession")   return J({ sessionKey: "sess-abc", email: "tester@example.com", expiresAt: String(Date.now() + 3600000) });
       if (method === "RefreshSession") return J({ sessionKey: "sess-rot", email: "tester@example.com", expiresAt: String(Date.now() + 3600000) });
       if (method === "SubmitReview")   return J({ ok: true, prUrl: "https://github.com/x/y/pull/11", prNumber: 11, message: "Review PR opened" });
@@ -167,28 +172,31 @@ const initScript = ({ jwt, seedSession, seedSubmission, seedVehicles, activeVehi
   eq("VIN decode returns fields", a.decode, { year: 2018, make: "Honda", model: "CR-V" });
   check("all Anthropic calls carry the API key header", a.allHadKey);
 
-  // -- Session-tagged review submission via the real UI flow --
+  // -- Session-tagged review submission via the real UI flow. Sign-in is the redirect
+  //    flow now: simulate returning from Google with a one-time handoff code in the URL. --
   const rev = await page.evaluate(async () => {
+    location.hash = "#authcode=rev-code";
+    await redeemHandoff();                                 // -> POST /auth/google/redeem -> session
     const cat = await loadMarket();
     openMarketGuide(cat.guides[0]);
     await new Promise((r) => setTimeout(r, 60));
     document.querySelectorAll("#myStars .st")[4].click(); // 5 stars
     document.getElementById("revText").value = "Clear and safe.";
-    document.getElementById("revPR").click();             // -> submit sheet (no client moderation now)
-    await new Promise((r) => setTimeout(r, 60));
-    document.getElementById("fakeG").click();              // Google sign-in -> StartSession
+    document.getElementById("revPR").click();             // -> submit sheet (already signed in)
     await new Promise((r) => setTimeout(r, 60));
     document.getElementById("subGo").click();              // -> SubmitReview
     await new Promise((r) => setTimeout(r, 80));
     return {
-      startSessionCalled: !!window.__rpc.StartSession,
+      redeemCode: window.__redeem && window.__redeem.code,
+      hashCleared: location.hash === "",
       review: window.__rpc.SubmitReview,
       status: document.getElementById("subStatus").textContent,
       recorded: JSON.parse(localStorage.getItem("crv-submissions") || "[]"),
     };
   });
-  check("StartSession called on sign-in", rev.startSessionCalled);
-  check("SubmitReview tagged with the session key", rev.review && rev.review.sessionKey === "sess-abc");
+  check("handoff code redeemed on return from the redirect", rev.redeemCode === "rev-code");
+  check("handoff code stripped from the URL after redeem", rev.hashCleared);
+  check("SubmitReview tagged with the session key", rev.review && rev.review.sessionKey === "sess-redeem");
   eq("SubmitReview carries the review fields", [rev.review.guideId, rev.review.stars, rev.review.reviewText], ["mkt-crv-s1", 5, "Clear and safe."]);
   check("opened PR is shown + recorded for polling", /#11/.test(rev.status) && rev.recorded.some((s) => s.number === 11));
 
@@ -201,7 +209,7 @@ const initScript = ({ jwt, seedSession, seedSubmission, seedVehicles, activeVehi
     await new Promise((r) => setTimeout(r, 80));
     return { repair: window.__rpc.SubmitRepair, status: document.getElementById("subStatus").textContent, recorded: JSON.parse(localStorage.getItem("crv-submissions") || "[]").length };
   });
-  check("SubmitRepair tagged with the session key", rep.repair && rep.repair.sessionKey === "sess-abc");
+  check("SubmitRepair tagged with the session key", rep.repair && rep.repair.sessionKey === "sess-redeem");
   check("empty-PR (silent) response shows 'received', records nothing", /received/i.test(rep.status) && rep.recorded === 1);
   eq("no page errors", errs, []);
   await ctx.close();
@@ -229,6 +237,41 @@ const initScript = ({ jwt, seedSession, seedSubmission, seedVehicles, activeVehi
   });
   check("Ask Claude error path does not execute injected HTML", x.xss === undefined);
   check("Ask Claude error text is escaped in the DOM", /&lt;img/.test(x.html) && !/<img/.test(x.html));
+  eq("no page errors", errs, []);
+  await ctx.close();
+}
+
+// ============ Scenario 3b: redirect Google sign-in (ux_mode:redirect + one-time handoff) ============
+{
+  console.log("client<->server: redirect sign-in (ux_mode:redirect + handoff redemption)");
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(initScript({ jwt: FAKE_JWT }));
+  const page = await ctx.newPage();
+  const errs = []; page.on("pageerror", (e) => errs.push(String(e)));
+  // Return leg: the backend 303'd us back into the PWA with a one-time code in the fragment.
+  await page.goto(BASE + "/index.html#authcode=boot-code", { waitUntil: "load" });
+  await page.waitForTimeout(400);
+  const r = await page.evaluate(() => ({
+    redeemCode: window.__redeem && window.__redeem.code,
+    loggedIn: loggedIn(),
+    refreshed: !!window.__rpc.RefreshSession,
+    hash: location.hash,
+  }));
+  check("boot redeems the handoff code from the URL fragment", r.redeemCode === "boot-code"); // T-R-redeem
+  check("session established after returning from the redirect", r.loggedIn);                  // T-R-login
+  check("session rotated immediately after redeem (negotiate ran)", r.refreshed);              // T-R-negotiate
+  check("handoff code stripped from the URL", r.hash === "");                                  // T-R-strip
+
+  // Signed OUT: the sign-in button is configured for the redirect flow, not a popup callback.
+  const cfg = await page.evaluate(async () => {
+    signOut();
+    openSubmitReview({ id: "mkt-crv-s1" }, "Title", 5, "Clear and safe review text.");
+    await new Promise((res) => setTimeout(res, 120));
+    return { gis: window.__gis };
+  });
+  check("GIS is configured for redirect (ux_mode:redirect)", cfg.gis && cfg.gis.ux_mode === "redirect");            // T-R-uxmode
+  check("login_uri targets the backend /auth/google/callback", cfg.gis && /\/auth\/google\/callback$/.test(cfg.gis.login_uri || "")); // T-R-loginuri
+  check("no JS callback is registered in redirect mode", cfg.gis && !cfg.gis.callback);                             // T-R-nocallback
   eq("no page errors", errs, []);
   await ctx.close();
 }
