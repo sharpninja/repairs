@@ -33,9 +33,7 @@ stages:
       name: 'Default'
     steps:
     - checkout: self
-    - task: NodeTool@0
-      inputs:
-        versionSpec: '20.x'
+    # node is baked into the PAYTON-DESKTOP host (golden host), so no NodeTool download needed.
     - script: cd server && npm ci
       displayName: install server deps
     - script: node tests/store.test.mjs
