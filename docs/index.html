@@ -238,15 +238,16 @@
   .msg.u{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:5px}
   .msg.a{align-self:flex-start;background:var(--card2);border:1px solid var(--line);border-bottom-left-radius:5px}
   .msg.a strong{color:var(--accent)}
-  .msg img{max-width:160px;border-radius:10px;display:block;margin-bottom:8px}
+  .msg img{max-width:min(100%,460px);width:auto;border-radius:10px;display:block;margin-bottom:8px}
   .msg.err{background:var(--danger-bg);border:1px solid var(--danger);color:var(--danger-ink)}
   .typing{align-self:flex-start;color:var(--muted);font-style:italic;padding:6px 4px}
   .chatinput{display:flex;gap:8px;padding:12px var(--pad) calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);align-items:flex-end}
   .chatinput textarea{flex:1;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:14px;padding:11px 13px;font-size:16px;resize:none;max-height:120px;font-family:inherit}
   .chatinput .send{background:var(--accent);color:var(--accent-ink);border:none;border-radius:14px;width:52px;height:48px;font-size:20px;font-weight:900;cursor:pointer;flex:0 0 auto}
   .chatinput .send:disabled{opacity:.4}
-  .attachchip{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:.8em;color:var(--muted);margin:0 var(--pad) 8px}
-  .attachchip img{width:26px;height:26px;border-radius:6px;object-fit:cover}
+  .attachchip{position:relative;display:inline-block;line-height:0;background:var(--card2);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:0 var(--pad) 8px}
+  .attachchip img{display:block;height:104px;width:auto;max-width:min(62vw,280px);object-fit:cover}
+  .attachchip .rm{position:absolute;top:5px;right:5px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
   .field{margin:12px 0}
   .field label{display:block;font-weight:700;margin-bottom:6px;font-size:.92em}
   .field input{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:16px}
@@ -695,7 +696,7 @@ const amazonTag=()=>String(_amazonTag||"").trim();
 async function fetchAppConfig(){ if(!submitApi()) return; try{ const r=await submitRPC("GetAppConfig",{}); _amazonTag=(r&&r.amazonTag)||""; localStorage.setItem("crv-amzn",_amazonTag); }catch(e){} }
 
 /* ================= CLIENT ERROR TELEMETRY (deidentified) ================= */
-const APP_VERSION = "crv-s1-v13";
+const APP_VERSION = "crv-s1-v15";
 /* Deidentify a string before it leaves the device: strip Anthropic keys, emails, tokens, VINs. */
 function scrub(s){ return String(s==null?"":s)
   .replace(/sk-ant-[A-Za-z0-9_-]+/g,"[KEY]")
@@ -779,7 +780,6 @@ function renderHome(){
   view.innerHTML=`
     <div class="hero" style="text-align:left;padding:18px 18px 16px">
       <h1 style="margin:0">AI Auto Repairman</h1>
-      <p class="lead" style="margin:.3em 0 0">Pick your vehicle, then a repair guide.</p>
     </div>
     ${noVeh?`<div class="call tip" style="margin-top:14px"><span class="ic">🚗</span><div><span class="t">Add your first vehicle</span>We tailor repair guides to your exact car. Add one by VIN to get started.</div></div>
       <div class="btnrow" style="margin-top:10px"><button class="btn pri" id="addFirstV">＋ Add your first vehicle</button></div>`:""}
@@ -1433,6 +1433,11 @@ function openChat(attachImg){
     const foot=document.createElement("div");
     foot.innerHTML=`<div class="attachchip hidden" id="attach"></div><div class="chatinput"><button class="cataux" id="chatCam" title="Take a photo">📷</button><button class="cataux" id="chatPhoto" title="Add a photo">🖼️</button><input type="file" accept="image/*" id="chatFile" hidden><textarea id="chatIn" rows="1" placeholder="Ask about this step…"></textarea><button class="send" id="chatSend">➤</button></div>`;
     panel.appendChild(foot);
+    // Chat panel fills the space from the toolbar down (consume full available height).
+    const tw=document.getElementById("topwrap")||document.getElementById("top");
+    const tb=tw?Math.max(0,Math.round(tw.getBoundingClientRect().bottom)):56;
+    const sh=document.getElementById("sheet"); if(sh) sh.style.top=tb+"px";
+    panel.style.maxHeight="none"; panel.style.height="100%";
     const log=body.querySelector("#chatlog"), ta=foot.querySelector("#chatIn"), send=foot.querySelector("#chatSend"), typing=body.querySelector("#typing");
     const fileIn=foot.querySelector("#chatFile");
     foot.querySelector("#chatCam").onclick=()=>startCapture(null,"photo",(d)=>{ pendingImage=d; showAttach(foot); });
@@ -1446,7 +1451,7 @@ function openChat(attachImg){
     setTimeout(()=>ta.focus(),150);
   }, true);
 }
-function showAttach(foot){ const c=foot.querySelector("#attach"); if(pendingImage){ c.classList.remove("hidden"); c.innerHTML=`<img src="${pendingImage}"> photo attached <button style="background:none;border:none;color:var(--muted);cursor:pointer" id="ua">✕</button>`; c.querySelector("#ua").onclick=()=>{ pendingImage=null; c.classList.add("hidden"); }; } else c.classList.add("hidden"); }
+function showAttach(foot){ const c=foot.querySelector("#attach"); if(pendingImage){ c.classList.remove("hidden"); c.innerHTML=`<img src="${pendingImage}" alt="attached photo"><button class="rm" id="ua" title="Remove photo">✕</button>`; c.querySelector("#ua").onclick=()=>{ pendingImage=null; c.classList.add("hidden"); }; } else c.classList.add("hidden"); }
 function msgHtml(role,text,img){ const r=(role==="u"?"u":"a"); const s=(text||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>"); return `<div class="msg ${r}">${img?`<img src="${(img||"").replace(/"/g,"&quot;")}">`:""}${s}</div>`; }
 function renderChat(log){ log.innerHTML=""; chatHistory.forEach(m=>{ const t=m.content.filter(b=>b.type==="text").map(b=>b.text).join(""); log.insertAdjacentHTML("beforeend", msgHtml(m.role==="user"?"u":"a", t, m._img||null)); }); }
 
