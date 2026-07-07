@@ -3,19 +3,16 @@
 # Three stages:
 #   1. Test        - backend unit tests (store + admin) on a Microsoft-hosted agent.
 #   2. PublishApp  - publish the PWA (docs/) to the GitHub Pages repo sharpninja/repairs.
-#   3. DeploySvc   - package the submit service (server/) and deploy it to Octopus on
-#                    PAYTON-DESKTOP, which deploys to the Windows target via its Tentacle.
+#   3. DeployService - create + deploy an Octopus release; Octopus runs on the PAYTON-DESKTOP
+#                    Windows target and triggers the docker redeploy (git pull + docker compose up).
 #
-# PREREQUISITES (set these up before the pipeline can fully run):
-#   - GITHUB_PAT : secret pipeline variable = a GitHub PAT with repo:contents write on
-#                  sharpninja/repairs (used to publish docs/ -> GitHub Pages).
-#   - A self-hosted Azure DevOps agent in pool 'OctopusLan' on a LAN machine that can
-#     reach http://payton-desktop:8065 (Microsoft-hosted agents cannot reach it). That
-#     agent picks up OCTOPUS_URL / OCTOPUS_API_KEY / OCTOPUS_SPACE from machine env vars
-#     (already registered on PAYTON-DESKTOP and PAYTON-LEGION2).
-#   - The Octopus server must be LICENSED (the initialisation license allows 0 projects /
-#     0 targets) and have a project matching var 'octopusProject' with a deployment
-#     process + the 'Production' environment target registered. Until then, DeploySvc fails.
+# All prerequisites are provisioned (2026-07-07):
+#   - GITHUB_PAT   : secret pipeline variable (repo:contents write on sharpninja/repairs) for the Pages publish.
+#   - DeployService runs on the self-hosted 'Default' pool (PAYTON-DESKTOP agents) which can reach the LAN
+#     Octopus at http://payton-desktop:8065, has the octopus CLI, and reads OCTOPUS_URL / OCTOPUS_API_KEY /
+#     OCTOPUS_SPACE from machine env vars (set on PAYTON-DESKTOP + PAYTON-LEGION2).
+#   - Octopus is licensed; project 'AI Auto Repairman Service' has a 'Production' deployment process that
+#     redeploys the docker service on the PAYTON-DESKTOP target.
 
 trigger:
   branches:
@@ -72,23 +69,13 @@ stages:
   dependsOn: Test
   condition: succeeded()
   jobs:
-  - deployment: DeployToOctopus
+  - job: DeployToOctopus
     pool:
-      name: 'OctopusLan'   # self-hosted agent that can reach http://payton-desktop:8065
-    environment: 'Production'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - checkout: self
-          - powershell: |
-              $ver = "$(Build.BuildNumber)"
-              octopus package zip create --id repairs-service --version $ver --include "server/src/**" --include "server/package.json" --include "server/package-lock.json" --include "server/Dockerfile" --include "server/proto/**" --out-folder "$(Build.ArtifactStagingDirectory)"
-              octopus package upload --package "$(Build.ArtifactStagingDirectory)/repairs-service.$ver.zip" --overwrite-mode overwrite
-              octopus release create --project "$(octopusProject)" --version $ver --package "repairs-service:$ver"
-              octopus release deploy --project "$(octopusProject)" --version $ver --environment "$(octopusEnvironment)"
-            displayName: Package + push + release + deploy to Octopus
-            env:
-              OCTOPUS_URL: $(OCTOPUS_URL)
-              OCTOPUS_API_KEY: $(OCTOPUS_API_KEY)
-              OCTOPUS_SPACE: $(octopusSpace)
+      name: 'Default'   # self-hosted PAYTON-DESKTOP agents: reach the LAN Octopus, have OCTOPUS_* machine env + octopus CLI
+    steps:
+    - checkout: none
+    - powershell: |
+        $ver = "$(Build.BuildNumber)"
+        octopus release create --project "$(octopusProject)" --version $ver --ignore-existing
+        octopus release deploy --project "$(octopusProject)" --version $ver --environment "$(octopusEnvironment)" --wait-for-deployment
+      displayName: Create + deploy Octopus release
