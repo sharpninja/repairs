@@ -58,6 +58,25 @@ Copy `.env.example` to `.env` and fill it in:
 For moderation, also set **`CLAUDE_CODE_OAUTH_TOKEN`**: on a machine logged into a
 Claude Pro/Max account run `claude setup-token` and paste the token into `.env`.
 
+Optional: set **`AMAZON_ASSOCIATE_TAG`** to your Amazon Associate tag. The app fetches it
+on startup via the unauthenticated `GetAppConfig` RPC and appends it to Amazon shopping
+links. Leave it blank for plain, untagged searches.
+
+The app reports **deidentified** script errors to the unauthenticated `LogClientError` RPC.
+The browser sends only an allowlist (scrubbed message/stack, route, app version, user agent,
+context, timestamp) and the server scrubs again (keys, emails, tokens, VINs) before logging
+to the console and appending to **`CLIENT_ERRORS_STORE`** (default `/app/data/client-errors.jsonl`,
+JSONL, capped ~5MB).
+
+### Admin dashboard
+
+Set **`ADMIN_TOKEN`** (e.g. `openssl rand -hex 32`) and open **`/admin?token=<ADMIN_TOKEN>`**
+(or send it as the `X-Admin-Token` header). The server-rendered page shows moderation status
+(live open submission PRs + their `ai:*` verdict, best-effort), the persisted **moderation log**
+(`MODERATION_LOG_STORE`, default `/app/data/moderation.jsonl`), the deidentified **error logs**,
+and the **ban** audit log. With `ADMIN_TOKEN` unset the `/admin` route is disabled (404); a
+missing/invalid token returns 401.
+
 ## Quick start (script)
 
 ```powershell

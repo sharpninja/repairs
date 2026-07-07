@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Honda H emblem">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Wrench and AI spark">
   <defs>
     <linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#f4f4f2"/>
@@ -6,14 +6,19 @@
       <stop offset="1" stop-color="#8f9296"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="112" fill="#1f1e1d"/>
-  <rect x="26" y="26" width="460" height="460" rx="92" fill="none" stroke="#3a3a37" stroke-width="6"/>
-  <!-- Honda-style H: two flared uprights + crossbar -->
-  <g fill="url(#chrome)" stroke="#5b5e62" stroke-width="4" stroke-linejoin="round">
-    <path d="M150 132 L222 132 L210 256 L162 256 Z"/>
-    <path d="M162 256 L210 256 L222 380 L150 380 Z"/>
-    <path d="M362 132 L290 132 L302 256 L350 256 Z"/>
-    <path d="M350 256 L302 256 L290 380 L362 380 Z"/>
-    <path d="M198 228 L314 228 L314 284 L198 284 Z"/>
+  <rect width="512" height="512" rx="112" fill="#0f1115"/>
+  <rect x="26" y="26" width="460" height="460" rx="92" fill="none" stroke="#2a2b30" stroke-width="6"/>
+  <!-- Combination wrench on a diagonal: open jaw at the top, box ring at the bottom -->
+  <g transform="rotate(35 256 256)">
+    <g fill="url(#chrome)" stroke="#5b5e62" stroke-width="4" stroke-linejoin="round">
+      <rect x="236" y="150" width="40" height="216" rx="20"/>
+      <circle cx="256" cy="374" r="44"/>
+      <rect x="216" y="96" width="80" height="70" rx="16"/>
+    </g>
+    <circle cx="256" cy="374" r="21" fill="#0f1115"/>
+    <rect x="242" y="88" width="28" height="52" rx="8" fill="#0f1115"/>
   </g>
+  <!-- AI spark -->
+  <path d="M368 116 L380 150 L414 162 L380 174 L368 208 L356 174 L322 162 L356 150 Z" fill="#d97757"/>
+  <circle cx="368" cy="162" r="6" fill="#ffffff" opacity="0.85"/>
 </svg>

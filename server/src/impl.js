@@ -2,11 +2,16 @@
 // tagged with the session key, rate-limited, trust-checked, then opened as a PR.
 import { OAuth2Client } from "google-auth-library";
 import { ConnectError, Code } from "@connectrpc/connect";
+import { appendFileSync, mkdirSync, statSync } from "node:fs";
+import { dirname } from "node:path";
 import { openReviewPR, openRepairPR, getStatuses } from "./github.js";
 import { createSession, rotateSession, resolveSession } from "./session.js";
 import { isBlocked, tryConsumeRate } from "./store.js";
 
 const googleClient = new OAuth2Client();
+
+// Public app config served to the browser on startup (no session required).
+const AMAZON_ASSOCIATE_TAG = process.env.AMAZON_ASSOCIATE_TAG || "";
 
 async function verifyGoogle(idToken) {
   if (!idToken) throw new ConnectError("Missing Google credential", Code.Unauthenticated);
@@ -81,4 +86,47 @@ export async function getSubmissionStatus(req) {
   const nums = (req.prNumbers || []).map(Number).filter(Boolean);
   const statuses = await getStatuses(nums);
   return { statuses };
+}
+
+// Unauthenticated: the browser fetches this on startup to pick up the Amazon
+// Associate tag (stored server-side as the AMAZON_ASSOCIATE_TAG env var).
+export async function getAppConfig() {
+  return { amazonTag: AMAZON_ASSOCIATE_TAG };
+}
+
+// ---- Deidentified client error logging (unauthenticated, best-effort) ----
+const CLIENT_ERRORS_STORE = process.env.CLIENT_ERRORS_STORE || "/app/data/client-errors.jsonl";
+const CLIENT_ERR_MAX_BYTES = 5 * 1024 * 1024; // stop appending past ~5MB
+let _errWindowStart = 0, _errCount = 0;
+function errRateOk(now) { if (now - _errWindowStart > 60000) { _errWindowStart = now; _errCount = 0; } return (++_errCount) <= 120; }
+// Backstop scrub: never persist a key/email/token/VIN even if the client missed one.
+function scrubServer(s) {
+  return String(s == null ? "" : s)
+    .replace(/sk-ant-[A-Za-z0-9_-]+/g, "[KEY]")
+    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[EMAIL]")
+    .replace(/\b[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{6,}\b/g, "[TOKEN]")
+    .replace(/\b[A-HJ-NPR-Z0-9]{17}\b/g, "[VIN]");
+}
+const capStr = (s, n) => { s = String(s == null ? "" : s); return s.length > n ? s.slice(0, n) : s; };
+
+export async function logClientError(req) {
+  const now = Date.now();
+  if (!errRateOk(now)) return { ok: false };
+  const rec = {
+    ts: Number(req.ts) || now,
+    receivedAt: now,
+    context: capStr(scrubServer(req.context), 40),
+    route: capStr(scrubServer(req.route), 40),
+    appVersion: capStr(scrubServer(req.appVersion), 40),
+    userAgent: capStr(scrubServer(req.userAgent), 300),
+    message: capStr(scrubServer(req.message), 500),
+    stack: capStr(scrubServer(req.stack), 4000),
+  };
+  console.error("client-error", JSON.stringify(rec));
+  try {
+    let underCap = true;
+    try { if (statSync(CLIENT_ERRORS_STORE).size > CLIENT_ERR_MAX_BYTES) underCap = false; } catch (e) { /* file may not exist yet */ }
+    if (underCap) { mkdirSync(dirname(CLIENT_ERRORS_STORE), { recursive: true }); appendFileSync(CLIENT_ERRORS_STORE, JSON.stringify(rec) + "\n"); }
+  } catch (e) { /* console.error above already captured it */ }
+  return { ok: true };
 }

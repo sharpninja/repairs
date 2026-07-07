@@ -12,6 +12,7 @@ process.env.SUBMIT_RATE_MS = "60000";
 process.env.TRUST_BLOCK_AT = "-4";
 process.env.SESSION_TTL_MS = "100000";
 process.env.BANS_STORE = join(dir, "bans.json");
+process.env.MODERATION_LOG_STORE = join(dir, "moderation.jsonl");
 
 const store = await import("../server/src/store.js");
 const session = await import("../server/src/session.js");
@@ -79,6 +80,17 @@ t("ban log is reviewable and append-only with receipts (email, PR, timestamp)", 
   assert.ok(Array.isArray(bans) && bans.length >= 2);
   const rec = bans.find((b) => b.email === "second@example.com");
   assert.ok(rec && rec.prNumber === 43 && typeof rec.ts === "string" && rec.ts.length > 0);
+});
+
+console.log("store.js — moderation log (append-only)");
+t("appendModerationLog + readModerationLog round-trip (newest last)", () => {
+  store.appendModerationLog({ ts: "2026-01-01T00:00:00Z", prNumber: 7, decision: "approve", summary: "looks good", submitter: "a@b.com" });
+  store.appendModerationLog({ ts: "2026-01-02T00:00:00Z", prNumber: 8, decision: "reject", summary: "unsafe" });
+  const log = store.readModerationLog(10);
+  assert.ok(Array.isArray(log) && log.length >= 2);
+  const last = log[log.length - 1];
+  assert.equal(last.prNumber, 8);
+  assert.equal(last.decision, "reject");
 });
 
 console.log("session.js — sessions");

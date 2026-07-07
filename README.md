@@ -1,10 +1,10 @@
-# Repairs — an offline, AI-assisted DIY vehicle-repair app
+# AI Auto Repairman: an offline, AI-assisted DIY vehicle-repair app
 
 A phone-first **Progressive Web App** for doing your own car repairs in the driveway.
 It's **installable**, works **fully offline**, tracks your progress, lets you **log
 photos / voice / video** as you work, links every **tool and part** to Amazon, and has
-an in-app **Claude** helper with vision. It ships with a complete built-in guide for a
-**2018 Honda CR-V 1.5T**, and can **generate a brand-new guide for any vehicle + job**
+an in-app **Claude** helper with vision. It ships with a complete **sample guide** (a
+2018 Honda CR-V 1.5T job) and can **generate a brand-new guide for any vehicle + job**
 on demand.
 
 - **App:** [`docs/`](docs/) — self-contained, no build step, no dependencies.
@@ -89,7 +89,7 @@ on demand.
   while you work. All voice control is on-device; only questions themselves reach Claude.
 - **Themes** — System / Light / Dark, toggled from the header, following
   `prefers-color-scheme` by default. Styled to match the Claude ecosystem (coral accent,
-  warm-paper light / charcoal dark, serif display). Honda-H app icon + favicon.
+  warm-paper light / charcoal dark, serif display). Wrench + AI-spark app icon + favicon.
 - **Offline-first** — the whole guide, progress, camera/mic capture, stored media, voice
   recognition/synthesis, and **VIN barcode scanning** work with **no internet**. Only the
   Claude features (*Ask Claude*, hands-free voice questions, *New Repair*, and *📷 read VIN*)
@@ -133,7 +133,7 @@ relative, so it runs correctly under the `/<repo>/` subpath.
 | [`docs/index.html`](docs/index.html) | **The entire app** — self-contained HTML/CSS/JS. Home dashboard, step flow, Tools & Parts, Session Log, New Repair, Guides. |
 | [`docs/marketplace.json`](docs/marketplace.json) | **Bundled seed** of the guide catalog — offline fallback. The live catalog is served from the separate data repo's `approved` branch. |
 | [`scripts/init-data-repo.ps1`](scripts/init-data-repo.ps1) | Bootstraps the `sharpninja/repairs-data` repo + `approved` branch from the seed (uses the GitHub CLI). |
-| `docs/manifest.webmanifest` · `docs/sw.js` · `docs/icon-*.png` · [`docs/favicon.svg`](docs/favicon.svg) | PWA manifest, offline service worker, Honda-H icons and favicon. |
+| `docs/manifest.webmanifest` · `docs/sw.js` · `docs/icon-*.png` · [`docs/favicon.svg`](docs/favicon.svg) | PWA manifest, offline service worker, app icons and favicon. |
 | [`guide/`](guide/) | The built-in CR-V guide as a standalone **slideshow + printable PDF** (see [below](#also-available-as-a-slideshow--pdf)). |
 | [`server/`](server/) | **Optional** Dockerized **gRPC / Connect** submit service — Google sign-in → session key → GitHub PRs, with Claude moderation, per-user trust, and rate limiting. The app works fully without it. |
 | [`tests/`](tests/) | Backend unit tests (trust / rate limit / sessions) + headless **client↔server integration tests** covering every interaction. Run with [`tests/run.ps1`](tests/run.ps1). |
@@ -211,7 +211,8 @@ step from **typed content blocks** (never raw HTML from the model). Shape:
             { "type": "crit",   "title": "…", "text": "…" },
             { "type": "tip",    "title": "…", "text": "…" },
             { "type": "spec",   "text": "Caliper bolts ~80 ft-lb", "verify": "Confirm vs the FSM for your VIN." },
-            { "type": "note",   "text": "Plain paragraph." }
+            { "type": "note",   "text": "Plain paragraph." },
+            { "type": "video",  "id": "dQw4w9WgXcQ" }   // 11-char YouTube id or a full URL; shown as a click-to-load player
           ] } ] } ],
   "tools": [ { "id": "torque-wrench-half", "d": "Caliper & lug torque" },   // library id → tracked as owned across guides
              { "n": "Brake caliper piston tool", "q": "amazon terms" } ],   // no id → one-off tool
@@ -219,9 +220,10 @@ step from **typed content blocks** (never raw HTML from the model). Shape:
 }
 ```
 
-Block types: `steps` (numbered), `check` (checklist — counts toward progress),
+Block types: `steps` (numbered), `check` (checklist: counts toward progress),
 `danger`/`crit`/`tip` (🛑/⚠️/💡 callouts), `spec` (torque/fluid value + a "verify against
-the FSM" note), `note` (paragraph). `**double asterisks**` render as bold. The system
+the FSM" note), `note` (paragraph), `video` (a YouTube clip by id or URL, rendered as a
+click-to-load player that only loads YouTube when tapped). `**double asterisks**` render as bold. The system
 prompt tells Claude to lead with safety, keep one action per step, and flag any spec that
 must be verified against the factory service manual rather than presenting an invented
 number as certain. It also passes the **standardized tool library** and asks Claude to
@@ -233,7 +235,7 @@ kept as one-offs. The same format is what **⬇ Add guide** imports.
 
 ---
 
-## Built-in guide: 2018 Honda CR-V 1.5T (Session 1)
+## Sample guide: Replace AC Compressor and ECT2 (2018 Honda CR-V)
 
 The app ships with a complete "Session 1" guide for a **2018 Honda CR-V 1.5L Turbo
 (L15B7)** — three jobs done together because they share a coolant drain and front-end
@@ -296,7 +298,11 @@ Requires Node + a Playwright-managed Chromium (the script points at
 ## Privacy
 
 Progress and all media (photos, voice, video) stay **on your device** (localStorage +
-IndexedDB) — nothing is uploaded. The only network calls are the two Claude features,
-which go directly from your browser to `api.anthropic.com` using **your own** API key
-(stored only in your browser, via the `anthropic-dangerous-direct-browser-access` header).
-No secrets are in this repo.
+IndexedDB): nothing is uploaded. The main network calls are the Claude features, which go
+directly from your browser to `api.anthropic.com` using **your own** API key (stored only
+in your browser, via the `anthropic-dangerous-direct-browser-access` header), plus reading
+the guide catalog from GitHub and the optional community-submission backend. **YouTube**
+videos in a guide load only when tapped (from `youtube-nocookie.com`). **Amazon** links may
+carry an affiliate tag if you set one in Settings (as an Amazon Associate we earn from
+qualifying purchases). The app also ships in-app **Privacy** and **Terms** pages, linked in
+the Home and Guide footers. No secrets are in this repo.

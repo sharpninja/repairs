@@ -4,7 +4,7 @@
 //
 // This is a single-process, low-volume store (writes are not concurrency-safe
 // across replicas) — run one submit instance, or swap in a real KV if you scale.
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 const FILE = process.env.TRUST_STORE || "./data/trust.json";
@@ -13,6 +13,8 @@ const RATE_MS = Number(process.env.SUBMIT_RATE_MS || 60000); // 1/min default
 // Append-only ban audit log for maintainer review (each entry carries receipts:
 // the PR, the moderation verdict, and the timestamp). Mount on the data volume.
 const BANS_STORE = process.env.BANS_STORE || "./data/bans.json";
+// Append-only moderation verdict log (JSONL) for the admin dashboard.
+const MODERATION_LOG_STORE = process.env.MODERATION_LOG_STORE || "./data/moderation.jsonl";
 
 function load() {
   try { return JSON.parse(readFileSync(FILE, "utf8")); } catch (e) { return {}; }
@@ -109,3 +111,20 @@ export function banUser(email, receipt = {}) {
 
 // The reviewable ban log (append-only, newest last) for the maintainer.
 export function listBans() { return loadBans(); }
+
+// ---- Moderation verdict log (append-only JSONL) ----
+// Appended by moderate.js on every moderation; read by the admin dashboard.
+export function appendModerationLog(entry) {
+  try { mkdirSync(dirname(MODERATION_LOG_STORE), { recursive: true }); appendFileSync(MODERATION_LOG_STORE, JSON.stringify(entry) + "\n"); }
+  catch (e) { console.error("moderation log append:", e.message); }
+}
+export function readModerationLog(limit = 500) { return tailJsonl(MODERATION_LOG_STORE, limit); }
+
+// Generic tail reader for a JSONL store: returns the last `limit` parsed lines
+// (a bad line degrades to { raw }), or [] if the file is missing.
+export function tailJsonl(file, limit = 500) {
+  try {
+    return readFileSync(file, "utf8").split("\n").filter(Boolean).slice(-limit)
+      .map((l) => { try { return JSON.parse(l); } catch (e) { return { raw: l }; } });
+  } catch (e) { return []; }
+}

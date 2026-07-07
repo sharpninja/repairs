@@ -2,7 +2,7 @@
 // Claude **subscription** (CLAUDE_CODE_OAUTH_TOKEN from `claude setup-token`) —
 // no Anthropic API key is used here. Posts a verdict comment + label on the PR.
 import { spawn } from "node:child_process";
-import { noteVerdict, banUser } from "./store.js";
+import { noteVerdict, banUser, appendModerationLog } from "./store.js";
 
 const MARK = "<!-- claude-moderation -->";
 // Pull the submitter email out of a PR body like "... (name@example.com)."
@@ -120,6 +120,12 @@ export async function moderatePullRequest(kit, owner, repo, prNumber, opts = {})
     await ensureLabel(kit, owner, repo, "prompt-injection", "5319e7");
     try { await kit.issues.addLabels({ owner, repo, issue_number: prNumber, labels: ["prompt-injection"] }); } catch (e) {}
   }
+
+  // Persist a structured verdict record for the admin dashboard (append-only).
+  appendModerationLog({
+    ts: new Date().toISOString(), prNumber, prUrl: pr.html_url, prTitle: pr.title,
+    submitter: email, decision: dec, injection, severity: v.severity, categories: v.categories, summary: v.summary,
+  });
 
   // Close on injection always; on a plain reject only when configured.
   if (injection || (dec === "reject" && String(process.env.AUTO_CLOSE_REJECT || "") === "true")) {

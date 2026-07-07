@@ -16,6 +16,11 @@ service SubmissionService {
   // Poll the state of previously-submitted PRs (open / merged / closed) so the
   // app can tell the user when their submission goes live. Public PR data.
   rpc GetSubmissionStatus(SubmissionStatusRequest) returns (SubmissionStatusResponse) {}
+  // Return public app config (e.g. the Amazon Associate tag) for the browser to
+  // apply on startup. No session required.
+  rpc GetAppConfig(GetAppConfigRequest) returns (GetAppConfigResponse) {}
+  // Log a deidentified client-side script error (unauthenticated, best-effort telemetry).
+  rpc LogClientError(LogClientErrorRequest) returns (LogClientErrorResponse) {}
 }
 
 message StartSessionRequest {
@@ -67,3 +72,22 @@ message PrStatus {
 message SubmissionStatusResponse {
   repeated PrStatus statuses = 1;
 }
+
+message GetAppConfigRequest {}
+message GetAppConfigResponse {
+  // Amazon Associate tag appended to shopping links (empty if unset).
+  string amazon_tag = 1;
+}
+
+// Deidentified client error report. The browser sends only these allowlisted,
+// scrubbed fields; the server scrubs again as a backstop.
+message LogClientErrorRequest {
+  string message = 1;
+  string stack = 2;
+  string route = 3;
+  string app_version = 4;
+  string user_agent = 5;
+  string context = 6;
+  int64 ts = 7;
+}
+message LogClientErrorResponse { bool ok = 1; }

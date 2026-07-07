@@ -13,6 +13,10 @@ Write-Host "== backend store/session unit tests =="
 node tests/store.test.mjs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "`n== backend admin dashboard unit tests =="
+node tests/admin.test.mjs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "`n== client<->server integration tests =="
 node tests/integration.test.mjs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

@@ -3,6 +3,7 @@
 import http from "node:http";
 import { connectNodeAdapter } from "@connectrpc/connect-node";
 import routes from "./routes.js";
+import { adminHandler } from "./admin.js";
 
 // CORS allowlist: a comma-separated list of exact origins, or "*" to allow any.
 // With a list, the matching request Origin is echoed back (proper multi-origin CORS);
@@ -33,6 +34,11 @@ const server = http.createServer((req, res) => {
   if (req.method === "GET" && (req.url === "/health" || req.url === "/")) {
     res.writeHead(200, { "content-type": "text/plain" });
     res.end("ok");
+    return;
+  }
+  // Token-gated admin dashboard (moderation status/logs + error logs + bans).
+  if (req.method === "GET" && req.url.split("?")[0] === "/admin") {
+    adminHandler(req, res).catch(() => { try { res.writeHead(500, { "content-type": "text/plain" }); res.end("error"); } catch (e) {} });
     return;
   }
   adapter(req, res);

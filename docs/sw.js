@@ -3,7 +3,7 @@
    camera capture, and stored photos work with NO network. The only thing that
    needs the internet is the Claude helper's call to api.anthropic.com, which is
    always fetched live and never cached. */
-const CACHE = "crv-s1-v4";
+const CACHE = "crv-s1-v14";
 const SHELL = [
   "./",
   "./index.html",
@@ -40,10 +40,15 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== self.location.origin) return;
   if (req.method !== "GET") return;
 
-  // Navigations: serve the cached app shell so it opens offline.
+  // Navigations: NETWORK-FIRST for the app shell so an online user always gets the
+  // latest index.html (and we refresh the cache); fall back to the cached shell only
+  // when offline. This prevents users getting stuck on a stale/broken cached shell.
   if (req.mode === "navigate") {
     e.respondWith(
-      caches.match("./index.html").then((r) => r || fetch(req).catch(() => caches.match("./")))
+      fetch(req).then((res) => {
+        if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put("./index.html", copy)); }
+        return res;
+      }).catch(() => caches.match("./index.html").then((r) => r || caches.match("./")))
     );
     return;
   }

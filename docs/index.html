@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'; worker-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.googleusercontent.com https://www.gstatic.com; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com https://accounts.google.com https://www.googleapis.com https://raw.githubusercontent.com https://sharpninja.ngrok.app; frame-src https://accounts.google.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'; worker-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.googleusercontent.com https://www.gstatic.com; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com https://accounts.google.com https://www.googleapis.com https://raw.githubusercontent.com https://sharpninja.ngrok.app; frame-src https://accounts.google.com https://www.youtube-nocookie.com;">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf9f5">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#262624">
@@ -12,7 +12,21 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>CR-V 1.5T Session 1 — Repair App</title>
+<title>AI Auto Repairman</title>
+<script>
+/* Boot self-heal (separate script so it runs even if the main script fails to parse):
+   if the app shell hasn't rendered into #view shortly after load - e.g. a stale or
+   broken cached bundle - reload ONCE from the network so the user never sees a blank
+   screen. Guarded by sessionStorage to avoid reload loops; self-clears when healthy. */
+(function(){ try{
+  var KEY="crv-boot-heal";
+  window.addEventListener("load", function(){ setTimeout(function(){ try{
+    var v=document.getElementById("view");
+    if(v && v.children && v.children.length){ sessionStorage.removeItem(KEY); return; }
+    if(!sessionStorage.getItem(KEY)){ sessionStorage.setItem(KEY,"1"); location.reload(); }
+  }catch(e){} }, 2500); });
+}catch(e){} })();
+</script>
 <style>
   /* ---------- Claude-ecosystem palette: light default, dark via media/attr ---------- */
   :root{
@@ -58,7 +72,8 @@
   a{color:var(--accent)}
   .hidden{display:none !important}
 
-  #top{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--bg) 82%,transparent);
+  #topwrap{position:sticky;top:0;z-index:40}
+  #top{background:color-mix(in srgb,var(--bg) 82%,transparent);
     backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
     padding:calc(8px + env(safe-area-inset-top)) var(--pad) 8px;display:flex;align-items:center;gap:10px}
   #top .ib{background:var(--card);border:1px solid var(--line);color:var(--ink);width:44px;height:44px;
@@ -67,6 +82,27 @@
   #top .title{font-weight:800;font-size:.84em;color:var(--muted);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
   #top .pct{font-weight:900;font-variant-numeric:tabular-nums;color:var(--accent);flex:0 0 auto;min-width:44px;text-align:right}
   #topbar{height:4px;background:var(--line)}
+  #vehbar{background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:6px var(--pad);display:flex}
+  #vehbar.hidden{display:none}
+  #vehbar select{flex:1;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-weight:700;font-size:.9em}
+  .vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:12px 0}
+  .vcard{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer;color:var(--ink);box-shadow:var(--shadow)}
+  .vcard.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .vcard .vinmono{font-family:ui-monospace,Menlo,monospace;color:var(--muted);font-size:.78em;word-break:break-all}
+  .vcard.add{align-items:center;justify-content:center;color:var(--muted)}
+  .vcard.add .em{font-size:1.4em}
+  .hlhead{display:flex;align-items:center;justify-content:space-between;margin:.8em 0 .2em}
+  .hlhead h3{margin:0}
+  .hlhead a{color:var(--accent);text-decoration:none;font-size:.85em;font-weight:700}
+  .cataux{background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:12px;width:44px;height:48px;font-size:18px;cursor:pointer;flex:0 0 auto}
+  .ytfacade{position:relative;margin:14px 0;background:#000;border:1px solid var(--line);border-radius:14px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer}
+  .ytfacade iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .ytplay{width:64px;height:64px;border-radius:50%;background:var(--accent);color:var(--accent-ink);border:none;font-size:24px;line-height:1;cursor:pointer;display:grid;place-content:center}
+  .ythint{position:absolute;bottom:8px;left:10px;color:#fff;font-size:.8em;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:8px}
+  .ytfacade figcaption{position:absolute;top:8px;left:10px;right:10px;color:#fff;font-size:.8em;text-shadow:0 1px 3px #000}
+  .sheet .body h3{margin:.8em 0 .2em;font-size:1em}
+  .sheet .body ul.pol{margin:.2em 0 .5em 1.15em;padding:0}
+  .sheet .body ul.pol li{margin:.4em 0}
   #topbar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
 
   main{max-width:860px;margin:0 auto;padding:var(--pad) var(--pad) 128px}
@@ -108,6 +144,12 @@
   .hero{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px 20px;margin-bottom:16px;box-shadow:var(--shadow);text-align:center}
   .ring{--v:0;width:130px;height:130px;border-radius:50%;margin:2px auto 12px;background:conic-gradient(var(--accent) calc(var(--v)*1%),var(--line) 0);display:grid;place-content:center;position:relative}
   .ring::before{content:"";position:absolute;inset:12px;background:var(--card);border-radius:50%}
+  .meterrow{display:flex;align-items:center;justify-content:space-between;gap:14px}
+  .meterrow .ring{margin:2px 0 0}
+  .startbtn{width:130px;height:130px;flex:0 0 auto;border-radius:24px;background:var(--accent);color:var(--accent-ink);border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;box-shadow:var(--shadow)}
+  .startbtn .sbi{font-size:34px;line-height:1}
+  .startbtn b{font-size:17px;font-weight:900}
+  .startbtn:active{transform:scale(.97)}
   .ring b{position:relative;font-size:30px;font-weight:900;font-variant-numeric:tabular-nums}
   .ring small{position:relative;display:block;text-align:center;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 
@@ -148,8 +190,11 @@
   .mitem .mact button{background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:7px 9px;font-size:.8em;font-weight:700;cursor:pointer}
   .mitem .mact .del{color:var(--danger)}
 
-  #ask{position:fixed;right:16px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:46;background:var(--accent);color:var(--accent-ink);border:none;border-radius:999px;padding:13px 18px;font-weight:900;font-size:15px;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;display:flex;gap:8px;align-items:center}
-  #mic{position:fixed;right:16px;bottom:calc(142px + env(safe-area-inset-bottom));z-index:46;background:var(--card);color:var(--accent);border:1px solid var(--line);border-radius:999px;width:54px;height:54px;font-size:22px;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer}
+  #fabs{position:fixed;right:16px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:46;display:flex;gap:10px;align-items:center}
+  #fabs button{width:54px;height:54px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;display:grid;place-content:center;flex:0 0 auto;font-size:22px}
+  #fabs button:active{transform:scale(.94)}
+  #ask{background:var(--accent);color:var(--accent-ink);border:none}
+  #mic{background:var(--card);color:var(--accent);border:1px solid var(--line)}
   #mic.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);animation:micpulse 1.6s infinite}
   @keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(217,119,87,.5)}50%{box-shadow:0 0 0 12px rgba(217,119,87,0)}}
   .voicebar{position:fixed;left:12px;right:12px;top:calc(66px + env(safe-area-inset-top));z-index:47;max-width:820px;margin:0 auto;background:var(--card);border:1.5px solid var(--accent);border-radius:16px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.32);cursor:pointer}
@@ -262,17 +307,22 @@
 </style>
 </head>
 <body>
+<div id="topwrap">
 <div id="top">
   <button class="ib" id="homeBtn" title="Home">☰</button>
-  <div class="title" id="topTitle">2018 CR-V 1.5T · Session 1</div>
+  <div class="title" id="topTitle">AI Auto Repairman</div>
   <button class="ib" id="themeBtn" title="Theme">🖥️</button>
   <div class="pct" id="topPct">0%</div>
 </div>
 <div id="topbar"><i id="topbarFill"></i></div>
+<div id="vehbar" class="hidden"><select id="vehSel" aria-label="Active vehicle"></select></div>
+</div>
 
 <main id="view"></main>
-<button id="mic" title="Hands-free voice">🎙️</button>
-<button id="ask">💬 Ask Claude</button>
+<div id="fabs">
+  <button id="mic" title="Hands-free voice">🎙️</button>
+  <button id="ask" title="Ask Claude" aria-label="Ask Claude"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 1c.9 5.6 5.4 10.1 11 11-5.6.9-10.1 5.4-11 11-.9-5.6-5.4-10.1-11-11C6.6 11.1 11.1 6.6 12 1Z"/></svg></button>
+</div>
 <div id="voicebar" class="voicebar hidden">
   <div class="vrow"><span class="vstate"></span><button class="vgear" id="vGear" title="Voice settings">⚙︎</button><button class="vstop" id="vStop" title="Stop hands-free">✕</button></div>
   <div class="vheard"></div><div class="vans"></div>
@@ -441,7 +491,7 @@ const DIAGRAMS = {
 /* Amazon marketplace follows the active guide's region so part links land in the
    right store; falls back to amazon.com. */
 function regionAmz(){ const r=ACTIVE&&ACTIVE.region; return (r&&REGIONS[r]&&REGIONS[r].amz)||"amazon.com"; }
-const AMZ = q => "https://www." + regionAmz() + "/s?k=" + encodeURIComponent(q);
+const AMZ = q => { const u="https://www." + regionAmz() + "/s?k=" + encodeURIComponent(q); const t=amazonTag(); return t?u+"&tag="+encodeURIComponent(t):u; };
 
 /* Standardized tool library. Every guide (built-in, imported, or Claude-generated)
    references these by stable `id` so ownership tracks reliably across guides — a
@@ -536,8 +586,8 @@ const guideChips=g=>{ const r=cleanRegion(g&&g.region), e=cleanEnv(g&&g.env);
 const GKEY="crv-guides";
 const userGuides=()=>{ try{return JSON.parse(localStorage.getItem(GKEY))||[]}catch(e){return[]} };
 const saveUserGuides=a=>localStorage.setItem(GKEY,JSON.stringify(a));
-const BUILTIN={ id:"crv-s1", builtin:true, title:"2018 Honda CR-V 1.5T",
-  subtitle:"Session 1 · A/C + condenser, ECT2, HG-1.", region:"us", env:["driveway","garage"],
+const BUILTIN={ id:"crv-s1", builtin:true, title:"Replace AC Compressor and ECT2",
+  subtitle:"A/C compressor + condenser, ECT2 sensor, HG-1.", region:"us", env:["driveway","garage"],
   fits:{makes:["Honda"],models:["CR-V"],yearFrom:2017,yearTo:2022},
   safety:"1) Never open A/C under pressure. 2) Cap every open line instantly. 3) New oiled O-ring at every fitting. 4) Hand-rotate the new compressor. 5) HG-1 cold, ½ bottle.",
   phases:PHASES, tools:TOOLS, parts:PARTS };
@@ -599,6 +649,12 @@ const stepById=id=>STEPS.find(s=>s.id===id);
 
 /* Render a Claude-generated step body (typed blocks) into SAFE HTML — the model
    never emits raw HTML; every string is escaped, only **bold** is honored. */
+/* Extract an 11-char YouTube id from a bare id or any YouTube URL; "" if none.
+   Guide creators supply an id/URL; the app builds the iframe itself (never raw HTML). */
+function ytId(s){ s=String(s||"").trim();
+  if(/^[A-Za-z0-9_-]{11}$/.test(s)) return s;
+  const m=s.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^&#]*&)*v=|embed\/|shorts\/|v\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m?m[1]:""; }
 function bodyToHtml(body){
   if(!Array.isArray(body)) return "";
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
@@ -609,6 +665,7 @@ function bodyToHtml(body){
     if(b.type==="check") return `<ul class="check" data-check>${(b.items||[]).map(i=>`<li><input type="checkbox"><label>${rich(i)}</label></li>`).join("")}</ul>`;
     if(b.type==="danger"||b.type==="crit"||b.type==="tip"){ const ic=b.type==="danger"?"🛑":b.type==="crit"?"⚠️":"💡"; return `<div class="call ${b.type}"><span class="ic">${ic}</span><div>${b.title?`<span class="t">${esc(b.title)}</span>`:""}${rich(b.text)}</div></div>`; }
     if(b.type==="spec") return `<div class="specbox">${rich(b.text)}${b.verify?` <span class="verify">${esc(b.verify)}</span>`:""}</div>`;
+    if(b.type==="video"){ const id=ytId(b.id||b.youtube||b.url); return id?`<figure class="ytfacade" data-yt="${id}"><button class="ytplay" type="button" aria-label="Play video">▶</button><span class="ythint">Play video (YouTube)</span>${b.title?`<figcaption>${esc(b.title)}</figcaption>`:""}</figure>`:""; }
     return `<p>${rich(b.text)}</p>`;
   }).join("");
 }
@@ -628,9 +685,40 @@ state.submitApi=state.submitApi||""; state.googleClientId=state.googleClientId||
 /* Community PR submission + data source: set these in ⚙️ → Community (or bake defaults here). */
 /* Deploy config: baked in at build time, NOT shown to end users. Update submitApi
    when the backend moves off the ngrok tunnel. dataUrl "" uses DEFAULT_DATA_URL. */
-const CONFIG={ submitApi:"https://sharpninja.ngrok.app", googleClientId:"71016487426-fiq7ga9ti2lr0crnoofmsveq2pnvhu80.apps.googleusercontent.com", dataUrl:"" };
+const CONFIG={ submitApi:"https://sharpninja.ngrok.app", googleClientId:"71016487426-fiq7ga9ti2lr0crnoofmsveq2pnvhu80.apps.googleusercontent.com", dataUrl:"", amazonTag:"" };
 const submitApi=()=>(state.submitApi||CONFIG.submitApi||"").trim();
 const googleClientId=()=>(state.googleClientId||CONFIG.googleClientId||"").trim();
+/* Amazon Associate tag is provided by the submit service (env AMAZON_ASSOCIATE_TAG)
+   via GetAppConfig, fetched on startup and cached for offline. Not a user setting. */
+let _amazonTag = localStorage.getItem("crv-amzn") || CONFIG.amazonTag || "";
+const amazonTag=()=>String(_amazonTag||"").trim();
+async function fetchAppConfig(){ if(!submitApi()) return; try{ const r=await submitRPC("GetAppConfig",{}); _amazonTag=(r&&r.amazonTag)||""; localStorage.setItem("crv-amzn",_amazonTag); }catch(e){} }
+
+/* ================= CLIENT ERROR TELEMETRY (deidentified) ================= */
+const APP_VERSION = "crv-s1-v13";
+/* Deidentify a string before it leaves the device: strip Anthropic keys, emails, tokens, VINs. */
+function scrub(s){ return String(s==null?"":s)
+  .replace(/sk-ant-[A-Za-z0-9_-]+/g,"[KEY]")
+  .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,"[EMAIL]")
+  .replace(/\b[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{6,}\b/g,"[TOKEN]")
+  .replace(/\b[A-HJ-NPR-Z0-9]{17}\b/g,"[VIN]"); }
+/* Report a script error to the backend, DEIDENTIFIED (allowlist only) and fully
+   self-guarded: never throws, never recurses, throttled + deduped, backend-gated.
+   The payload never carries the API key, localStorage, VIN/email, or guide content. */
+let _reporting=false; const _reportSeen=new Set(); let _reportCount=0;
+function reportClientError(context, err){
+  try{
+    if(_reporting || _reportCount>=10 || !submitApi()) return;
+    const msg=scrub(err&&err.message!=null?err.message:err);
+    const key=context+":"+msg; if(_reportSeen.has(key)) return; _reportSeen.add(key); _reportCount++;
+    _reporting=true;
+    const payload={ message:String(msg).slice(0,500), stack:scrub(err&&err.stack).slice(0,4000),
+      route:String(typeof route!=="undefined"?route:""), appVersion:APP_VERSION,
+      userAgent:((navigator&&navigator.userAgent)||"").slice(0,300), context:String(context||"").slice(0,40), ts:Date.now() };
+    try{ submitRPC("LogClientError", payload).catch(()=>{}); }catch(e){}
+  }catch(e){ /* telemetry must never break the app */ }
+  finally{ _reporting=false; }
+}
 const MODELS=[
   {id:"claude-sonnet-5", n:"Sonnet 5", d:"Balanced quality & cost — recommended"},
   {id:"claude-opus-4-8", n:"Opus 4.8", d:"Most capable, highest cost"},
@@ -653,24 +741,110 @@ function delMedia(id){ return new Promise((res)=>{ const tx=db.transaction("medi
 function nChecks(st){ if(st.html) return (st.html.match(/type="checkbox"/g)||[]).length; if(Array.isArray(st.body)){ let n=0; st.body.forEach(b=>{ if(b&&b.type==="check") n+=(b.items||[]).length; }); return n; } return 0; }
 function stepComplete(st){ const n=nChecks(st); if(n){ for(let i=0;i<n;i++) if(!state.checks[st.id+"#"+i]) return false; return true; } return !!state.done[st.id]; }
 function phaseProgress(ph){ return {done:ph.steps.filter(stepComplete).length,total:ph.steps.length}; }
-function overallPct(){ let d=0; STEPS.forEach(s=>{if(stepComplete(s))d++;}); return Math.round(d/TOTAL_STEPS*100); }
-function refreshTop(){ const p=overallPct(); document.getElementById("topPct").textContent=p+"%"; document.getElementById("topbarFill").style.width=p+"%"; }
+function overallPct(){ if(!TOTAL_STEPS) return 0; let d=0; STEPS.forEach(s=>{if(stepComplete(s))d++;}); return Math.round(d/TOTAL_STEPS*100); }
+function refreshTop(){ const p=overallPct(); const pe=document.getElementById("topPct"); if(pe) pe.textContent=p+"%"; const tf=document.getElementById("topbarFill"); if(tf) tf.style.width=p+"%"; }
 
 /* ================= ROUTER ================= */
-let cur=null, route="home"; // route: home | step | tools | log
+let cur=null, route="home"; // route: home | guide | step | tools | log
 const view=document.getElementById("view"), nav=document.getElementById("nav");
 function go(gi){ route="step"; cur=gi; render(); window.scrollTo(0,0); }
 function goHome(){ route="home"; cur=null; render(); window.scrollTo(0,0); }
+function goGuide(){ route="guide"; cur=null; render(); window.scrollTo(0,0); }
 function render(){
-  refreshTop();
-  nav.classList.toggle("hidden", route!=="step");
-  if(route==="home"){ document.getElementById("topTitle").textContent="2018 CR-V 1.5T · Session 1"; renderHome(); }
-  else if(route==="tools"){ document.getElementById("topTitle").textContent="Tools & Parts"; renderTools(); }
-  else if(route==="log"){ document.getElementById("topTitle").textContent="Session Log"; renderLog(); }
-  else renderStep(STEPS[cur]);
+  try{
+    refreshTop();
+    nav.classList.toggle("hidden", route!=="step");
+    const tt=document.getElementById("topTitle");
+    if(route==="home"){ if(tt) tt.textContent="AI Auto Repairman"; syncVehBar(); renderHome(); }
+    else if(route==="guide"){ if(!ACTIVE){ route="home"; syncVehBar(); renderHome(); return; } if(tt) tt.textContent=ACTIVE.title; syncVehBar(); renderGuide(); }
+    else if(route==="tools"){ if(tt) tt.textContent="Tools & Parts"; syncVehBar(); renderTools(); }
+    else if(route==="log"){ if(tt) tt.textContent="Session Log"; syncVehBar(); renderLog(); }
+    else { if(!STEPS[cur]){ route="home"; syncVehBar(); renderHome(); return; } syncVehBar(); renderStep(STEPS[cur]); }
+  }catch(err){
+    console.error("render failed, recovering to home:", err);
+    try{ route="home"; nav.classList.add("hidden"); syncVehBar(); renderHome(); }
+    catch(e){ if(view) view.innerHTML=`<div class="hero"><h1>AI Auto Repairman</h1><p class="lead">Something went wrong. Reload the page to continue.</p></div>`; }
+    reportClientError("render", err);
+  }
 }
 
+/* Generic, vehicle-centric landing. Not tied to a single guide: shows the user's
+   vehicles (selectable filters) + New/Popular guide lists matched to them. */
 function renderHome(){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  const vs=vehicles(), av=state.activeVehicle, noVeh=vs.length===0, ip=inProgressGuide();
+  const vcards=vs.map(v=>{ const on=v.id===av, i=vinInfo(v.vin);
+    return `<button class="vcard${on?' on':''}" data-vid="${esc(v.id)}"><b>${esc(vehLabel(v))}</b><small class="vinmono">${esc(v.vin||"")}</small><small>${i.checkOk?'✓':'⚠️'}${i.year?` · ${i.year}`:''}</small></button>`; }).join("");
+  const addCard=`<button class="vcard add" id="addVCard"><span class="em">＋</span><b>Add vehicle</b></button>`;
+  view.innerHTML=`
+    <div class="hero" style="text-align:left;padding:18px 18px 16px">
+      <h1 style="margin:0">AI Auto Repairman</h1>
+      <p class="lead" style="margin:.3em 0 0">Pick your vehicle, then a repair guide.</p>
+    </div>
+    ${noVeh?`<div class="call tip" style="margin-top:14px"><span class="ic">🚗</span><div><span class="t">Add your first vehicle</span>We tailor repair guides to your exact car. Add one by VIN to get started.</div></div>
+      <div class="btnrow" style="margin-top:10px"><button class="btn pri" id="addFirstV">＋ Add your first vehicle</button></div>`:""}
+    ${ip?`<div class="tiles" style="grid-template-columns:1fr;margin-top:14px"><button class="tile" id="homeContinue"><span class="em">▶️</span><b>Continue: ${esc(ip.guide.title)}</b><span>${ip.pct}% complete, pick up where you left off</span></button></div>`:""}
+    ${noVeh?"":`<div class="hlhead"><h3>🚗 Your vehicles</h3><a href="#" id="mgVeh">Manage</a></div>`}
+    <div class="vgrid">${vcards}${addCard}</div>
+    <div class="hlhead"><h3>🆕 New Repair Guides</h3><a href="#" id="seeAllNew">See all ›</a></div>
+    <div id="homeNew"><p class="fine">Loading guides…</p></div>
+    <div class="hlhead"><h3>🔥 Popular Repair Guides</h3><a href="#" id="seeAllPop">See all ›</a></div>
+    <div id="homePopular"><p class="fine">Loading guides…</p></div>
+    <div class="btnrow" style="margin-top:16px"><button class="btn" id="guidesBtn">⇄ Guides</button><button class="btn" id="newBtn">＋ New Repair</button><button class="btn" id="keyBtn">⚙️ Claude API key</button></div>
+    <p class="fine" style="margin-top:14px">Progress &amp; media are stored on this device only. Camera/mic and install-to-home-screen need HTTPS or localhost. Only the Claude features use the internet, via your own Anthropic API key. <a href="#" id="privacyLink">Privacy</a> · <a href="#" id="termsLink">Terms</a></p>`;
+  view.querySelectorAll(".vcard[data-vid]").forEach(b=>b.onclick=()=>{ const id=b.dataset.vid; state.activeVehicle=(state.activeVehicle===id)?"":id; saveState(); render(); window.scrollTo(0,0); });
+  const avc=document.getElementById("addVCard"); if(avc) avc.onclick=()=>openAddVehicle(null);
+  const afv=document.getElementById("addFirstV"); if(afv) afv.onclick=()=>openAddVehicle(null);
+  const mg=document.getElementById("mgVeh"); if(mg) mg.onclick=(e)=>{ e.preventDefault(); openGarage(); };
+  const cont=document.getElementById("homeContinue"); if(cont) cont.onclick=goGuide;
+  document.getElementById("seeAllNew").onclick=(e)=>{ e.preventDefault(); openMarket(); };
+  document.getElementById("seeAllPop").onclick=(e)=>{ e.preventDefault(); openMarket(); };
+  document.getElementById("guidesBtn").onclick=openGuides;
+  document.getElementById("newBtn").onclick=openNew;
+  document.getElementById("keyBtn").onclick=openKey;
+  { const pl=document.getElementById("privacyLink"); if(pl) pl.onclick=(e)=>{ e.preventDefault(); openPrivacy(); }; const tl=document.getElementById("termsLink"); if(tl) tl.onclick=(e)=>{ e.preventDefault(); openTerms(); }; }
+  loadMarket().then(cat=>{ if(route!=="home") return; fillHomeGuides(cat, activeVehicle()); }).catch(()=>{});
+}
+/* Marketplace-style guide card (shared by Home lists + the Marketplace sheet). */
+function mktCardHtml(e, veh){
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  const m=entryMeta(e), r=aggRating(e), fit=fitLabel(cleanFits(m.fits)), matches=veh&&fitScore(m.fits,veh)>0;
+  return `<div class="mkt" data-id="${esc(e.id)}"><div class="top"><div style="min-width:0"><b>${esc(m.title)}</b><br><small>${esc(m.subtitle||"")}</small></div><div class="rate">${starHtml(r.avg)}<span>${r.avg?r.avg.toFixed(1):"-"} (${r.count})</span></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${matches?`<span class="fitpill">Fits your ${esc(vehDesc(veh)||"vehicle")}</span>`:""}${fit?`<small>${esc(fit)}</small>`:""}${guideChips(m)}</div></div>`;
+}
+/* "New" recency signal: optional addedAt/added (epoch ms or ISO); 0 when absent. */
+function entryAddedAt(e){ const m=e.meta||{}; const v=e.addedAt||m.addedAt||e.added||m.added; return v?(typeof v==="number"?v:(Date.parse(v)||0)):0; }
+/* Fill the two Home guide lists, filtered to the active vehicle (all when none). */
+function fillHomeGuides(cat, veh){
+  const all=(cat&&Array.isArray(cat.guides))?cat.guides:[];
+  const pool=veh?all.filter(e=>fitScore(entryMeta(e).fits,veh)>0):all.slice();
+  const idx=new Map(all.map((e,i)=>[e,i])), CAP=4;
+  const newList=pool.slice().sort((a,b)=>{ const da=entryAddedAt(a),db=entryAddedAt(b); if(da||db) return db-da; return idx.get(b)-idx.get(a); }).slice(0,CAP);
+  const popList=pool.slice().sort((a,b)=>aggRating(b).count-aggRating(a).count).slice(0,CAP);
+  const paint=(box,arr)=>{ if(!box) return;
+    box.innerHTML=arr.length?arr.map(e=>mktCardHtml(e,veh)).join(""):`<p class="fine">No matching guides for this vehicle yet: <a href="#" data-all="1">see all</a> or make one with ＋ New Repair.</p>`;
+    box.querySelectorAll(".mkt").forEach(c=>c.onclick=()=>{ const e=all.find(x=>x.id===c.dataset.id); if(e) openMarketGuide(e); });
+    const sa=box.querySelector("[data-all]"); if(sa) sa.onclick=ev=>{ ev.preventDefault(); openMarket(); };
+  };
+  paint(document.getElementById("homeNew"), newList);
+  paint(document.getElementById("homePopular"), popList);
+}
+/* The active guide, only when it is partly (not zero, not fully) complete. */
+function inProgressGuide(){ if(!ACTIVE||!TOTAL_STEPS) return null; const p=overallPct(); return (p>0&&p<100)?{guide:ACTIVE,pct:p}:null; }
+/* Sticky vehicle-context dropdown: home-only, mirrors + drives state.activeVehicle. */
+function syncVehBar(){
+  const bar=document.getElementById("vehbar"); if(!bar) return;
+  const vs=vehicles(), onHome=(route==="home");
+  bar.classList.toggle("hidden", !onHome || vs.length===0);
+  if(!onHome || !vs.length) return;
+  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const sel=document.getElementById("vehSel"); if(!sel) return;
+  sel.innerHTML=`<option value="">All vehicles</option>`+vs.map(v=>`<option value="${esc(v.id)}">${esc(vehLabel(v))}</option>`).join("");
+  sel.value=state.activeVehicle||"";
+  sel.onchange=()=>{ state.activeVehicle=sel.value; saveState(); render(); };
+}
+
+/* Per-guide dashboard (progress ring + phase list); reached from Continue/install/select. */
+function renderGuide(){
   const p=overallPct(); const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   let rows="";
   ACTIVE.phases.forEach((ph,pi)=>{ const pr=phaseProgress(ph); const pct=pr.total?Math.round(pr.done/pr.total*100):0; const all=pr.total&&pr.done===pr.total; const dnum=(String(ph.name||"").match(/\d+/)||[pi])[0];
@@ -678,7 +852,7 @@ function renderHome(){
   const hasTools=(ACTIVE.tools&&ACTIVE.tools.length)||(ACTIVE.parts&&ACTIVE.parts.length);
   view.innerHTML=`
     <div class="hero">
-      <div class="ring" style="--v:${p}"><b>${p}%</b><small>complete</small></div>
+      <div class="meterrow"><div class="ring" style="--v:${p}"><b>${p}%</b><small>complete</small></div><button class="startbtn" id="startBtn"><span class="sbi">${p>=100?'✓':'▶'}</span><b>${p>=100?'Review':(p>0?'Continue':'Start')}</b></button></div>
       <h1>${esc(ACTIVE.title)}</h1>
       <p class="lead" style="margin:.3em 0 0">${esc(ACTIVE.subtitle||"")}<br>Tap a phase to start.</p>
       ${guideChips(ACTIVE)}
@@ -693,8 +867,9 @@ function renderHome(){
     <div class="phaselist">${rows}</div>
     ${ACTIVE.safety?`<div class="call danger" style="margin-top:16px"><span class="ic">🛑</span><div><span class="t">Safety</span>${esc(ACTIVE.safety)}</div></div>`:""}
     <div class="btnrow"><button class="btn" id="resetBtn">Reset progress</button><button class="btn" id="keyBtn">⚙️ Claude API key</button></div>
-    <p class="fine" style="margin-top:14px">Progress &amp; media are stored on this device only. Camera/mic and install-to-home-screen need HTTPS or localhost. Only the Claude features (help &amp; New Repair) use the internet — via your own Anthropic API key.</p>`;
+    <p class="fine" style="margin-top:14px">Progress &amp; media are stored on this device only. Camera/mic and install-to-home-screen need HTTPS or localhost. Only the Claude features (help &amp; New Repair) use the internet, via your own Anthropic API key. <a href="#" id="privacyLink">Privacy</a> · <a href="#" id="termsLink">Terms</a></p>`;
   view.querySelectorAll(".prow").forEach(b=>b.onclick=()=>go(+b.dataset.gi));
+  const sb=document.getElementById("startBtn"); if(sb) sb.onclick=()=>{ const i=STEPS.findIndex(s=>!stepComplete(s)); go(i<0?0:i); };
   const tt=document.getElementById("toolsT"); if(tt) tt.onclick=()=>{route="tools";render();window.scrollTo(0,0);};
   document.getElementById("mktT").onclick=openMarket;
   document.getElementById("logT").onclick=()=>{route="log";render();window.scrollTo(0,0);};
@@ -704,6 +879,7 @@ function renderHome(){
   const vl=document.getElementById("vinLine"); if(vl) vl.onclick=openGarage;
   document.getElementById("resetBtn").onclick=resetProgress;
   document.getElementById("keyBtn").onclick=openKey;
+  { const pl=document.getElementById("privacyLink"); if(pl) pl.onclick=(e)=>{ e.preventDefault(); openPrivacy(); }; const tl=document.getElementById("termsLink"); if(tl) tl.onclick=(e)=>{ e.preventDefault(); openTerms(); }; }
 }
 function vehicleLine(){ const v=activeVehicle(); if(!v||!v.vin) return ""; const i=vinInfo(v.vin);
   return `<div class="vinline" id="vinLine">🚗 <b>${String(vehLabel(v)).replace(/&/g,"&amp;").replace(/</g,"&lt;")}</b> · <span class="vinmono">${i.vin}</span> <span class="${i.checkOk?'vinok':'vinbad'}">${i.checkOk?'✓':'⚠️'}</span></div>`; }
@@ -727,7 +903,7 @@ function renderTools(){
     <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Check fitment first</span>${warn}</div></div>
     <div class="toolgrp"><h3>Tools</h3>${toolArr.length?`<div class="invsum" id="toolSum">Have ${toolOwned} of ${toolArr.length} · tracked across all your guides</div>`:""}${toolsHtml}</div>
     ${parts?`<h2 style="margin-top:22px">Parts</h2>${partArr.length?`<div class="invsum" id="partSum">Have ${partOwned} of ${partArr.length} · for this guide</div>`:""}${parts}`:""}
-    <p class="fine" style="margin-top:14px">Tap <b>＋ I have it</b> to mark what you own — tools stay checked across every guide; parts are per-guide. Amazon links open <b>${regionAmz()}</b> (this guide's region) in a new tab and need internet. No affiliate tags — plain searches.</p>`;
+    <p class="fine" style="margin-top:14px">Tap <b>＋ I have it</b> to mark what you own: tools stay checked across every guide; parts are per-guide. Amazon links open <b>${regionAmz()}</b> (this guide's region) in a new tab and need internet. As an Amazon Associate we earn from qualifying purchases.</p>`;
   view.querySelectorAll("button.have").forEach(btn=>{ btn.onclick=()=>{
     const {t,kind}=flat[+btn.dataset.i]; const now=kind==='tool'?!hasTool(t):!hasPart(t);
     if(kind==='tool') setTool(t,now); else setPart(t,now);
@@ -795,8 +971,10 @@ function renderStep(st){
   document.getElementById("prev").disabled=st.gi===0;
   const nx=document.getElementById("next"); nx.textContent=st.gi===TOTAL_STEPS-1?"Finish ✓":"Next ›";
   document.getElementById("prev").onclick=()=>{ if(st.gi>0) go(st.gi-1); };
-  nx.onclick=()=>{ state.done[st.id]=true; saveState(); refreshTop(); if(st.gi<TOTAL_STEPS-1) go(st.gi+1); else goHome(); };
+  nx.onclick=()=>{ state.done[st.id]=true; saveState(); refreshTop(); if(st.gi<TOTAL_STEPS-1) go(st.gi+1); else goGuide(); };
   if(st.allowMedia){ view.querySelectorAll("[data-cap]").forEach(b=>b.onclick=()=>startCapture(st.id,b.dataset.cap)); refreshStepMedia(st.id); }
+  // Click-to-load YouTube: swap the facade for a youtube-nocookie iframe only on tap (id re-validated at the sink).
+  view.querySelectorAll(".ytfacade .ytplay").forEach(btn=>btn.onclick=()=>{ const fig=btn.closest(".ytfacade"); if(!fig) return; const id=fig.getAttribute("data-yt")||""; if(!/^[A-Za-z0-9_-]{11}$/.test(id)) return; fig.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1" title="Video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`; });
 }
 async function refreshStepMedia(stepId){
   const box=document.getElementById("medialist"); if(!box) return;
@@ -811,7 +989,7 @@ function pickMime(kind){
   for(const m of opts){ if(window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; }
   return '';
 }
-async function startCapture(stepId, kind){
+async function startCapture(stepId, kind, onPhoto){
   let stream;
   const constraints = kind==='photo'?{video:{facingMode:'environment'},audio:false}
     : kind==='audio'?{audio:true}
@@ -839,7 +1017,9 @@ async function startCapture(stepId, kind){
     shutter.onclick=async()=>{
       const w=video.videoWidth||1280,h=video.videoHeight||720,s=Math.min(1,1280/Math.max(w,h));
       const c=document.createElement("canvas"); c.width=w*s;c.height=h*s; c.getContext("2d").drawImage(video,0,0,c.width,c.height);
-      await putMedia({type:'photo',stepId,ts:Date.now(),dataUrl:c.toDataURL("image/jpeg",0.82)}); close(); refreshStepMedia(stepId);
+      const dataUrl=c.toDataURL("image/jpeg",0.82);
+      if(onPhoto){ close(); onPhoto(dataUrl); }
+      else { await putMedia({type:'photo',stepId,ts:Date.now(),dataUrl}); close(); refreshStepMedia(stepId); }
     };
     return;
   }
@@ -893,9 +1073,45 @@ function openKey(){
   sheet("Claude settings",`<div class="field"><label>Anthropic API key</label><input id="keyIn" type="password" placeholder="sk-ant-..." value="${cur.replace(/"/g,'&quot;')}">
       <div class="btnrow" style="margin-top:6px"><a class="btn" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">🔑 Generate a key on console.anthropic.com ↗</a></div></div>
     <div class="field"><label>Model</label><select id="modelIn">${opts}</select></div>
-    <p class="fine">Stored only in this browser and sent directly to api.anthropic.com from your device. The model is used for <b>Ask Claude</b>, hands-free voice, and <b>New Repair</b> (all support vision). Get a key at console.anthropic.com; API usage is billed to your account — Opus costs the most, Haiku the least.</p>
+    <p class="fine">Stored only in this browser and sent directly to api.anthropic.com from your device. The model is used for <b>Ask Claude</b>, hands-free voice, and <b>New Repair</b> (all support vision). Get a key at console.anthropic.com; API usage is billed to your account: Opus costs the most, Haiku the least.</p>
     <div class="btnrow"><button class="btn" id="kc">Cancel</button><button class="btn pri" id="ks">Save</button></div>`,
   (b)=>{ b.querySelector("#ks").onclick=()=>{ state.apiKey=b.querySelector("#keyIn").value.trim(); state.model=b.querySelector("#modelIn").value; saveState(); closeSheet(); }; b.querySelector("#kc").onclick=closeSheet; });
+}
+/* ================= PRIVACY + TERMS (static in-app policies) ================= */
+function openPrivacy(){
+  sheet("Privacy Policy", `
+    <p class="fine">Last updated 2026-07-07. This is a plain-language summary, not legal advice; review with your own counsel before relying on it.</p>
+    <h3>Your data stays on your device</h3>
+    <p>Your progress, checklists, captured photos, voice notes, videos, vehicles and VINs, saved guides, reviews, and settings are stored only on this device (browser localStorage and IndexedDB). There is no analytics or tracking server, and the app does not upload that content.</p>
+    <h3>When the app uses the internet</h3>
+    <p>Everything works offline except these opt-in features:</p>
+    <ul class="pol">
+      <li><b>Claude features</b> (Ask Claude, hands-free voice, New Repair, read-VIN): your request and any photo you attach go directly from your browser to <b>api.anthropic.com</b> using <b>your own</b> Anthropic API key. Anthropic's handling is governed by their privacy policy.</li>
+      <li><b>Guide catalog</b>: read from GitHub (raw.githubusercontent.com). No account required.</li>
+      <li><b>Community submissions</b> (optional): if you choose to submit a guide or review, it may be published to the <b>public</b> community catalog (visible to anyone). Signing in with Google shares your Google account email with the submission service. Do not submit anything you want kept private. Google sign-in is governed by Google's privacy policy.</li>
+      <li><b>YouTube videos</b>: a guide step may include a video. Nothing loads from YouTube until you tap play; then it loads from youtube-nocookie.com and YouTube may collect data per their policy.</li>
+      <li><b>Amazon links</b>: shopping links open Amazon in a new tab and may carry an affiliate tag. As an Amazon Associate we earn from qualifying purchases (see Terms).</li>
+    </ul>
+    <h3>Your control</h3>
+    <p>Clear this site's data in your browser to remove everything, or delete individual vehicles, guides, and captures in the app. Your API key lives only in this browser.</p>
+    <div class="btnrow"><button class="btn pri" id="pClose">Close</button></div>`,
+  (b)=>{ b.querySelector("#pClose").onclick=closeSheet; });
+}
+function openTerms(){
+  sheet("Terms of Service", `
+    <p class="fine">Last updated 2026-07-07. Plain-language summary, not legal advice; review with your own counsel.</p>
+    <h3>Safety and no professional advice</h3>
+    <p>This app provides DIY repair information and AI-generated guidance for general reference only. It is <b>not a substitute for a professional</b> mechanic. Vehicle repair can cause serious injury, death, or property damage. Always verify torque values, fluids, procedures, and parts against the factory service manual for your exact vehicle (VIN), and stop if a task is beyond your skill or tools. You are solely responsible for work you perform.</p>
+    <h3>AI-generated content</h3>
+    <p>Guides, answers, and photo assessments may be produced by AI and can be incomplete or wrong. Treat them as a starting point and confirm before acting.</p>
+    <h3>Community submissions</h3>
+    <p>If you submit a guide or review, you confirm it is yours to share and you license it for inclusion in the public catalog. Submissions may be published publicly; unsafe, abusive, or manipulative content is rejected and may result in a ban.</p>
+    <h3>Amazon affiliate disclosure</h3>
+    <p>As an Amazon Associate we earn from qualifying purchases. Some Amazon links may include an affiliate tag; this does not change your price.</p>
+    <h3>No warranty</h3>
+    <p>The app is provided "as is" without warranties of any kind. To the maximum extent permitted by law, the authors are not liable for any damages arising from its use.</p>
+    <div class="btnrow"><button class="btn pri" id="tClose">Close</button></div>`,
+  (b)=>{ b.querySelector("#tClose").onclick=closeSheet; });
 }
 
 /* ---- VIN reading: door-jamb barcode (offline BarcodeDetector) + dashboard-stamp OCR via Claude ---- */
@@ -1040,16 +1256,6 @@ function starHtml(v){ v=Math.round(v||0); let s=""; for(let i=1;i<=5;i++) s+=`<s
 function installMarketGuide(e){ if(e.builtinRef){ setActive(e.builtinRef); return guideById(e.builtinRef); }
   const existing=allGuides().find(g=>g.title===e.guide.title); if(existing){ setActive(existing.id); return existing; }
   const g=createGuide(e.guide); setActive(g.id); return g; }
-function contributeReview(payload){
-  const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-  const json=JSON.stringify(payload,null,2);
-  try{ navigator.clipboard.writeText(json); }catch(e){}
-  const url="https://github.com/sharpninja/repairs-data/issues/new?title="+encodeURIComponent("Guide review: "+(payload.guideTitle||payload.guideId))+"&body="+encodeURIComponent("Proposed review (from the app):\n\n```json\n"+json+"\n```");
-  sheet("⧉ Contribute review", `<p class="fine">There's no shared server, so your reviews live on your device. To add yours to the public catalog, it's been <b>copied to your clipboard</b> — open an issue on the repo and paste it (maintainers fold approved reviews into the catalog).</p>
-    <div class="field"><textarea rows="8" readonly>${esc(json)}</textarea></div>
-    <div class="btnrow"><button class="btn" id="cClose">Close</button><a class="btn pri" href="${url}" target="_blank" rel="noopener">Open GitHub issue ↗</a></div>`,
-  (b)=>{ b.querySelector("#cClose").onclick=openMarket; });
-}
 async function openMarket(){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const veh=activeVehicle();
@@ -1062,10 +1268,12 @@ async function openMarket(){
       return `<div class="mkt" data-id="${esc(e.id)}"><div class="top"><div style="min-width:0"><b>${esc(m.title)}</b><br><small>${esc(m.subtitle||"")}</small></div><div class="rate">${starHtml(r.avg)}<span>${r.avg?r.avg.toFixed(1):"—"} (${r.count})</span></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${matches?`<span class="fitpill">Fits your ${esc(vehDesc(veh)||"vehicle")}</span>`:""}${fit?`<small>${esc(fit)}</small>`:""}${guideChips(m)}</div></div>`; };
     let html="";
     if(veh){ const forYou=entries.map(e=>({e,s:fitScore(entryMeta(e).fits,veh)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
-      html+=`<h3 style="margin:.2em 0">🚗 For your ${esc(vehDesc(veh)||"vehicle")}</h3>`+(forYou.length?forYou.map(x=>card(x.e)).join(""):`<p class="fine">No catalog guides match this vehicle yet — browse all below, or make one with ＋ New Repair.</p>`);
-    } else html+=`<p class="fine">Tip: set an active vehicle (🚗) to surface guides matched to your car.</p>`;
-    html+=`<h3 style="margin:.7em 0 .2em">All guides</h3>`+entries.map(card).join("");
-    html+=`<p class="fine" style="margin-top:12px">Ratings combine the community seed with your own, stored on-device. Open a guide to <b>🚀 Submit as PR</b> (moderated by Claude on the server) or <b>Contribute</b> via an issue.</p>`;
+      html+=`<h3 style="margin:.2em 0">🚗 For your ${esc(vehDesc(veh)||"vehicle")}</h3>`+(forYou.length?forYou.map(x=>card(x.e)).join(""):`<p class="fine">No guides yet for ${esc(vehDesc(veh)||"your vehicle")}. Make one with ＋ New Repair, or 🚀 Submit to the community catalog.</p>`);
+    } else {
+      html+=`<p class="fine">Tip: set an active vehicle (🚗) to surface guides matched to your car.</p>`;
+      html+=`<h3 style="margin:.7em 0 .2em">All guides</h3>`+entries.map(card).join("");
+    }
+    html+=`<p class="fine" style="margin-top:12px">Ratings combine the community seed with your own, stored on-device. Open a guide to <b>🚀 Submit</b> your own guide or review to the community catalog.</p>`;
     box.innerHTML=html;
     box.querySelectorAll(".mkt").forEach(c=>c.onclick=()=>{ const e=entries.find(x=>x.id===c.dataset.id); if(e) openMarketGuide(e); });
   });
@@ -1089,15 +1297,14 @@ function openMarketGuide(e){
     <div id="myStars" class="stars" style="font-size:1.7em"></div>
     <div class="field" style="margin-top:10px"><label>Write a review</label><textarea id="revText" rows="3" placeholder="What worked, what to watch for…">${esc((ur.review&&ur.review.text)||"")}</textarea></div>
     <div id="revStatus"></div>
-    <div class="btnrow"><button class="btn" id="revContribute">⧉ Contribute</button><button class="btn" id="revPR">🚀 Submit as PR</button><button class="btn pri" id="revSubmit">Save review</button></div>
+    <div class="btnrow"><button class="btn" id="revPR">🚀 Submit review</button><button class="btn pri" id="revSubmit">Save review</button></div>
     <h3 style="margin:.7em 0 .2em">Reviews</h3>
     <div id="revList">${revHtml||'<p class="fine">No reviews yet — be the first.</p>'}</div>`,
   (b)=>{
     const sp=b.querySelector("#myStars"); let picked=ur.stars||0;
     const paint=()=>{ sp.innerHTML=""; for(let i=1;i<=5;i++){ const s=document.createElement("span"); s.className="st"+(i<=picked?" on":""); s.textContent="★"; s.onclick=()=>{ picked=i; setUserReview(e.id,{stars:i}); paint(); }; sp.appendChild(s); } };
     paint();
-    b.querySelector("#mInstall").onclick=()=>{ installMarketGuide(e); closeSheet(); goHome(); };
-    b.querySelector("#revContribute").onclick=()=>{ contributeReview({guideId:e.id, guideTitle:m.title, stars:picked, review:(b.querySelector("#revText").value||"").trim()}); };
+    b.querySelector("#mInstall").onclick=()=>{ installMarketGuide(e); closeSheet(); goGuide(); };
     b.querySelector("#revPR").onclick=()=>{
       const txt=(b.querySelector("#revText").value||"").trim(); const st=b.querySelector("#revStatus");
       if(picked<1){ st.innerHTML=`<div class="modverdict no">Pick a star rating first.</div>`; return; }
@@ -1179,10 +1386,10 @@ function submitSheet(title, previewHtml, rpc, payload, meta, back){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   if(!submitApi()||!googleClientId()){ sheet(title, `<div class="modverdict no">Community submissions aren't configured. Set the <b>Backend URL</b> and <b>Google client ID</b> in ⚙️ → Community submissions, then try again.</div><div class="btnrow"><button class="btn pri" id="cfg">Open settings</button></div>`, (b)=>{ b.querySelector("#cfg").onclick=()=>{ closeSheet(); openKey(); }; }); return; }
   sheet(title, `${previewHtml}
-    <p class="fine">Every submission is tagged with your session key and moderated by Claude on the server. A maintainer reviews and merges it.</p>
+    <p class="fine">Submitting shares this with the community catalog. Make sure it's safe and accurate, and don't include anything private.</p>
     <div id="gsi" style="margin:10px 0;min-height:44px"></div>
     <div id="subStatus" class="fine"></div>
-    <div class="btnrow"><button class="btn" id="subCancel">Cancel</button><button class="btn pri" id="subGo" disabled>🚀 Submit PR</button></div>`,
+    <div class="btnrow"><button class="btn" id="subCancel">Cancel</button><button class="btn pri" id="subGo" disabled>🚀 Submit</button></div>`,
   (b)=>{
     const go=b.querySelector("#subGo"), st=b.querySelector("#subStatus"), gsi=b.querySelector("#gsi");
     const ready=()=>{ go.disabled=false; st.innerHTML=`Signed in as <b>${esc(_session&&_session.email||_gEmail)}</b>.`; gsi.style.display="none"; };
@@ -1192,7 +1399,7 @@ function submitSheet(title, previewHtml, rpc, payload, meta, back){
     go.onclick=async()=>{ if(!loggedIn()){ st.textContent="Sign in first."; return; } go.disabled=true; st.textContent="Submitting…";
       try{ const r=await submitRPC(rpc, Object.assign({sessionKey:_session.key}, payload));
         if(r.prNumber){ recordSubmission({number:r.prNumber, url:r.prUrl, title:meta&&meta.title, kind:meta&&meta.kind});
-          st.innerHTML=`✅ Pull request opened: <a href="${esc(r.prUrl)}" target="_blank" rel="noopener">#${r.prNumber} ↗</a><br><span class="fine">We'll let you know when it goes live.</span>`; }
+          st.innerHTML=`✅ Submitted <a href="${esc(r.prUrl)}" target="_blank" rel="noopener">#${r.prNumber} ↗</a><br><span class="fine">We'll let you know when it goes live.</span>`; }
         else st.innerHTML=`✅ ${esc(r.message||"Submission received.")}`;
       }catch(err){ go.disabled=false; st.innerHTML=`<span class="vinbad">⚠️ ${esc(String(err.message||err))}</span>`; } };
   });
@@ -1209,25 +1416,38 @@ function openSubmitRepair(g){
     "SubmitRepair", {guideJson:json}, {title:g.title, kind:"repair"}, ()=>openExport(g));
 }
 
+/* Read a picked image File and return a downscaled JPEG data URL (max 1280px). */
+function fileToScaledDataUrl(file, max=1280){ return new Promise((res,rej)=>{
+  const fr=new FileReader();
+  fr.onload=()=>{ const img=new Image();
+    img.onload=()=>{ const w=img.width||max,h=img.height||max,s=Math.min(1,max/Math.max(w,h));
+      const c=document.createElement("canvas"); c.width=Math.max(1,Math.round(w*s)); c.height=Math.max(1,Math.round(h*s));
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height); res(c.toDataURL("image/jpeg",0.82)); };
+    img.onerror=()=>res(fr.result); img.src=fr.result; };
+  fr.onerror=()=>rej(new Error("Couldn't read the image.")); fr.readAsDataURL(file); }); }
 function openChat(attachImg){
   if(attachImg) pendingImage=attachImg;
   const ctx = route==="step" ? `Current step: "${STEPS[cur].t}" (${STEPS[cur].phase.name}).` : "";
   sheet("💬 Ask Claude", `<div id="chatlog"></div><div class="typing hidden" id="typing">Claude is thinking…</div>`,
   (body,panel)=>{
     const foot=document.createElement("div");
-    foot.innerHTML=`<div class="attachchip hidden" id="attach"></div><div class="chatinput"><textarea id="chatIn" rows="1" placeholder="Ask about this step…"></textarea><button class="send" id="chatSend">➤</button></div>`;
+    foot.innerHTML=`<div class="attachchip hidden" id="attach"></div><div class="chatinput"><button class="cataux" id="chatCam" title="Take a photo">📷</button><button class="cataux" id="chatPhoto" title="Add a photo">🖼️</button><input type="file" accept="image/*" id="chatFile" hidden><textarea id="chatIn" rows="1" placeholder="Ask about this step…"></textarea><button class="send" id="chatSend">➤</button></div>`;
     panel.appendChild(foot);
     const log=body.querySelector("#chatlog"), ta=foot.querySelector("#chatIn"), send=foot.querySelector("#chatSend"), typing=body.querySelector("#typing");
+    const fileIn=foot.querySelector("#chatFile");
+    foot.querySelector("#chatCam").onclick=()=>startCapture(null,"photo",(d)=>{ pendingImage=d; showAttach(foot); });
+    foot.querySelector("#chatPhoto").onclick=()=>fileIn.click();
+    fileIn.onchange=async()=>{ const f=fileIn.files&&fileIn.files[0]; if(f){ try{ pendingImage=await fileToScaledDataUrl(f); showAttach(foot); }catch(e){} } fileIn.value=""; };
     ta.oninput=()=>{ ta.style.height="auto"; ta.style.height=Math.min(120,ta.scrollHeight)+"px"; };
     renderChat(log); showAttach(foot);
     function submit(){ const t=ta.value.trim(); if(!t&&!pendingImage) return; ta.value=""; ta.style.height="auto"; sendToClaude(t,ctx,log,typing,foot); }
     send.onclick=submit; ta.onkeydown=e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); submit(); } };
-    if(!chatHistory.length) log.insertAdjacentHTML("beforeend", msgHtml("a","Hi — I'm your Session-1 helper. Ask about the A/C swap, ECT2 sensor, coolant bleed, or HG-1. Attach a photo of a fitting or O-ring and I'll check it. What's up?"));
+    if(!chatHistory.length) log.insertAdjacentHTML("beforeend", msgHtml("a","Hi, I'm your repair helper. Ask about any step, part, or torque spec. Tap 📷 or 🖼️ to attach a photo of a part, fitting, or connector and I'll check it. What are you working on?"));
     setTimeout(()=>ta.focus(),150);
   }, true);
 }
 function showAttach(foot){ const c=foot.querySelector("#attach"); if(pendingImage){ c.classList.remove("hidden"); c.innerHTML=`<img src="${pendingImage}"> photo attached <button style="background:none;border:none;color:var(--muted);cursor:pointer" id="ua">✕</button>`; c.querySelector("#ua").onclick=()=>{ pendingImage=null; c.classList.add("hidden"); }; } else c.classList.add("hidden"); }
-function msgHtml(role,text,img){ const s=(text||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>"); return `<div class="msg ${role}">${img?`<img src="${img}">`:""}${s}</div>`; }
+function msgHtml(role,text,img){ const r=(role==="u"?"u":"a"); const s=(text||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>"); return `<div class="msg ${r}">${img?`<img src="${(img||"").replace(/"/g,"&quot;")}">`:""}${s}</div>`; }
 function renderChat(log){ log.innerHTML=""; chatHistory.forEach(m=>{ const t=m.content.filter(b=>b.type==="text").map(b=>b.text).join(""); log.insertAdjacentHTML("beforeend", msgHtml(m.role==="user"?"u":"a", t, m._img||null)); }); }
 
 function pushUser(text,img){
@@ -1252,7 +1472,7 @@ async function sendToClaude(text,ctx,log,typing,foot){
   pushUser(text, pendingImage); pendingImage=null; showAttach(foot);
   renderChat(log); log.scrollTop=log.scrollHeight; typing.classList.remove("hidden");
   try{ await completeClaude(ctx); typing.classList.add("hidden"); renderChat(log); log.scrollTop=log.scrollHeight; }
-  catch(err){ typing.classList.add("hidden"); log.insertAdjacentHTML("beforeend", `<div class="msg err">⚠️ ${String(err.message||err)}<br><span class="fine">Check your API key (⚙️ on the home screen) and network.</span></div>`); log.scrollTop=log.scrollHeight; }
+  catch(err){ typing.classList.add("hidden"); const em=String(err.message||err).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); log.insertAdjacentHTML("beforeend", `<div class="msg err">⚠️ ${em}<br><span class="fine">Check your API key (⚙️ on the home screen) and network.</span></div>`); log.scrollTop=log.scrollHeight; }
 }
 
 /* ================= SHEET ================= */
@@ -1308,13 +1528,14 @@ JSON shape:
             {"type":"crit","title":"string","text":"string"},
             {"type":"tip","title":"string","text":"string"},
             {"type":"spec","text":"string","verify":"string"},
-            {"type":"note","text":"string"}
+            {"type":"note","text":"string"},
+            {"type":"video","id":"11-char YouTube id or a full YouTube URL"}
           ] } ] } ],
   "tools": [ {"id":"library id if one fits (see below), else omit","n":"name","d":"why it's needed","q":"amazon search terms"} ],
   "parts": [ {"g":"group name","items":[ {"n":"name","d":"note","q":"amazon search terms"} ]} ]
 }
 
-Block types: "steps" = numbered sub-steps; "check" = a checklist (these count toward progress — include at least one, e.g. a final "before you drive" list); "danger" = critical safety; "crit" = easy to get wrong; "tip" = helpful; "spec" = a torque/fluid value with a "verify" note; "note" = a plain paragraph.
+Block types: "steps" = numbered sub-steps; "check" = a checklist (these count toward progress — include at least one, e.g. a final "before you drive" list); "danger" = critical safety; "crit" = easy to get wrong; "tip" = helpful; "spec" = a torque/fluid value with a "verify" note; "note" = a plain paragraph; "video" = an optional YouTube how-to clip (give the 11-char video id or a full YouTube URL).
 
 Standard Tool Library — reuse these by their exact "id" whenever one fits, so the app can track tools the user already owns across guides. You may still set "d" to a job-specific note. Only invent a tool (an object with "n"/"q" and NO "id") when nothing here fits:
 ${TOOL_LIB.map(t=>`  ${t.id} = ${t.n}`).join("\n")}
@@ -1430,7 +1651,7 @@ function openNew(){
       go.disabled=true; status.textContent="✨ Generating with Claude… this can take 20–40s.";
       try{
         const obj=await genGuideJSON(SCHEMA_SYSTEM, prompt);
-        const g=createGuide(obj); setActive(g.id); closeSheet(); goHome();
+        const g=createGuide(obj); setActive(g.id); closeSheet(); goGuide();
       }catch(err){ go.disabled=false; status.innerHTML=`<span style="color:var(--danger)">⚠️ ${esc(String(err.message||err))}</span>`; }
     };
   });
@@ -1458,7 +1679,7 @@ function openMerge(){
       const userText="Merge these guides into one combined guide.\n"+(note?("Extra instructions: "+note+"\n"):"")+"\nGuides JSON:\n"+JSON.stringify(picked);
       try{
         const obj=await genGuideJSON(MERGE_SYSTEM, userText);
-        const g=createGuide(obj); setActive(g.id); closeSheet(); goHome();
+        const g=createGuide(obj); setActive(g.id); closeSheet(); goGuide();
       }catch(err){ go.disabled=false; status.innerHTML=`<span style="color:var(--danger)">⚠️ ${esc(String(err.message||err))}</span>`; }
     };
   });
@@ -1471,7 +1692,7 @@ function openGuides(){
   sheet("Guides", rows+`<div class="btnrow"><button class="btn" id="mktBtn">🛒 Marketplace</button><button class="btn" id="addG">⬇ Add guide</button>${canMerge?`<button class="btn" id="mergeG">⤵ Merge</button>`:""}<button class="btn pri" id="newG">＋ New Repair</button></div>`,
   (b)=>{
     b.querySelector("#mktBtn").onclick=()=>{ closeSheet(); openMarket(); };
-    b.querySelectorAll('input[name=gsel]').forEach(r=>r.onchange=()=>{ setActive(r.value); closeSheet(); goHome(); });
+    b.querySelectorAll('input[name=gsel]').forEach(r=>r.onchange=()=>{ setActive(r.value); closeSheet(); goGuide(); });
     b.querySelectorAll("[data-del]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); const id=x.dataset.del; saveUserGuides(userGuides().filter(g=>g.id!==id)); if(ACTIVE.id===id) setActive("crv-s1"); closeSheet(); openGuides(); });
     b.querySelectorAll("[data-exp]").forEach(x=>x.onclick=(e)=>{ e.preventDefault(); openExport(guideById(x.dataset.exp)); });
     const mg=b.querySelector("#mergeG"); if(mg) mg.onclick=openMerge;
@@ -1484,7 +1705,7 @@ function openExport(g){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const json=JSON.stringify(exportGuide(g),null,2);
   sheet("Share: "+esc(g.title), `
-    <p class="fine">Copy this JSON or download it — anyone can add it via <b>Guides → ⬇ Add guide</b> on their own device. Or <b>🚀 Submit to marketplace</b> to open a pull request adding it to the shared catalog.</p>
+    <p class="fine">Copy this JSON or download it: anyone can add it via <b>Guides → ⬇ Add guide</b> on their own device. Or <b>🚀 Submit to marketplace</b> to share it with the community catalog.</p>
     <div class="field"><textarea id="expJson" rows="12" readonly>${esc(json)}</textarea></div>
     <div id="expStatus" class="fine"></div>
     <div class="btnrow"><button class="btn" id="expCopy">⧉ Copy</button><button class="btn" id="expPR">🚀 Submit to marketplace</button><button class="btn pri" id="expDl">⬇ Download .json</button></div>`,
@@ -1509,7 +1730,7 @@ function openAdd(){
       const st=b.querySelector("#impStatus"); let obj;
       try{ obj=extractJson(b.querySelector("#impJson").value); }catch(e){ st.innerHTML=`<span style="color:var(--danger)">⚠️ That isn't valid JSON.</span>`; return; }
       if(!validGuide(obj)){ st.innerHTML=`<span style="color:var(--danger)">⚠️ Needs a title and at least one phase with steps.</span>`; return; }
-      const g=createGuide(obj); setActive(g.id); closeSheet(); goHome();
+      const g=createGuide(obj); setActive(g.id); closeSheet(); goGuide();
     };
   });
 }
@@ -1654,6 +1875,9 @@ function openVoiceSettings(){
 }
 
 /* ================= BOOT ================= */
+// Global safety net: any uncaught error / rejection is reported (deidentified) and swallowed.
+window.addEventListener("error", e=>reportClientError("window.onerror", e&&(e.error||e.message)));
+window.addEventListener("unhandledrejection", e=>reportClientError("unhandledrejection", e&&e.reason));
 document.getElementById("homeBtn").onclick=goHome;
 document.getElementById("themeBtn").onclick=cycleTheme;
 document.getElementById("ask").onclick=()=>openChat(null);
@@ -1665,6 +1889,7 @@ document.getElementById("mic").onclick=()=>Voice.toggle();
 })();
 setActive(state.activeGuide||"crv-s1");
 openDB().then(render).catch(render);
+fetchAppConfig().catch(()=>{});   // pick up the server-provided Amazon Associate tag (no login needed)
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 // On startup, if logged in, negotiate a fresh session key then poll our PRs and
 // notify when any have gone live (merged).

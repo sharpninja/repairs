@@ -6,12 +6,13 @@
       "id": "mkt-crv-s1",
       "builtinRef": "crv-s1",
       "meta": {
-        "title": "2018 Honda CR-V 1.5T — Session 1",
+        "title": "Replace AC Compressor and ECT2",
         "subtitle": "A/C compressor + condenser, ECT2 sensor, HG-1",
         "region": "us",
         "env": ["driveway", "garage"],
         "fits": { "makes": ["Honda"], "models": ["CR-V"], "yearFrom": 2017, "yearTo": 2022 }
       },
+      "addedAt": 1717200000000,
       "rating": { "avg": 4.7, "count": 12 },
       "reviews": [
         { "author": "wrenchingdad", "stars": 5, "text": "The 'cap every open line instantly' warning saved me — did all three jobs on one coolant drain. Clear and safety-first.", "ts": 1717200000000 },
@@ -68,6 +69,7 @@
           ] }
         ]
       },
+      "addedAt": 1719000000000,
       "rating": { "avg": 4.5, "count": 8 },
       "reviews": [
         { "author": "boxer_wagon", "stars": 5, "text": "Did my '17 Outback in an afternoon. The piston-compression reminder and the bed-in step are the parts people skip.", "ts": 1716000000000 },
@@ -123,6 +125,7 @@
           ] }
         ]
       },
+      "addedAt": 1715000000000,
       "rating": { "avg": 4.9, "count": 34 },
       "reviews": [
         { "author": "firsttimer", "stars": 5, "text": "Clear enough that I did my first oil change with zero drama. The crush-washer warning is gold.", "ts": 1715000000000 }

@@ -45,6 +45,24 @@ function octo() {
   if (!t) throw new Error("Set GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY + GITHUB_APP_INSTALLATION_ID, or GITHUB_TOKEN");
   return new Octokit({ auth: t });
 }
+
+// List open app-submission PRs + their current moderation verdict (from the ai:*
+// label). Throws if no GitHub credentials are configured (callers treat this as
+// best-effort). Used by the admin dashboard's live moderation-status view.
+export async function listOpenSubmissionPRs() {
+  const kit = octo();
+  const prs = await kit.pulls.list({ owner: OWNER, repo: REPO, state: "open", per_page: 50, sort: "created", direction: "desc" });
+  return prs.data
+    .filter((pr) => (pr.labels || []).some((l) => l.name === SUBMISSION_LABEL))
+    .map((pr) => {
+      const labels = (pr.labels || []).map((l) => l.name);
+      return {
+        number: pr.number, title: pr.title, state: pr.state, url: pr.html_url,
+        verdict: (labels.find((l) => l.startsWith("ai:")) || "").replace("ai:", "") || "pending",
+        injection: labels.includes("prompt-injection"),
+      };
+    });
+}
 const slug = (s) => String(s || "guide").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "guide";
 const stamp = () => new Date().toISOString().replace(/[^0-9]/g, "").slice(0, 14);
 
