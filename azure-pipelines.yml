@@ -1,8 +1,9 @@
 # Azure Pipeline for AI Auto Repairman (Azure DevOps org: McpServer).
 #
 # Three stages:
-#   1. Test        - backend unit tests (store + admin) on a Microsoft-hosted agent.
+#   1. Test        - backend unit tests (store + admin) on the self-hosted 'Default' pool.
 #   2. PublishApp  - publish the PWA (docs/) to the GitHub Pages repo sharpninja/repairs.
+#   (This org is self-hosted only; there is no Microsoft-hosted 'Azure Pipelines' pool, so every stage uses 'Default'.)
 #   3. DeployService - create + deploy an Octopus release; Octopus runs on the PAYTON-DESKTOP
 #                    Windows target and triggers the docker redeploy (git pull + docker compose up).
 #
@@ -29,8 +30,9 @@ stages:
   jobs:
   - job: Backend
     pool:
-      vmImage: 'windows-latest'
+      name: 'Default'
     steps:
+    - checkout: self
     - task: NodeTool@0
       inputs:
         versionSpec: '20.x'
@@ -48,20 +50,22 @@ stages:
   jobs:
   - job: PublishPages
     pool:
-      vmImage: 'ubuntu-latest'
+      name: 'Default'
     steps:
     - checkout: self
-    - script: |
-        set -e
+    - powershell: |
         git config --global user.email "ci@thesharp.ninja"
         git config --global user.name "Azure Pipeline"
+        if (Test-Path ghpages) { Remove-Item -Recurse -Force ghpages }
         git clone "https://$(GITHUB_PAT)@github.com/sharpninja/repairs.git" ghpages
-        rm -rf ghpages/docs
-        cp -r docs ghpages/docs
-        cd ghpages
+        if ($LASTEXITCODE -ne 0) { throw "git clone failed" }
+        Remove-Item -Recurse -Force ghpages\docs
+        Copy-Item -Recurse docs ghpages\docs
+        Set-Location ghpages
         git add docs
-        git commit -m "publish app $(Build.BuildNumber) [skip ci]" || echo "no app changes to publish"
+        git commit -m "publish app $(Build.BuildNumber) [skip ci]" 2>&1 | Write-Host
         git push origin HEAD:main
+        if ($LASTEXITCODE -ne 0) { throw "git push failed" }
       displayName: Publish docs/ to sharpninja/repairs (GitHub Pages)
 
 - stage: DeployService
