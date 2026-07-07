@@ -4,6 +4,7 @@ import http from "node:http";
 import { connectNodeAdapter } from "@connectrpc/connect-node";
 import routes from "./routes.js";
 import { adminHandler } from "./admin.js";
+import { legalHandler } from "./legal.js";
 
 // CORS allowlist: a comma-separated list of exact origins, or "*" to allow any.
 // With a list, the matching request Origin is echoed back (proper multi-origin CORS);
@@ -41,6 +42,8 @@ const server = http.createServer((req, res) => {
     adminHandler(req, res).catch(() => { try { res.writeHead(500, { "content-type": "text/plain" }); res.end("error"); } catch (e) {} });
     return;
   }
+  // Public legal pages (privacy policy + terms) for the app-store listings.
+  if (legalHandler(req, res)) return;
   adapter(req, res);
 });
 

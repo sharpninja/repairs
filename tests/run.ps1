@@ -17,6 +17,14 @@ Write-Host "`n== backend admin dashboard unit tests =="
 node tests/admin.test.mjs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "`n== backend legal endpoints unit tests =="
+node tests/legal.test.mjs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "`n== backend auth strategy unit tests =="
+node tests/auth.test.mjs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "`n== client<->server integration tests =="
 node tests/integration.test.mjs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

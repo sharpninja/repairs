@@ -58,6 +58,14 @@ Copy `.env.example` to `.env` and fill it in:
 For moderation, also set **`CLAUDE_CODE_OAUTH_TOKEN`**: on a machine logged into a
 Claude Pro/Max account run `claude setup-token` and paste the token into `.env`.
 
+Optional: **Sign in with Apple** — set **`APPLE_CLIENT_ID`** to the **Services ID** configured
+for Sign in with Apple (the audience the Apple identity token must match; distinct from the iOS
+app's Bundle ID). The server verifies Apple tokens against Apple's JWKS. Sign in with Apple also
+requires, on the Apple Developer portal, a registered Services ID, a Sign in with Apple key, and
+configured return URLs — one-time account setup the server cannot automate. Until it's set up the
+client keeps using Google: `StartSession`'s `provider` field defaults to `"google"`, so existing
+clients are unaffected.
+
 Optional: set **`AMAZON_ASSOCIATE_TAG`** to your Amazon Associate tag. The app fetches it
 on startup via the unauthenticated `GetAppConfig` RPC and appends it to Amazon shopping
 links. Leave it blank for plain, untagged searches.
@@ -76,6 +84,19 @@ Set **`ADMIN_TOKEN`** (e.g. `openssl rand -hex 32`) and open **`/admin?token=<AD
 (`MODERATION_LOG_STORE`, default `/app/data/moderation.jsonl`), the deidentified **error logs**,
 and the **ban** audit log. With `ADMIN_TOKEN` unset the `/admin` route is disabled (404); a
 missing/invalid token returns 401.
+
+### Store listing URLs
+
+Google Play Console and Apple App Store Connect require **public URLs** for the privacy policy
+and terms of service during listing setup. The service serves them as plain HTML (simple `GET`,
+no auth, short cache), meant to be opened directly in a browser and linked from the store consoles:
+
+- **`GET /legal/privacy`** — privacy policy
+- **`GET /legal/terms`** — terms of service
+
+The content lives in [`legal/privacy.md`](legal/privacy.md) and [`legal/terms.md`](legal/terms.md).
+With the service exposed publicly (e.g. via the ngrok tunnel), the listing URLs are
+`https://<your-host>/legal/privacy` and `https://<your-host>/legal/terms`.
 
 ## Quick start (script)
 

@@ -12,6 +12,9 @@ node_modules/
 server/node_modules/
 server/gen/
 
+# store packaging build outputs (scripts/package-*.ps1)
+dist/
+
 # logs + local state
 *.log
 mcp.db

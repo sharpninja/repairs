@@ -1,29 +1,15 @@
 // Service implementation: Google login -> session key; every submission is
 // tagged with the session key, rate-limited, trust-checked, then opened as a PR.
-import { OAuth2Client } from "google-auth-library";
 import { ConnectError, Code } from "@connectrpc/connect";
+import { getStrategy } from "./auth/index.js";
 import { appendFileSync, mkdirSync, statSync } from "node:fs";
 import { dirname } from "node:path";
 import { openReviewPR, openRepairPR, getStatuses } from "./github.js";
 import { createSession, rotateSession, resolveSession } from "./session.js";
 import { isBlocked, tryConsumeRate } from "./store.js";
 
-const googleClient = new OAuth2Client();
-
 // Public app config served to the browser on startup (no session required).
 const AMAZON_ASSOCIATE_TAG = process.env.AMAZON_ASSOCIATE_TAG || "";
-
-async function verifyGoogle(idToken) {
-  if (!idToken) throw new ConnectError("Missing Google credential", Code.Unauthenticated);
-  const aud = process.env.GOOGLE_CLIENT_ID;
-  if (!aud) throw new ConnectError("Server is missing GOOGLE_CLIENT_ID", Code.FailedPrecondition);
-  let ticket;
-  try { ticket = await googleClient.verifyIdToken({ idToken, audience: aud }); }
-  catch (e) { throw new ConnectError("Invalid Google credential", Code.Unauthenticated); }
-  const p = ticket.getPayload();
-  if (!p || !p.email_verified) throw new ConnectError("Unverified Google account", Code.PermissionDenied);
-  return { email: p.email, name: p.name || "", sub: p.sub };
-}
 
 function requireSession(sessionKey) {
   const s = resolveSession(sessionKey);
@@ -33,7 +19,10 @@ function requireSession(sessionKey) {
 function wrap(e) { return e instanceof ConnectError ? e : new ConnectError(String(e && e.message ? e.message : e), Code.Internal); }
 
 export async function startSession(req) {
-  const user = await verifyGoogle(req.googleIdToken);
+  const provider = req.provider || "google";
+  const strategy = getStrategy(provider);
+  const idToken = provider === "apple" ? req.appleIdToken : req.googleIdToken;
+  const user = await strategy.verify(idToken);
   const s = createSession(user.email, user.name);
   return { sessionKey: s.key, email: s.email, expiresAt: String(s.exp) };
 }

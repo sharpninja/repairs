@@ -133,6 +133,7 @@ relative, so it runs correctly under the `/<repo>/` subpath.
 | [`docs/index.html`](docs/index.html) | **The entire app** — self-contained HTML/CSS/JS. Home dashboard, step flow, Tools & Parts, Session Log, New Repair, Guides. |
 | [`docs/marketplace.json`](docs/marketplace.json) | **Bundled seed** of the guide catalog — offline fallback. The live catalog is served from the separate data repo's `approved` branch. |
 | [`scripts/init-data-repo.ps1`](scripts/init-data-repo.ps1) | Bootstraps the `sharpninja/repairs-data` repo + `approved` branch from the seed (uses the GitHub CLI). |
+| [`scripts/package-apps.ps1`](scripts/package-apps.ps1) · [`package-android.ps1`](scripts/package-android.ps1) · [`package-ios.ps1`](scripts/package-ios.ps1) | Package the PWA for the stores. **Android**: Bubblewrap TWA → signed `.aab` + `docs/.well-known/assetlinks.json`. **iOS**: PWABuilder Xcode project (build/upload on a Mac). `package-apps.ps1` orchestrates both; outputs to `dist/`. |
 | `docs/manifest.webmanifest` · `docs/sw.js` · `docs/icon-*.png` · [`docs/favicon.svg`](docs/favicon.svg) | PWA manifest, offline service worker, app icons and favicon. |
 | [`guide/`](guide/) | The built-in CR-V guide as a standalone **slideshow + printable PDF** (see [below](#also-available-as-a-slideshow--pdf)). |
 | [`server/`](server/) | **Optional** Dockerized **gRPC / Connect** submit service — Google sign-in → session key → GitHub PRs, with Claude moderation, per-user trust, and rate limiting. The app works fully without it. |

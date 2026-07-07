@@ -24,8 +24,13 @@ service SubmissionService {
 }
 
 message StartSessionRequest {
-  // Google Identity Services ID token (JWT) from the browser.
+  // Google Identity Services ID token (JWT). Used when provider is "google" or empty.
   string google_id_token = 1;
+  // "google" or "apple". Empty defaults to "google" for backward compatibility
+  // with existing clients that only set google_id_token.
+  string provider = 2;
+  // Sign in with Apple identity token (JWT). Used when provider is "apple".
+  string apple_id_token = 3;
 }
 message RefreshSessionRequest {
   string session_key = 1;
