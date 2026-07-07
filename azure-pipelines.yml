@@ -78,6 +78,8 @@ stages:
     - checkout: none
     - powershell: |
         $ver = "$(Build.BuildNumber)"
-        octopus release create --project "$(octopusProject)" --version $ver --ignore-existing
-        octopus release deploy --project "$(octopusProject)" --version $ver --environment "$(octopusEnvironment)" --wait-for-deployment
+        octopus release create --project "$(octopusProject)" --version $ver --no-prompt
+        if ($LASTEXITCODE -ne 0) { throw "octopus release create failed" }
+        octopus release deploy --project "$(octopusProject)" --version $ver --environment "$(octopusEnvironment)" --no-prompt
+        if ($LASTEXITCODE -ne 0) { throw "octopus release deploy failed" }
       displayName: Create + deploy Octopus release
