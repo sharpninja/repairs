@@ -645,11 +645,11 @@ const initScript = ({ jwt, seedSession, seedSubmission, seedVehicles, activeVehi
   const p = await page.evaluate(async () => {
     goHome(); await new Promise((r) => setTimeout(r, 60));
     document.getElementById("privacyLink")?.click(); await new Promise((r) => setTimeout(r, 40));
-    const privTitle = (document.querySelector(".sheet .head b") || {}).textContent || "";
+    const privTitle = (document.querySelector(".sheet .head h2") || {}).textContent || "";
     const privText = (document.querySelector(".sheet .body") || {}).textContent || "";
     closeSheet();
     document.getElementById("termsLink")?.click(); await new Promise((r) => setTimeout(r, 40));
-    const termsTitle = (document.querySelector(".sheet .head b") || {}).textContent || "";
+    const termsTitle = (document.querySelector(".sheet .head h2") || {}).textContent || "";
     const termsText = (document.querySelector(".sheet .body") || {}).textContent || "";
     closeSheet();
     setActive("crv-s1"); goGuide(); await new Promise((r) => setTimeout(r, 60));
@@ -777,7 +777,7 @@ const initScript = ({ jwt, seedSession, seedSubmission, seedVehicles, activeVehi
     const m = document.getElementById("mic").getBoundingClientRect(), a = document.getElementById("ask").getBoundingClientRect();
     R.sameRow = Math.abs(m.top - a.top) < 4;
     document.getElementById("ask").click(); await new Promise((r) => setTimeout(r, 60));
-    R.chatOpened = /Ask Claude/i.test((document.querySelector(".sheet .head b") || {}).textContent || "");
+    R.chatOpened = /Ask Claude/i.test((document.querySelector(".sheet .head h2") || {}).textContent || "");
     return R;
   });
   check("floating action row (#fabs) exists", u.fabs);
@@ -910,6 +910,453 @@ const initScript = ({ jwt, seedSession, seedSubmission, seedVehicles, activeVehi
   check("tagged car (fits Honda) still drives discovery", t.fitsMakes.toLowerCase().includes("honda") && t.shown); // T-title-discovery
   check("marketplace lists the guide by its job title", /Replace AC Compressor and ECT2/.test(t.body));
   eq("no page errors", errs, []);
+  await ctx.close();
+}
+
+// ============ Scenario A11y-A: keyboard-operable custom widgets ============
+{
+  console.log("a11y-A: star radiogroup + button cards + video-thumb keyboard");
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(initScript({ jwt: FAKE_JWT, seedVehicles: true }));
+  const page = await ctx.newPage();
+  const errs = []; page.on("pageerror", (e) => errs.push(String(e)));
+  await page.goto(BASE + "/index.html", { waitUntil: "load" });
+  await page.waitForTimeout(300);
+
+  // -- Star rating widget: radiogroup, roles, keyboard operation --
+  const star = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const cat = await loadMarket();
+    openMarketGuide(cat.guides[0]);
+    await sleep(120);
+    const sp = document.getElementById("myStars");
+    const radios = sp ? [...sp.querySelectorAll('[role=radio]')] : [];
+    const named = radios.length === 5 && radios.every((r) => /\bstars?\b/i.test(r.getAttribute("aria-label") || ""));
+    const haveChecked = radios.length === 5 && radios.every((r) => r.hasAttribute("aria-checked"));
+    const focusable = radios.some((r) => r.tabIndex === 0);
+    // keyboard-only: select the 3rd star with Enter, then Save (proves no mouse needed)
+    if (radios[2]) { radios[2].focus(); radios[2].dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); }
+    await sleep(40);
+    const after = sp ? [...sp.querySelectorAll('[role=radio]')] : [];
+    const checkedIdx = after.findIndex((r) => r.getAttribute("aria-checked") === "true");
+    if (document.getElementById("revText")) document.getElementById("revText").value = "Clear, safe, keyboard-set.";
+    const sub = document.getElementById("revSubmit"); if (sub) sub.click();
+    await sleep(30);
+    return {
+      groupRole: sp && sp.getAttribute("role"), groupLabel: !!(sp && sp.getAttribute("aria-label")),
+      radioCount: radios.length, named, haveChecked, focusable, checkedIdx,
+      savedViaKeyboard: /saved/i.test((document.getElementById("revStatus") || {}).textContent || ""),
+    };
+  });
+  check("rating widget is a radiogroup with a name", star.groupRole === "radiogroup" && star.groupLabel); // F3/F4
+  check("five stars, each a named radio with aria-checked", star.radioCount === 5 && star.named && star.haveChecked);
+  check("rating widget is keyboard focusable (roving tabindex)", star.focusable);
+  check("Enter selects the 3rd star (aria-checked moves)", star.checkedIdx === 2); // F1
+  check("review saves after keyboard-only rating (submit gate cleared)", star.savedViaKeyboard);
+
+  // -- Guide cards are semantic buttons with no nested interactive --
+  const cards = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    closeSheet();
+    await loadMarket(); openMarket(); await sleep(150);
+    const mkt = document.querySelector(".sheet .mkt");
+    const mktNested = mkt ? mkt.querySelectorAll("button,a,input,select,textarea").length : -1;
+    closeSheet(); render(); await sleep(200);
+    const home = document.querySelector("#homePopular .mkt, #homeNew .mkt");
+    let opened = false;
+    if (home) { home.click(); await sleep(150); opened = !!document.getElementById("myStars"); }
+    return { mktTag: mkt && mkt.tagName, mktNested, homeTag: home && home.tagName, opened };
+  });
+  check("marketplace card is a <button>", cards.mktTag === "BUTTON");         // F5/F6
+  check("card has no nested interactive elements", cards.mktNested === 0);
+  check("home guide card is a <button>", cards.homeTag === "BUTTON");
+  check("activating a card opens the guide detail", cards.opened);
+
+  // -- Session-log video thumbnail is keyboard-operable --
+  const vid = await page.evaluate(() => {
+    const el = mediaEl({ type: "video", id: "v1", dataUrl: "data:video/mp4;base64,AAAA", ts: 1 }, false);
+    const t = el.querySelector(".mth video") || el.querySelector(".mth");
+    return { role: t && t.getAttribute("role"), tabindex: t && t.getAttribute("tabindex"), label: t && t.getAttribute("aria-label") };
+  });
+  check("session-log video thumb is a keyboard button", vid.role === "button" && vid.tabindex === "0" && /play/i.test(vid.label || "")); // F25
+  eq("no page errors (a11y-A)", errs, []);
+  await ctx.close();
+}
+
+// ============ Scenario A11y-B: checklist checkboxes are labeled + index-persistent ============
+{
+  console.log("a11y-B: checklist checkboxes labeled + index persistence");
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(initScript({ jwt: FAKE_JWT }));
+  const page = await ctx.newPage();
+  const errs = []; page.on("pageerror", (e) => errs.push(String(e)));
+  await page.goto(BASE + "/index.html", { waitUntil: "load" });
+  await page.waitForTimeout(300);
+  const r = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    // 1. dynamic typed-block renderer
+    const d = document.createElement("div"); d.innerHTML = bodyToHtml([{ type: "check", items: ["Item one", "Item two"] }]);
+    const dyn = [...d.querySelectorAll('input[type=checkbox]')];
+    const dynLabeled = dyn.length === 2 && dyn.every((cb) => !!cb.closest("label"));
+    // 2. a real built-in step that uses a static checklist
+    setActive("crv-s1");
+    const gi = STEPS.findIndex((s) => nChecks(s) > 0);
+    go(gi); await sleep(90);
+    const cbs = [...document.querySelectorAll('input[type=checkbox]')];
+    const staticLabeled = cbs.length > 0 && cbs.every((cb) => !!cb.closest("label"));
+    // 3. index integrity: check the 2nd box, re-render, confirm it is still checked at index 1
+    let persisted = null, labelDone = false;
+    if (cbs.length >= 2) {
+      cbs[1].checked = true; cbs[1].dispatchEvent(new Event("change", { bubbles: true }));
+      labelDone = !!cbs[1].closest("li").querySelector("label.done");
+      go(gi); await sleep(90);
+      const cbs2 = [...document.querySelectorAll('input[type=checkbox]')];
+      persisted = !!(cbs2[1] && cbs2[1].checked);
+    }
+    return { dynLabeled, staticCount: cbs.length, staticLabeled, persisted, labelDone };
+  });
+  check("dynamic checklist wraps each input in a label", r.dynLabeled);                 // F2/F9 (renderer)
+  check("built-in static checklist wraps each input in a label", r.staticCount > 0 && r.staticLabeled);
+  check("checkbox state persists by index after re-render (wiring intact)", r.persisted === true);
+  check("checking a box marks its wrapping label done", r.labelDone);
+  eq("no page errors (a11y-B)", errs, []);
+  await ctx.close();
+}
+
+// ============ Scenario A11y-C: modal dialog semantics, focus trap/restore, base utilities ============
+{
+  console.log("a11y-C: sheet() dialog + focus management + sr-only/focus-visible/reduced-motion");
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(initScript({ jwt: FAKE_JWT }));
+  const page = await ctx.newPage();
+  const errs = []; page.on("pageerror", (e) => errs.push(String(e)));
+  await page.goto(BASE + "/index.html", { waitUntil: "load" });
+  await page.waitForTimeout(300);
+
+  const r = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+    const opener = document.getElementById("themeBtn"); opener.focus();
+    resetProgress(); // opens a simple sheet() with Cancel/Reset buttons
+    await sleep(60);
+    const panel = document.querySelector("#sheet .panel");
+    const titleId = panel && panel.getAttribute("aria-labelledby");
+    const titleEl = titleId && document.getElementById(titleId);
+    const cl = document.querySelector("#sheet .cl");
+    const focusedInsideOnOpen = panel && panel.contains(document.activeElement) && document.activeElement !== document.body;
+    // Tab-trap: Shift+Tab from the first focusable should wrap to the last.
+    const focusables = [...panel.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter((e) => !e.disabled);
+    focusables[0].focus();
+    document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true }));
+    await sleep(20);
+    const wrappedBack = document.activeElement === focusables[focusables.length - 1];
+    // Escape closes the dialog
+    document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    await sleep(30);
+    const closedOnEscape = !document.getElementById("sheet");
+    const focusRestored = document.activeElement === opener;
+    return {
+      role: panel && panel.getAttribute("role"), ariaModal: panel && panel.getAttribute("aria-modal"),
+      hasTitleId: !!titleId, titleTag: titleEl && titleEl.tagName, titleText: titleEl && titleEl.textContent,
+      closeLabeled: !!(cl && cl.getAttribute("aria-label")),
+      focusedInsideOnOpen, focusableCount: focusables.length, wrappedBack, closedOnEscape, focusRestored,
+    };
+  });
+  check("sheet panel has role=dialog + aria-modal", r.role === "dialog" && r.ariaModal === "true"); // F10/F24
+  check("sheet has an aria-labelledby pointing to a real heading", r.hasTitleId && /^H[1-6]$/.test(r.titleTag || "") && /Reset progress/i.test(r.titleText || ""));
+  check("close button (.cl) has an aria-label", r.closeLabeled);
+  check("opening a sheet moves focus inside the panel", r.focusedInsideOnOpen); // F7
+  check("Shift+Tab from the first control wraps to the last (focus trap)", r.focusableCount >= 2 && r.wrappedBack);
+  check("Escape closes the sheet", r.closedOnEscape);
+  check("closing restores focus to the opener", r.focusRestored);
+
+  // -- Capture overlay (#rec) is also a modal dialog with focus + Escape --
+  // kind="audio" avoids the app's <video> branch: a plain-object getUserMedia stub is not a
+  // real MediaStream, so assigning it to video.srcObject would throw in real Chromium.
+  const rec = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+    navigator.mediaDevices.getUserMedia = async () => ({ getTracks: () => [] });
+    window.MediaRecorder = window.MediaRecorder || function () {};
+    const opener = document.getElementById("mic"); opener.focus();
+    await startCapture(null, "audio", () => {});
+    await sleep(60);
+    const ov = document.getElementById("rec");
+    const role = ov && ov.getAttribute("role");
+    const modal = ov && ov.getAttribute("aria-modal");
+    const focusedInside = ov && ov.contains(document.activeElement);
+    document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    await sleep(30);
+    return { role, modal, focusedInside, closed: !document.getElementById("rec"), restored: document.activeElement === opener };
+  });
+  check("#rec capture overlay is a dialog with focus moved in", rec.role === "dialog" && rec.modal === "true" && rec.focusedInside); // F8
+  check("Escape closes the capture overlay and restores focus", rec.closed && rec.restored);
+
+  // -- Base utilities: sr-only class, global :focus-visible, prefers-reduced-motion --
+  const base = await page.evaluate(() => {
+    let srOnly = false, focusVisible = false, reducedMotion = false;
+    for (const ss of document.styleSheets) {
+      try {
+        for (const rule of ss.cssRules) {
+          if (rule.selectorText && /\.sr-only\b/.test(rule.selectorText)) srOnly = true;
+          if (rule.selectorText && /:focus-visible/.test(rule.selectorText)) focusVisible = true;
+          if (rule.media && /prefers-reduced-motion/.test(rule.media.mediaText || "")) reducedMotion = true;
+        }
+      } catch (e) {}
+    }
+    return { srOnly, focusVisible, reducedMotion };
+  });
+  check(".sr-only utility class exists", base.srOnly);           // F11 support utility
+  check("a global :focus-visible rule exists", base.focusVisible); // F11
+  check("a prefers-reduced-motion media rule exists", base.reducedMotion); // F49
+  eq("no page errors (a11y-C)", errs, []);
+  await ctx.close();
+}
+
+// ============ Scenario A11y-D: status messages are live regions ============
+{
+  console.log("a11y-D: live-region roles on status/error/toast/chat/voice");
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(initScript({ jwt: FAKE_JWT }));
+  const page = await ctx.newPage();
+  const errs = []; page.on("pageerror", (e) => errs.push(String(e)));
+  await page.goto(BASE + "/index.html", { waitUntil: "load" });
+  await page.waitForTimeout(300);
+
+  const rev = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const cat = await loadMarket();
+    openMarketGuide(cat.guides[0]); await sleep(100);
+    const st = document.getElementById("revStatus");
+    const before = { role: st.getAttribute("role"), live: st.getAttribute("aria-live") };
+    document.getElementById("revPR").click(); await sleep(20); // no rating, no text -> validation error
+    const onError = { role: st.getAttribute("role"), live: st.getAttribute("aria-live"), focusedRevText: document.activeElement === document.getElementById("revText") };
+    // pick a rating + write text, then Save -> should revert to a polite status
+    document.querySelector('#myStars [role=radio][data-v="4"]').click();
+    document.getElementById("revText").value = "Solid guide.";
+    document.getElementById("revSubmit").click(); await sleep(20);
+    const onSave = { role: st.getAttribute("role"), live: st.getAttribute("aria-live"), text: st.textContent };
+    return { before, onError, onSave };
+  });
+  check("#revStatus starts as a polite status region", rev.before.role === "status" && rev.before.live === "polite"); // F12/F21
+  check("validation error switches #revStatus to an alert", rev.onError.role === "alert" && rev.onError.live === "assertive"); // F33
+  check("validation error moves focus to the review text field", rev.onError.focusedRevText);
+  check("saving reverts #revStatus to a polite status", rev.onSave.role === "status" && rev.onSave.live === "polite" && /saved/i.test(rev.onSave.text));
+
+  const rest = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    closeSheet();
+    // #subStatus (submit sheet)
+    openSubmitReview({ id: "mkt-crv-s1" }, "Title", 5, "text"); await sleep(60);
+    const sub = document.getElementById("subStatus");
+    const subOk = sub.getAttribute("role") === "status" && sub.getAttribute("aria-live") === "polite";
+    closeSheet();
+    // #genStatus (New Repair) + #mStatus (Merge)
+    openNew(); await sleep(30);
+    const gen = document.getElementById("genStatus");
+    const genOk = gen.getAttribute("role") === "status" && gen.getAttribute("aria-live") === "polite";
+    closeSheet();
+    openMerge(); await sleep(30);
+    const mrg = document.getElementById("mStatus");
+    const mrgOk = mrg.getAttribute("role") === "status" && mrg.getAttribute("aria-live") === "polite";
+    closeSheet();
+    // voice bar: .vstate/.vans are polite status regions; .vheard is explicitly silent
+    const vstate = document.querySelector(".voicebar .vstate");
+    const vans = document.querySelector(".voicebar .vans");
+    const vheard = document.querySelector(".voicebar .vheard");
+    const voiceOk = vstate.getAttribute("role") === "status" && vstate.getAttribute("aria-live") === "polite"
+      && vans.getAttribute("role") === "status" && vans.getAttribute("aria-live") === "polite"
+      && vheard.getAttribute("aria-live") === "off";
+    // toast
+    toast("Test toast message");
+    const toaster = document.getElementById("toaster");
+    const toastOk = toaster.getAttribute("role") === "status" && toaster.getAttribute("aria-live") === "polite";
+    // chat
+    openChat(null); await sleep(30);
+    const chatlog = document.getElementById("chatlog"), typing = document.getElementById("typing");
+    const chatOk = chatlog.getAttribute("role") === "log" && chatlog.getAttribute("aria-live") === "polite" && chatlog.getAttribute("aria-relevant") === "additions"
+      && typing.getAttribute("role") === "status";
+    return { subOk, genOk, mrgOk, voiceOk, toastOk, chatOk };
+  });
+  check("#subStatus (submit sheet) is a polite status region", rest.subOk);       // F14/F20
+  check("#genStatus (New Repair) is a polite status region", rest.genOk);         // F28
+  check("#mStatus (Merge) is a polite status region", rest.mrgOk);                // F28
+  check("voice bar .vstate/.vans are polite; .vheard stays silent", rest.voiceOk); // F29/F30
+  check("toast container is a polite status region", rest.toastOk);               // F14/F31
+  check("#chatlog is a live log; #typing is a status region", rest.chatOk);       // F13
+  eq("no page errors (a11y-D)", errs, []);
+  await ctx.close();
+}
+
+// ============ Scenario A11y-E: names, text alternatives, headings ============
+{
+  console.log("a11y-E: form labels, icon-button names, star semantics, alts, callout prefixes");
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(initScript({ jwt: FAKE_JWT }));
+  const page = await ctx.newPage();
+  const errs = []; page.on("pageerror", (e) => errs.push(String(e)));
+  await page.goto(BASE + "/index.html", { waitUntil: "load" });
+  await page.waitForTimeout(300);
+
+  const labels = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const hasLabel = (id) => { const el = document.getElementById(id); return !!(el && el.labels && el.labels.length > 0); };
+    openKey(); await sleep(30);
+    const keySettings = hasLabel("keyIn") && hasLabel("modelIn");
+    closeSheet();
+    openAddVehicle(null); await sleep(30);
+    const vehicleFields = ["vNick", "vVin", "vYear", "vMake", "vModel"].every(hasLabel);
+    closeSheet();
+    openSubmitRepair(guideById("crv-s1")); await sleep(30);
+    const exportField = [...document.querySelectorAll('.sheet input[readonly]')].some((i) => i.labels && i.labels.length > 0);
+    closeSheet();
+    openNew(); await sleep(30);
+    const genField = hasLabel("genPrompt");
+    closeSheet();
+    openMerge(); await sleep(30);
+    const mergeField = hasLabel("mNote");
+    closeSheet();
+    openVoiceSettings(); await sleep(30);
+    const voiceField = hasLabel("vw");
+    closeSheet();
+    // review textarea (already open in the guide-detail sheet)
+    const cat = await loadMarket(); openMarketGuide(cat.guides[0]); await sleep(60);
+    const revField = hasLabel("revText");
+    return { keySettings, vehicleFields, exportField, genField, mergeField, voiceField, revField };
+  });
+  check("Claude settings fields (API key, model) are labeled", labels.keySettings);       // F23
+  check("add-vehicle fields (nick/VIN/year/make/model) are labeled", labels.vehicleFields);
+  check("export/submit-repair Guide field is labeled", labels.exportField);
+  check("New Repair prompt textarea is labeled", labels.genField);
+  check("Merge notes textarea is labeled", labels.mergeField);
+  check("voice wake-word field is labeled", labels.voiceField);
+  check("review textarea is labeled", labels.revField);
+
+  const names = await page.evaluate(() => {
+    const label = (id) => (document.getElementById(id) || {}).getAttribute && document.getElementById(id).getAttribute("aria-label");
+    return {
+      home: label("homeBtn"), theme: label("themeBtn"), mic: label("mic"),
+      vGear: label("vGear"), vStop: label("vStop"),
+    };
+  });
+  check("home/theme/mic/voice-gear/voice-stop buttons are named (aria-label)",
+    !!(names.home && names.theme && names.mic && names.vGear && names.vStop)); // F27 (icon-only buttons)
+
+  const chat = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    closeSheet();
+    openChat(null); await sleep(30);
+    const chatIn = document.getElementById("chatIn"), chatSend = document.getElementById("chatSend");
+    const transcriptImgAlt = (() => { const d = document.createElement("div"); d.innerHTML = msgHtml("u", "hi", "data:image/jpeg;base64,AAAA"); const img = d.querySelector("img"); return img && img.getAttribute("alt"); })();
+    return { chatInLabel: chatIn.getAttribute("aria-label"), chatSendLabel: chatSend.getAttribute("aria-label"), transcriptImgAlt };
+  });
+  check("chat textarea has an aria-label", !!chat.chatInLabel);          // F26
+  check("chat send button has an aria-label", !!chat.chatSendLabel);    // F27
+  check("chat transcript images carry alt text", !!chat.transcriptImgAlt); // F42
+
+  const stars = await page.evaluate(() => {
+    const html = starHtml(3);
+    const d = document.createElement("div"); d.innerHTML = html;
+    const wrap = d.firstElementChild;
+    const glyphs = [...wrap.children].map((s) => s.textContent);
+    const allHidden = [...wrap.children].every((s) => s.getAttribute("aria-hidden") === "true");
+    return { role: wrap.getAttribute("role"), label: wrap.getAttribute("aria-label"), glyphs, allHidden };
+  });
+  check("read-only stars expose role=img with a numeric label", stars.role === "img" && /3 out of 5|3\/5|3 of 5/i.test(stars.label || "")); // F39
+  check("filled vs empty stars use distinct glyphs (not color alone)", stars.glyphs.filter((g) => g === "★").length === 3 && stars.glyphs.filter((g) => g !== "★").length === 2); // F18
+  check("star glyphs are hidden from AT (name comes from the wrapper)", stars.allHidden);
+
+  const media = await page.evaluate(() => {
+    const photo = mediaEl({ type: "photo", id: "p1", dataUrl: "data:image/jpeg;base64,AAAA", ts: 1 }, false);
+    const audio = mediaEl({ type: "audio", id: "a1", ts: 1 }, false);
+    const img = photo.querySelector(".mth img");
+    const audioThumb = audio.querySelector(".mth");
+    return {
+      photoAlt: img && img.getAttribute("alt"),
+      audioThumbHidden: audioThumb && audioThumb.querySelector('[aria-hidden="true"]') !== null,
+      titleTag: photo.querySelector(".minfo") && photo.querySelector(".minfo").children[0] && photo.querySelector(".minfo").children[0].tagName,
+    };
+  });
+  check("captured photo thumbnail has empty alt (decorative)", media.photoAlt === "");     // F40
+  check("audio thumbnail emoji is hidden from AT", media.audioThumbHidden);                 // F43
+  check("media item title is a real heading", media.titleTag === "H3");                    // F34
+
+  const callouts = await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    closeSheet();
+    setActive("crv-s1");
+    const gi = STEPS.findIndex((s) => /danger|crit|tip/.test(stepInner(s)));
+    go(gi); await sleep(60);
+    const call = document.querySelector(".call.danger, .call.crit, .call.tip");
+    const ic = call && call.querySelector(".ic");
+    const sr = call && call.querySelector(".sr-only");
+    return { icHidden: ic && ic.getAttribute("aria-hidden") === "true", hasSevPrefix: !!(sr && /warning|important|tip/i.test(sr.textContent || "")) };
+  });
+  check("callout icon is hidden from AT", callouts.icHidden);              // F35
+  check("callout carries a visually-hidden severity prefix", callouts.hasSevPrefix); // F35
+  eq("no page errors (a11y-E)", errs, []);
+  await ctx.close();
+}
+
+// ============ Scenario A11y-F: color contrast tokens + pinch-zoom ============
+{
+  console.log("a11y-F: contrast tokens (both themes) + viewport zoom");
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(initScript({ jwt: FAKE_JWT }));
+  const page = await ctx.newPage();
+  const errs = []; page.on("pageerror", (e) => errs.push(String(e)));
+  await page.goto(BASE + "/index.html", { waitUntil: "load" });
+  await page.waitForTimeout(300);
+
+  const r = await page.evaluate(async () => {
+    // WCAG relative-luminance contrast ratio, computed from real hex values (not eyeballed).
+    function ratio(hexA, hexB) {
+      const lum = (hex) => {
+        hex = hex.replace("#", ""); if (hex.length === 3) hex = [...hex].map((c) => c + c).join("");
+        const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+        const lin = (c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+        return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+      };
+      const [l1, l2] = [lum(hexA), lum(hexB)].sort((a, b) => b - a);
+      return (l1 + 0.05) / (l2 + 0.05);
+    }
+    const vars = (theme) => {
+      document.documentElement.setAttribute("data-theme", theme);
+      const cs = getComputedStyle(document.documentElement);
+      const g = (name) => cs.getPropertyValue(name).trim(); // already a hex literal, e.g. "#faf9f5"
+      return { bg: g("--bg"), card: g("--card"), card2: g("--card2"), muted: g("--muted"), accent: g("--accent"), accentText: g("--accent-text"), accentInk: g("--accent-ink"), star: g("--star"), ctrlBorder: g("--ctrl-border") };
+    };
+    const light = vars("light"), dark = vars("dark");
+    document.documentElement.removeAttribute("data-theme");
+
+    const out = {};
+    for (const [name, t] of [["light", light], ["dark", dark]]) {
+      out[name] = {
+        accentTextOnBg: ratio(t.accentText, t.bg), accentTextOnCard: ratio(t.accentText, t.card), accentTextOnCard2: ratio(t.accentText, t.card2),
+        accentInkOnAccent: ratio(t.accentInk, t.accent),
+        starOnCard: ratio(t.star, t.card), starOnCard2: ratio(t.star, t.card2),
+        mutedOnCard2: ratio(t.muted, t.card2),
+        ctrlBorderOnCard: ratio(t.ctrlBorder, t.card),
+      };
+    }
+    // readableInk(): pick white/black so ANY phase color clears 4.5:1, both directions.
+    const darkPhase = "#2a5d3a", lightPhase = "#e6c229";
+    out.inkDark = { ink: readableInk(darkPhase), ratio: ratio(readableInk(darkPhase), hexc(darkPhase)) };
+    out.inkLight = { ink: readableInk(lightPhase), ratio: ratio(readableInk(lightPhase), hexc(lightPhase)) };
+    out.viewport = document.querySelector('meta[name="viewport"]').getAttribute("content");
+    return out;
+  });
+
+  check("viewport no longer caps zoom (no maximum-scale)", !/maximum-scale/.test(r.viewport)); // F15
+  for (const theme of ["light", "dark"]) {
+    const t = r[theme];
+    check(`[${theme}] --accent-text is >=4.5:1 on bg/card/card2`, t.accentTextOnBg >= 4.5 && t.accentTextOnCard >= 4.5 && t.accentTextOnCard2 >= 4.5); // F16
+    check(`[${theme}] --accent-ink is >=4.5:1 on --accent (button/badge text)`, t.accentInkOnAccent >= 4.5); // F17
+    check(`[${theme}] --star is >=3:1 on card/card2`, t.starOnCard >= 3 && t.starOnCard2 >= 3);              // F37
+    check(`[${theme}] --muted is >=4.5:1 on card2`, t.mutedOnCard2 >= 4.5);                                  // F38
+    check(`[${theme}] control border is >=3:1 on card`, t.ctrlBorderOnCard >= 3);                            // F44
+  }
+  check("readableInk() picks a 4.5:1-passing ink for a dark phase color", r.inkDark.ratio >= 4.5); // F36
+  check("readableInk() picks a 4.5:1-passing ink for a light phase color", r.inkLight.ratio >= 4.5 && r.inkLight.ink !== r.inkDark.ink);
+  eq("no page errors (a11y-F)", errs, []);
   await ctx.close();
 }
 

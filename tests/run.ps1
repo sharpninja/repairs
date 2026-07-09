@@ -38,3 +38,7 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Host "`n== client<->server integration tests =="
 node tests/integration.test.mjs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "`n== guide slideshow accessibility tests =="
+node tests/slideshow.test.mjs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

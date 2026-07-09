@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'self' https://sharpninja.ngrok.app https://accounts.google.com; manifest-src 'self'; worker-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://*.googleusercontent.com https://www.gstatic.com; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://api.anthropic.com https://accounts.google.com https://www.googleapis.com https://raw.githubusercontent.com https://sharpninja.ngrok.app; frame-src https://accounts.google.com https://www.youtube-nocookie.com;">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf9f5">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#262624">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -31,8 +31,16 @@
 <style>
   /* ---------- Claude-ecosystem palette: light default, dark via media/attr ---------- */
   :root{
-    --bg:#faf9f5; --card:#ffffff; --card2:#f1efe8; --ink:#20201e; --muted:#75736c;
-    --line:#e7e4da; --accent:#d97757; --accent-ink:#ffffff; --accent-soft:#f6e7e0;
+    --bg:#faf9f5; --card:#ffffff; --card2:#f1efe8; --ink:#20201e; --muted:#6b6960;
+    --line:#e7e4da; --accent:#d97757; --accent-ink:#241812; --accent-soft:#f6e7e0;
+    /* WCAG-safe companions to --accent/--muted (see docs/index.html a11y remediation):
+       --accent-text is --accent darkened enough to read as normal-size TEXT (>=4.5:1);
+       --accent-ink flips light-theme buttons to dark-on-coral (mirrors the dark theme's
+       own already-passing pattern) instead of the too-light white-on-coral it replaces;
+       --star is the rating-star fill color, darkened to clear 3:1 as a graphical object;
+       --ctrl-border is a stronger, WCAG-1.4.11-passing border for form controls only
+       (the softer --line stays as the general low-contrast divider elsewhere). */
+    --accent-text:#b0431f; --star:#a06e00; --ctrl-border:#8f8a7d;
     --danger:#b23b2e; --danger-bg:#fbe9e6; --danger-ink:#7e241b;
     --crit:#a76a16; --crit-bg:#fbf0da; --crit-ink:#734810;
     --tip:#2e7d55; --tip-bg:#e3f3ea; --tip-ink:#1b4d34;
@@ -49,6 +57,7 @@
   :root[data-theme="dark"]{
     --bg:#262624; --card:#30302e; --card2:#3a3a36; --ink:#f4f3ee; --muted:#a6a49a;
     --line:#403f3a; --accent:#e08a68; --accent-ink:#241812; --accent-soft:#3a2a22;
+    --accent-text:#e8a084; --star:#e6a817; --ctrl-border:#8f8a7d;
     --danger:#e5645a; --danger-bg:#38201c; --danger-ink:#ffd7d1;
     --crit:#e0a63f; --crit-bg:#392f18; --crit-ink:#ffe8c2;
     --tip:#5cc78d; --tip-bg:#123324; --tip-ink:#c6f0da;
@@ -59,6 +68,7 @@
     :root:not([data-theme="light"]){
       --bg:#262624; --card:#30302e; --card2:#3a3a36; --ink:#f4f3ee; --muted:#a6a49a;
       --line:#403f3a; --accent:#e08a68; --accent-ink:#241812; --accent-soft:#3a2a22;
+      --accent-text:#e8a084; --star:#e6a817; --ctrl-border:#8f8a7d;
       --danger:#e5645a; --danger-bg:#38201c; --danger-ink:#ffd7d1;
       --crit:#e0a63f; --crit-bg:#392f18; --crit-ink:#ffe8c2;
       --tip:#5cc78d; --tip-bg:#123324; --tip-ink:#c6f0da;
@@ -70,7 +80,17 @@
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
     font-size:var(--body);line-height:1.45;-webkit-text-size-adjust:100%;overscroll-behavior-y:none}
   button{font-family:inherit}
-  a{color:var(--accent)}
+  /* Visually hide content while keeping it in the accessibility tree (screen-reader-only text). */
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  /* Visible keyboard focus indicator (never outline:none). Native controls, restyled custom
+     widgets (cards, radios, dots), and the sr-only .sr-only anchors all get one consistent ring. */
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,
+  [tabindex]:focus-visible,[role="radio"]:focus-visible,[role="button"]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
+      transition-duration:.001ms!important;scroll-behavior:auto!important}}
+  a{color:var(--accent-text)}
   .hidden{display:none !important}
 
   #topwrap{position:sticky;top:0;z-index:40}
@@ -81,11 +101,11 @@
     border-radius:12px;font-size:19px;cursor:pointer;flex:0 0 auto;display:grid;place-content:center}
   #top .ib:active{transform:scale(.94)}
   #top .title{font-weight:800;font-size:.84em;color:var(--muted);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-  #top .pct{font-weight:900;font-variant-numeric:tabular-nums;color:var(--accent);flex:0 0 auto;min-width:44px;text-align:right}
+  #top .pct{font-weight:900;font-variant-numeric:tabular-nums;color:var(--accent-text);flex:0 0 auto;min-width:44px;text-align:right}
   #topbar{height:4px;background:var(--line)}
   #vehbar{background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:6px var(--pad);display:flex}
   #vehbar.hidden{display:none}
-  #vehbar select{flex:1;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-weight:700;font-size:.9em}
+  #vehbar select{flex:1;background:var(--card);color:var(--ink);border:1px solid var(--ctrl-border);border-radius:10px;padding:8px 10px;font-weight:700;font-size:.9em}
   .vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:12px 0}
   .vcard{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer;color:var(--ink);box-shadow:var(--shadow)}
   .vcard.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
@@ -94,7 +114,7 @@
   .vcard.add .em{font-size:1.4em}
   .hlhead{display:flex;align-items:center;justify-content:space-between;margin:.8em 0 .2em}
   .hlhead h3{margin:0}
-  .hlhead a{color:var(--accent);text-decoration:none;font-size:.85em;font-weight:700}
+  .hlhead a{color:var(--accent-text);text-decoration:none;font-size:.85em;font-weight:700}
   .cataux{background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:12px;width:44px;height:48px;font-size:18px;cursor:pointer;flex:0 0 auto}
   .ytfacade{position:relative;margin:14px 0;background:#000;border:1px solid var(--line);border-radius:14px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer}
   .ytfacade iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
@@ -123,7 +143,7 @@
   .crit{background:var(--crit-bg);border-color:var(--crit);color:var(--crit-ink)}.crit .t{color:var(--crit)}
   .tip{background:var(--tip-bg);border-color:var(--tip);color:var(--tip-ink)}.tip .t{color:var(--tip)}
   .specbox{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:12px;padding:11px 15px;margin:10px 0;box-shadow:var(--shadow)}
-  .specbox b{color:var(--accent)}
+  .specbox b{color:var(--accent-text)}
   .verify{color:var(--crit);font-size:.84em;font-weight:700}
 
   .steps{counter-reset:s;list-style:none;padding:0;margin:.3em 0}
@@ -178,13 +198,13 @@
   /* media logging */
   .logbar{margin:14px 0}
   .logbtns{display:flex;gap:8px;flex-wrap:wrap}
-  .lbtn{display:inline-flex;gap:8px;align-items:center;background:var(--card);border:1px dashed var(--accent);color:var(--accent);border-radius:13px;padding:11px 15px;font-weight:800;cursor:pointer;font-size:.92em;box-shadow:var(--shadow)}
+  .lbtn{display:inline-flex;gap:8px;align-items:center;background:var(--card);border:1px dashed var(--accent);color:var(--accent-text);border-radius:13px;padding:11px 15px;font-weight:800;cursor:pointer;font-size:.92em;box-shadow:var(--shadow)}
   .medialist{display:flex;flex-direction:column;gap:8px;margin-top:12px}
   .mitem{display:flex;gap:11px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:9px 11px;box-shadow:var(--shadow)}
   .mitem .mth{width:56px;height:56px;border-radius:9px;overflow:hidden;background:#000;flex:0 0 auto;display:grid;place-content:center;color:#fff;font-size:22px}
   .mitem .mth img,.mitem .mth video{width:100%;height:100%;object-fit:cover;display:block}
   .mitem .minfo{flex:1;min-width:0}
-  .mitem .minfo b{display:block;font-size:.92em}
+  .mitem .minfo h3{display:block;font-size:.92em;margin:0;font-weight:700}
   .mitem .minfo small{color:var(--muted);font-size:.78em}
   .mitem audio,.mitem video.play{width:100%;margin-top:6px}
   .mitem .mact{display:flex;gap:6px;flex:0 0 auto}
@@ -195,7 +215,7 @@
   #fabs button{width:54px;height:54px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;display:grid;place-content:center;flex:0 0 auto;font-size:22px}
   #fabs button:active{transform:scale(.94)}
   #ask{background:var(--accent);color:var(--accent-ink);border:none}
-  #mic{background:var(--card);color:var(--accent);border:1px solid var(--line)}
+  #mic{background:var(--card);color:var(--accent-text);border:1px solid var(--line)}
   #mic.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);animation:micpulse 1.6s infinite}
   @keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(217,119,87,.5)}50%{box-shadow:0 0 0 12px rgba(217,119,87,0)}}
   .voicebar{position:fixed;left:12px;right:12px;top:calc(66px + env(safe-area-inset-top));z-index:47;max-width:820px;margin:0 auto;background:var(--card);border:1.5px solid var(--accent);border-radius:16px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.32);cursor:pointer}
@@ -211,7 +231,7 @@
   .sheet .panel{background:var(--bg);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:860px;max-height:92dvh;display:flex;flex-direction:column;animation:up .22s ease}
   @keyframes up{from{transform:translateY(30px);opacity:.5}to{transform:none;opacity:1}}
   .sheet .head{display:flex;align-items:center;gap:10px;padding:14px var(--pad);border-bottom:1px solid var(--line)}
-  .sheet .head b{flex:1;font-size:1.05em}
+  .sheet .head h2{flex:1;font-size:1.05em;margin:0;font-weight:700}
   .sheet .head .cl{background:var(--card);border:1px solid var(--line);color:var(--ink);width:38px;height:38px;border-radius:11px;font-size:18px;cursor:pointer}
   .sheet .body{padding:14px var(--pad);overflow:auto;-webkit-overflow-scrolling:touch}
 
@@ -238,7 +258,7 @@
   .msg{max-width:88%;padding:11px 14px;border-radius:15px;font-size:.97em;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
   .msg.u{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:5px}
   .msg.a{align-self:flex-start;background:var(--card2);border:1px solid var(--line);border-bottom-left-radius:5px}
-  .msg.a strong{color:var(--accent)}
+  .msg.a strong{color:var(--accent-text)}
   .msg img{max-width:min(100%,460px);width:auto;border-radius:10px;display:block;margin-bottom:8px}
   .msg.err{background:var(--danger-bg);border:1px solid var(--danger);color:var(--danger-ink)}
   .typing{align-self:flex-start;color:var(--muted);font-style:italic;padding:6px 4px}
@@ -251,12 +271,13 @@
   .attachchip .rm{position:absolute;top:5px;right:5px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
   .field{margin:12px 0}
   .field label{display:block;font-weight:700;margin-bottom:6px;font-size:.92em}
-  .field input{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:16px}
-  .field select{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:16px;font-family:inherit}
+  .field input{width:100%;background:var(--card);border:1px solid var(--ctrl-border);color:var(--ink);border-radius:12px;padding:12px;font-size:16px}
+  .field select{width:100%;background:var(--card);border:1px solid var(--ctrl-border);color:var(--ink);border-radius:12px;padding:12px;font-size:16px;font-family:inherit}
   .row3{display:flex;gap:8px}.row3 .field{flex:1;min-width:0}
   .stars{display:inline-flex;gap:2px;font-size:1.05em;line-height:1}
-  .stars .st{cursor:pointer;color:var(--muted)}.stars .st.on{color:#e6a817}
-  .mkt{display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;margin:8px 0;box-shadow:var(--shadow);cursor:pointer}
+  .stars .st{cursor:pointer;color:var(--muted)}.stars .st.on{color:var(--star)}
+  .stars .st[role="radio"]{padding:2px 4px;border-radius:6px}
+  .mkt{display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;margin:8px 0;box-shadow:var(--shadow);cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit}
   .mkt .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
   .mkt b{font-size:1.02em}.mkt small{color:var(--muted)}
   .mkt .rate{white-space:nowrap;font-size:.85em;color:var(--muted);display:flex;align-items:center;gap:4px}
@@ -269,7 +290,7 @@
   .toastitem{pointer-events:auto;background:var(--tip-bg);border:1px solid var(--tip);color:var(--tip-ink);border-radius:12px;padding:11px 13px;box-shadow:0 8px 24px rgba(0,0,0,.28);display:flex;gap:10px;align-items:center;transition:opacity .4s;font-size:.92em}
   .toastitem a{color:inherit;font-weight:800;white-space:nowrap}
   .toastitem button{margin-left:auto;background:none;border:none;color:inherit;cursor:pointer;font-size:1em;opacity:.7}
-  .field textarea{width:100%;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px;font-size:15px;font-family:inherit;resize:vertical;line-height:1.45}
+  .field textarea{width:100%;background:var(--card);border:1px solid var(--ctrl-border);color:var(--ink);border-radius:12px;padding:12px;font-size:15px;font-family:inherit;resize:vertical;line-height:1.45}
   .gbtns{display:flex;gap:8px;justify-content:center;margin-top:14px}
   .pill2{background:var(--card2);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:9px 15px;font-weight:800;font-size:.84em;cursor:pointer}
   .pill2:active{transform:scale(.96)}
@@ -280,7 +301,7 @@
   .grow input{min-width:22px;height:22px;accent-color:var(--accent);flex:0 0 auto}
   .grow span{flex:1;min-width:0}.grow span b{display:block}.grow span small{color:var(--muted);font-size:.82em}
   .grow .del{background:none;border:none;color:var(--danger);font-size:1.15em;cursor:pointer;flex:0 0 auto}
-  .grow .exp{background:none;border:none;color:var(--accent);font-size:1.1em;cursor:pointer;flex:0 0 auto}
+  .grow .exp{background:none;border:none;color:var(--accent-text);font-size:1.1em;cursor:pointer;flex:0 0 auto}
   .btnrow{display:flex;gap:10px;margin-top:14px}
   .btn{flex:1;padding:13px;border-radius:13px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
   .btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -311,9 +332,9 @@
 <body>
 <div id="topwrap">
 <div id="top">
-  <button class="ib" id="homeBtn" title="Home">☰</button>
+  <button class="ib" id="homeBtn" title="Home" aria-label="Home">☰</button>
   <div class="title" id="topTitle">AI Auto Repairman</div>
-  <button class="ib" id="themeBtn" title="Theme">🖥️</button>
+  <button class="ib" id="themeBtn" title="Theme" aria-label="Theme">🖥️</button>
   <div class="pct" id="topPct">0%</div>
 </div>
 <div id="topbar"><i id="topbarFill"></i></div>
@@ -322,12 +343,12 @@
 
 <main id="view"></main>
 <div id="fabs">
-  <button id="mic" title="Hands-free voice">🎙️</button>
+  <button id="mic" title="Hands-free voice" aria-label="Hands-free voice">🎙️</button>
   <button id="ask" title="Ask Claude" aria-label="Ask Claude"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 1c.9 5.6 5.4 10.1 11 11-5.6.9-10.1 5.4-11 11-.9-5.6-5.4-10.1-11-11C6.6 11.1 11.1 6.6 12 1Z"/></svg></button>
 </div>
 <div id="voicebar" class="voicebar hidden">
-  <div class="vrow"><span class="vstate"></span><button class="vgear" id="vGear" title="Voice settings">⚙︎</button><button class="vstop" id="vStop" title="Stop hands-free">✕</button></div>
-  <div class="vheard"></div><div class="vans"></div>
+  <div class="vrow"><span class="vstate" role="status" aria-live="polite"></span><button class="vgear" id="vGear" title="Voice settings" aria-label="Voice settings">⚙︎</button><button class="vstop" id="vStop" title="Stop hands-free" aria-label="Stop hands-free">✕</button></div>
+  <div class="vheard" aria-live="off"></div><div class="vans" role="status" aria-live="polite"></div>
 </div>
 
 <nav id="nav" class="hidden">
@@ -358,11 +379,11 @@ const PHASES = [
     {t:"Cold engine. Confirm. Stage parts.", allowMedia:true, html:`
       <div class="call danger"><span class="ic">🛑</span><div><span class="t">Engine must be stone cold</span>The cooling system is pressurized hot. No draining, no cap off, no HG-1 until you can hold the radiator hose comfortably.</div></div>
       <ul class="check" data-check>
-        <li><input type="checkbox"><label>Refrigerant recovered — gauge reads <strong>0 psi</strong> (confirm with the recovery shop)</label></li>
-        <li><input type="checkbox"><label>Battery <strong>NEGATIVE (−) terminal disconnected</strong>, cable tucked aside</label></li>
-        <li><input type="checkbox"><label>Two <strong>drain pans</strong> ready (1 coolant, 1 old compressor oil)</label></li>
-        <li><input type="checkbox"><label>Parts staged: compressor, condenser w/ drier, O-ring kit, <strong>correct R-1234yf A/C oil</strong>, coolant, ECT2 + O-ring, HG-1</label></li>
-        <li><input type="checkbox"><label>Clear <strong>mL measuring cup</strong> for the old compressor oil</label></li>
+        <li><label><input type="checkbox">Refrigerant recovered — gauge reads <strong>0 psi</strong> (confirm with the recovery shop)</label></li>
+        <li><label><input type="checkbox">Battery <strong>NEGATIVE (−) terminal disconnected</strong>, cable tucked aside</label></li>
+        <li><label><input type="checkbox">Two <strong>drain pans</strong> ready (1 coolant, 1 old compressor oil)</label></li>
+        <li><label><input type="checkbox">Parts staged: compressor, condenser w/ drier, O-ring kit, <strong>correct R-1234yf A/C oil</strong>, coolant, ECT2 + O-ring, HG-1</label></li>
+        <li><label><input type="checkbox">Clear <strong>mL measuring cup</strong> for the old compressor oil</label></li>
       </ul>
       <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Your system is R-1234yf</span>Do <b>not</b> use generic R-134a PAG46. Honda R-1234yf systems spec their own oil (ND-OIL 12 / POE per Honda service info). Confirm the exact oil for your VIN and let the shop set the final charge.</div></div>`},
   ]},
@@ -439,11 +460,11 @@ const PHASES = [
   {id:"p5", name:"Phase 5 · Reassemble", color:"#7d6bd6", steps:[
     {t:"Bumper → splash shield → battery", allowMedia:true, html:`
       <ul class="check" data-check>
-        <li><input type="checkbox"><label>Reinstall bumper cover — <strong>replace every broken clip</strong></label></li>
-        <li><input type="checkbox"><label>Wheel-well screws, top-edge fasteners, lower clips all in</label></li>
-        <li><input type="checkbox"><label>Reinstall the <strong>lower splash shield / undertray</strong></label></li>
-        <li><input type="checkbox"><label>Radiator <strong>petcock CLOSED</strong> before refilling</label></li>
-        <li><input type="checkbox"><label><strong>Reconnect the battery (−)</strong>, snug it</label></li>
+        <li><label><input type="checkbox">Reinstall bumper cover — <strong>replace every broken clip</strong></label></li>
+        <li><label><input type="checkbox">Wheel-well screws, top-edge fasteners, lower clips all in</label></li>
+        <li><label><input type="checkbox">Reinstall the <strong>lower splash shield / undertray</strong></label></li>
+        <li><label><input type="checkbox">Radiator <strong>petcock CLOSED</strong> before refilling</label></li>
+        <li><label><input type="checkbox"><strong>Reconnect the battery (−)</strong>, snug it</label></li>
       </ul>
       <div class="call crit"><span class="ic">⚠️</span><div><span class="t">Petcock closed?</span>Easy to forget — fresh coolant will pour onto the floor if it's open.</div></div>`},
   ]},
@@ -462,22 +483,22 @@ const PHASES = [
   {id:"p7", name:"Phase 7 · Verify & Leak Check", color:"#3f8a49", steps:[
     {t:"Final checks before it moves", allowMedia:true, html:`
       <ul class="check" data-check>
-        <li><input type="checkbox"><label><strong>Every A/C O-ring new &amp; oiled</strong> (the #1 leak source)</label></li>
-        <li><input type="checkbox"><label>All A/C <strong>fittings torqued</strong> (flanges + compressor bolts)</label></li>
-        <li><input type="checkbox"><label>You <strong>hand-rotated the compressor</strong> 8–10 turns</label></li>
-        <li><input type="checkbox"><label>No <strong>coolant leaks</strong> at ECT2, petcock, hoses after warm idle</label></li>
-        <li><input type="checkbox"><label>Coolant topped off; reserve at MAX; cap tight</label></li>
-        <li><input type="checkbox"><label>Old compressor oil amount <strong>written down</strong> for the shop</label></li>
+        <li><label><input type="checkbox"><strong>Every A/C O-ring new &amp; oiled</strong> (the #1 leak source)</label></li>
+        <li><label><input type="checkbox">All A/C <strong>fittings torqued</strong> (flanges + compressor bolts)</label></li>
+        <li><label><input type="checkbox">You <strong>hand-rotated the compressor</strong> 8–10 turns</label></li>
+        <li><label><input type="checkbox">No <strong>coolant leaks</strong> at ECT2, petcock, hoses after warm idle</label></li>
+        <li><label><input type="checkbox">Coolant topped off; reserve at MAX; cap tight</label></li>
+        <li><label><input type="checkbox">Old compressor oil amount <strong>written down</strong> for the shop</label></li>
       </ul>
       <div class="call danger"><span class="ic">🛑</span><div><span class="t">DO NOT turn the A/C on</span>The system is open/empty. Running it dry destroys the new compressor. Straight to the shop.</div></div>`},
     {t:"Before you drive · then the shop", allowMedia:false, html:`
       <ul class="check" data-check>
-        <li><input type="checkbox"><label>Battery reconnected, tools out of the engine bay</label></li>
-        <li><input type="checkbox"><label>Car off the stands, wheels torqued if removed, on the ground</label></li>
-        <li><input type="checkbox"><label>Splash shield &amp; bumper fully fastened</label></li>
-        <li><input type="checkbox"><label>Coolant full, no leaks, temp normal at idle</label></li>
-        <li><input type="checkbox"><label><strong>A/C left OFF</strong> — no exceptions</label></li>
-        <li><input type="checkbox"><label>Measured old-oil note + receipts in hand for the shop</label></li>
+        <li><label><input type="checkbox">Battery reconnected, tools out of the engine bay</label></li>
+        <li><label><input type="checkbox">Car off the stands, wheels torqued if removed, on the ground</label></li>
+        <li><label><input type="checkbox">Splash shield &amp; bumper fully fastened</label></li>
+        <li><label><input type="checkbox">Coolant full, no leaks, temp normal at idle</label></li>
+        <li><label><input type="checkbox"><strong>A/C left OFF</strong> — no exceptions</label></li>
+        <li><label><input type="checkbox">Measured old-oil note + receipts in hand for the shop</label></li>
       </ul>
       <div class="call tip"><span class="ic">💡</span><div><span class="t">At the shop</span>They evacuate under vacuum, leak-test, <b>set the final R-1234yf oil charge</b>, and recharge. Then — and only then — the A/C runs.</div></div>`},
   ]},
@@ -664,7 +685,7 @@ function bodyToHtml(body){
   return body.map(b=>{
     if(!b||!b.type) return "";
     if(b.type==="steps") return `<ol class="steps">${(b.items||[]).map(i=>`<li>${rich(i)}</li>`).join("")}</ol>`;
-    if(b.type==="check") return `<ul class="check" data-check>${(b.items||[]).map(i=>`<li><input type="checkbox"><label>${rich(i)}</label></li>`).join("")}</ul>`;
+    if(b.type==="check") return `<ul class="check" data-check>${(b.items||[]).map(i=>`<li><label><input type="checkbox">${rich(i)}</label></li>`).join("")}</ul>`;
     if(b.type==="danger"||b.type==="crit"||b.type==="tip"){ const ic=b.type==="danger"?"🛑":b.type==="crit"?"⚠️":"💡"; return `<div class="call ${b.type}"><span class="ic">${ic}</span><div>${b.title?`<span class="t">${esc(b.title)}</span>`:""}${rich(b.text)}</div></div>`; }
     if(b.type==="spec") return `<div class="specbox">${rich(b.text)}${b.verify?` <span class="verify">${esc(b.verify)}</span>`:""}</div>`;
     if(b.type==="video"){ const id=ytId(b.id||b.youtube||b.url); return id?`<figure class="ytfacade" data-yt="${id}"><button class="ytplay" type="button" aria-label="Play video">▶</button><span class="ythint">Play video (YouTube)</span>${b.title?`<figcaption>${esc(b.title)}</figcaption>`:""}</figure>`:""; }
@@ -672,9 +693,33 @@ function bodyToHtml(body){
   }).join("");
 }
 const stepInner=st=> st.html ? st.html : bodyToHtml(st.body);
+/* Danger/crit/tip callouts (static built-in HTML and the dynamic renderer alike) carry a
+   decorative emoji icon plus a visible .t label; hide the emoji from AT and add a
+   visually-hidden severity word so a screen reader hears "Warning:"/"Important:"/"Tip:"
+   before the content, not just an emoji CLDR name. Run once against the rendered DOM so it
+   covers both HTML sources without touching every call site. */
+function enhanceCallouts(root){
+  root.querySelectorAll(".call.danger,.call.crit,.call.tip").forEach(el=>{
+    const ic=el.querySelector(".ic"); if(ic&&!ic.hasAttribute("aria-hidden")) ic.setAttribute("aria-hidden","true");
+    const txt=el.children[1]; if(!txt||txt.querySelector(".sr-only")) return;
+    const sev=el.classList.contains("danger")?"Warning: ":el.classList.contains("crit")?"Important: ":"Tip: ";
+    const pre=document.createElement("span"); pre.className="sr-only"; pre.textContent=sev;
+    txt.insertBefore(pre, txt.firstChild);
+  });
+}
 /* Phase colors are hex-sanitized on import (createGuide), but also sanitize at the
    render sink so a raw color can never reach a style="" attribute (defense-in-depth). */
 const hexc=c=>/^#[0-9a-fA-F]{3,8}$/.test(c)?c:"#8a8a80";
+/* Phase colors are arbitrary (user/import/Claude-supplied), so pick whichever of white/black
+   text gives the higher contrast against that exact background. This guarantees >=4.5:1
+   (WCAG 1.4.3) for ANY hex hexc() lets through, with no separate "floor" needed on the color
+   itself: the white/black crossover always clears the threshold from both sides. */
+function readableInk(hex){
+  const h=hexc(hex).slice(1); const n=(h.length===3?[...h].map(c=>c+c).join(""):(h+"000000").slice(0,6));
+  const lin=c=>{ c=parseInt(c,16)/255; return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4); };
+  const L=0.2126*lin(n.slice(0,2))+0.7152*lin(n.slice(2,4))+0.0722*lin(n.slice(4,6));
+  return (1.05)/(L+0.05) >= (L+0.05)/0.05 ? "#fff" : "#000";
+}
 
 /* ================= STATE ================= */
 const LS="crvapp1";
@@ -697,7 +742,7 @@ const amazonTag=()=>String(_amazonTag||"").trim();
 async function fetchAppConfig(){ if(!submitApi()) return; try{ const r=await submitRPC("GetAppConfig",{}); _amazonTag=(r&&r.amazonTag)||""; localStorage.setItem("crv-amzn",_amazonTag); }catch(e){} }
 
 /* ================= CLIENT ERROR TELEMETRY (deidentified) ================= */
-const APP_VERSION = "crv-s1-v18";
+const APP_VERSION = "crv-s1-v19";
 /* Deidentify a string before it leaves the device: strip Anthropic keys, emails, tokens, VINs. */
 function scrub(s){ return String(s==null?"":s)
   .replace(/sk-ant-[A-Za-z0-9_-]+/g,"[KEY]")
@@ -810,7 +855,7 @@ function renderHome(){
 function mktCardHtml(e, veh){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const m=entryMeta(e), r=aggRating(e), fit=fitLabel(cleanFits(m.fits)), matches=veh&&fitScore(m.fits,veh)>0;
-  return `<div class="mkt" data-id="${esc(e.id)}"><div class="top"><div style="min-width:0"><b>${esc(m.title)}</b><br><small>${esc(m.subtitle||"")}</small></div><div class="rate">${starHtml(r.avg)}<span>${r.avg?r.avg.toFixed(1):"-"} (${r.count})</span></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${matches?`<span class="fitpill">Fits your ${esc(vehDesc(veh)||"vehicle")}</span>`:""}${fit?`<small>${esc(fit)}</small>`:""}${guideChips(m)}</div></div>`;
+  return `<button type="button" class="mkt" data-id="${esc(e.id)}"><div class="top"><div style="min-width:0"><b>${esc(m.title)}</b><br><small>${esc(m.subtitle||"")}</small></div><div class="rate">${starHtml(r.avg)}<span>${r.avg?r.avg.toFixed(1):"-"} (${r.count})</span></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${matches?`<span class="fitpill">Fits your ${esc(vehDesc(veh)||"vehicle")}</span>`:""}${fit?`<small>${esc(fit)}</small>`:""}${guideChips(m)}</div></button>`;
 }
 /* "New" recency signal: optional addedAt/added (epoch ms or ISO); 0 when absent. */
 function entryAddedAt(e){ const m=e.meta||{}; const v=e.addedAt||m.addedAt||e.added||m.added; return v?(typeof v==="number"?v:(Date.parse(v)||0)):0; }
@@ -849,7 +894,7 @@ function renderGuide(){
   const p=overallPct(); const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   let rows="";
   ACTIVE.phases.forEach((ph,pi)=>{ const pr=phaseProgress(ph); const pct=pr.total?Math.round(pr.done/pr.total*100):0; const all=pr.total&&pr.done===pr.total; const dnum=(String(ph.name||"").match(/\d+/)||[pi])[0];
-    rows+=`<button class="prow ${all?'doneall':''}" data-gi="${ph.steps[0]?ph.steps[0].gi:0}"><span class="dot" style="background:${hexc(ph.color)}">${all?'✓':dnum}</span><span class="meta"><b>${esc(ph.name)}</b><span class="bar"><i style="width:${pct}%"></i></span></span><span class="cnt">${pr.done}/${pr.total}</span></button>`; });
+    rows+=`<button class="prow ${all?'doneall':''}" data-gi="${ph.steps[0]?ph.steps[0].gi:0}"><span class="dot" style="background:${hexc(ph.color)};color:${readableInk(ph.color)}">${all?'✓':dnum}</span><span class="meta"><b>${esc(ph.name)}</b><span class="bar"><i style="width:${pct}%"></i></span></span><span class="cnt">${pr.done}/${pr.total}</span></button>`; });
   const hasTools=(ACTIVE.tools&&ACTIVE.tools.length)||(ACTIVE.parts&&ACTIVE.parts.length);
   view.innerHTML=`
     <div class="hero">
@@ -930,11 +975,11 @@ function mediaEl(m, showStep){
   const label=(m.type==='photo'?'📷 Photo':m.type==='audio'?'🎙️ Voice note':'🎬 Video');
   const url=m.blob?URL.createObjectURL(m.blob):m.dataUrl;
   let thumb, body="";
-  if(m.type==='photo'){ thumb=`<img src="${m.dataUrl}">`; }
-  else if(m.type==='audio'){ thumb=`🎙️`; body=`<audio controls preload="none" src="${url}"></audio>`; }
+  if(m.type==='photo'){ thumb=`<img src="${m.dataUrl}" alt="">`; }
+  else if(m.type==='audio'){ thumb=`<span aria-hidden="true">🎙️</span>`; body=`<audio controls preload="none" src="${url}"></audio>`; }
   else { thumb=`<video src="${url}" muted playsinline preload="metadata"></video>`; }
   wrap.innerHTML=`<div class="mth">${thumb}</div>
-    <div class="minfo"><b>${label}</b><small>${showStep&&st?st.phase.name+' · ':''}${fmtTime(m.ts)}</small>${body}
+    <div class="minfo"><h3>${label}</h3><small>${showStep&&st?st.phase.name+' · ':''}${fmtTime(m.ts)}</small>${body}
       ${m.type==='video'?`<video class="play hidden" controls playsinline src="${url}"></video>`:''}</div>
     <div class="mact">${(m.type==='photo'||m.type==='video')?`<button data-ask>Ask</button>`:''}<button class="del" data-del>Del</button></div>`;
   const del=wrap.querySelector("[data-del]");
@@ -950,7 +995,9 @@ function mediaEl(m, showStep){
     }
   };
   const vthumb=wrap.querySelector(".mth video");
-  if(vthumb) vthumb.onclick=()=>{ const pl=wrap.querySelector("video.play"); pl.classList.toggle("hidden"); if(!pl.classList.contains("hidden")) pl.play(); };
+  if(vthumb){ vthumb.setAttribute("role","button"); vthumb.tabIndex=0; vthumb.setAttribute("aria-label","Play video");
+    const toggle=()=>{ const pl=wrap.querySelector("video.play"); pl.classList.toggle("hidden"); if(!pl.classList.contains("hidden")) pl.play(); };
+    vthumb.onclick=toggle; vthumb.onkeydown=(ev)=>{ if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); toggle(); } }; }
   return wrap;
 }
 
@@ -963,7 +1010,8 @@ function renderStep(st){
       <button class="lbtn" data-cap="audio">🎙️ Voice</button>
       <button class="lbtn" data-cap="video">🎬 Video</button></div>
       <div class="medialist" id="medialist"></div></div>`:"";
-  view.innerHTML=`<span class="kicker" style="background:${hexc(st.phase.color)}">${esc(st.phase.name)}</span><h2>${esc(st.t)}</h2>${fig}${stepInner(st)}${log}`;
+  view.innerHTML=`<span class="kicker" style="background:${hexc(st.phase.color)};color:${readableInk(st.phase.color)}">${esc(st.phase.name)}</span><h2>${esc(st.t)}</h2>${fig}${stepInner(st)}${log}`;
+  enhanceCallouts(view);
   view.querySelectorAll('input[type=checkbox]').forEach((cb,i)=>{
     const key=st.id+"#"+i; cb.checked=!!state.checks[key];
     if(cb.checked) cb.closest('li').querySelector('label').classList.add('done');
@@ -999,17 +1047,20 @@ async function startCapture(stepId, kind, onPhoto){
   catch(e){ alert((kind==='audio'?"Microphone":"Camera")+" unavailable: "+e.message+"\n\nNeeds HTTPS or localhost + permission."); return; }
   if((kind==='audio'||kind==='video') && !window.MediaRecorder){ alert("Recording isn't supported in this browser."); stream.getTracks().forEach(t=>t.stop()); return; }
 
-  const ov=document.createElement("div"); ov.id="rec";
-  ov.innerHTML=`<button class="rx">✕</button>${kind==='audio'?'<div class="badge hidden">● REC</div>':''}
+  const ov=document.createElement("div"); ov.id="rec"; ov.setAttribute("role","dialog"); ov.setAttribute("aria-modal","true"); ov.setAttribute("aria-label",kind==='audio'?"Record voice note":kind==='video'?"Record video":"Take photo");
+  ov.innerHTML=`<button class="rx" aria-label="Close">✕</button>${kind==='audio'?'<div class="badge hidden">● REC</div>':''}
     ${kind==='audio'?`<div class="audioface"><div class="mic">🎙️</div><div class="timer">0:00</div><div class="fine" style="color:#bbb;margin-top:8px">Tap the red button to start &amp; stop</div></div>`
       :`<video autoplay playsinline muted></video>${kind==='video'?'<div class="badge hidden">● REC</div>':''}`}
     <div class="rc">${kind==='video'?'<button class="flip">⟲ Flip</button>':''}<button class="shutter" aria-label="capture"></button></div>`;
   document.body.appendChild(ov);
   const video=ov.querySelector("video"), shutter=ov.querySelector(".shutter"), badge=ov.querySelector(".badge"), timerEl=ov.querySelector(".timer");
+  const _opener=document.activeElement;
   let facing='environment';
   function stopStream(){ if(stream) stream.getTracks().forEach(t=>t.stop()); }
-  function close(){ stopStream(); ov.remove(); }
+  function close(){ stopStream(); ov.remove(); if(_opener && document.contains(_opener)) _opener.focus(); }
   ov.querySelector(".rx").onclick=()=>{ if(rec&&rec.state==='recording'){ rec.stop(); } close(); };
+  ov.onkeydown=(ev)=>{ if(ev.key==="Escape"){ ev.preventDefault(); if(rec&&rec.state==='recording'){ rec.stop(); } close(); } };
+  shutter.focus();
   if(video){ video.srcObject=stream; }
   const flip=ov.querySelector(".flip");
   if(flip) flip.onclick=async()=>{ facing=facing==='environment'?'user':'environment'; stopStream(); try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing},audio:kind==='video'}); video.srcObject=stream; }catch(e){} };
@@ -1071,9 +1122,9 @@ let chatHistory=[], pendingImage=null;
 function openKey(){
   const cur=state.apiKey||"";
   const opts=MODELS.map(m=>`<option value="${m.id}" ${m.id===state.model?"selected":""}>${m.n} — ${m.d}</option>`).join("");
-  sheet("Claude settings",`<div class="field"><label>Anthropic API key</label><input id="keyIn" type="password" placeholder="sk-ant-..." value="${cur.replace(/"/g,'&quot;')}">
+  sheet("Claude settings",`<div class="field"><label for="keyIn">Anthropic API key</label><input id="keyIn" type="password" placeholder="sk-ant-..." value="${cur.replace(/"/g,'&quot;')}">
       <div class="btnrow" style="margin-top:6px"><a class="btn" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">🔑 Generate a key on console.anthropic.com ↗</a></div></div>
-    <div class="field"><label>Model</label><select id="modelIn">${opts}</select></div>
+    <div class="field"><label for="modelIn">Model</label><select id="modelIn">${opts}</select></div>
     <p class="fine">Stored only in this browser and sent directly to api.anthropic.com from your device. The model is used for <b>Ask Claude</b>, hands-free voice, and <b>New Repair</b> (all support vision). Get a key at console.anthropic.com; API usage is billed to your account: Opus costs the most, Haiku the least.</p>
     <div class="btnrow"><button class="btn" id="kc">Cancel</button><button class="btn pri" id="ks">Save</button></div>`,
   (b)=>{ b.querySelector("#ks").onclick=()=>{ state.apiKey=b.querySelector("#keyIn").value.trim(); state.model=b.querySelector("#modelIn").value; saveState(); closeSheet(); }; b.querySelector("#kc").onclick=closeSheet; });
@@ -1134,8 +1185,8 @@ async function openVinScanner(onVin){
   try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false}); }
   catch(e){ alert("Camera unavailable: "+e.message+"\n\nNeeds HTTPS or localhost + permission. You can type the VIN instead."); return; }
   const hasBD=("BarcodeDetector" in window);
-  const ov=document.createElement("div"); ov.id="rec";
-  ov.innerHTML=`<button class="rx">✕</button>
+  const ov=document.createElement("div"); ov.id="rec"; ov.setAttribute("role","dialog"); ov.setAttribute("aria-modal","true"); ov.setAttribute("aria-label","Scan VIN");
+  ov.innerHTML=`<button class="rx" aria-label="Close">✕</button>
     <video autoplay playsinline muted></video>
     <div class="reticle"></div>
     <div class="hint">${hasBD?"Aim the box at the <b>barcode</b> on the driver's door-jamb sticker — it scans automatically.<br>Or tap 📷 to read a stamped VIN (dashboard/sticker) with Claude.":"Tap 📷 to read the VIN (door-jamb sticker or dashboard plate) with Claude — or ✕ and type it."}</div>
@@ -1144,10 +1195,13 @@ async function openVinScanner(onVin){
   document.body.appendChild(ov);
   const video=ov.querySelector("video"); try{ video.srcObject=stream; }catch(e){}
   const foundEl=ov.querySelector(".vinfound"), shutter=ov.querySelector(".shutter");
+  const _opener=document.activeElement;
   let done=false, det=null, loopT=0;
-  function stop(){ done=true; clearTimeout(loopT); if(stream) stream.getTracks().forEach(t=>t.stop()); ov.remove(); }
+  function stop(){ done=true; clearTimeout(loopT); if(stream) stream.getTracks().forEach(t=>t.stop()); ov.remove(); if(_opener && document.contains(_opener)) _opener.focus(); }
   function finish(vin){ if(done) return; foundEl.textContent="✓ "+vin; setTimeout(()=>{ stop(); onVin(vin); },350); }
   ov.querySelector(".rx").onclick=stop;
+  ov.onkeydown=(ev)=>{ if(ev.key==="Escape"){ ev.preventDefault(); stop(); } };
+  shutter.focus();
   if(hasBD){ try{ det=new BarcodeDetector({formats:["code_39","code_128","data_matrix","pdf417","qr_code","codabar","itf"]}); }catch(e){ det=null; } }
   async function tick(){ if(done||!det) return;
     try{ const codes=await det.detect(video); for(const c of codes){ const v=extractVin(c.rawValue); if(v){ return finish(v); } } }catch(e){}
@@ -1173,13 +1227,13 @@ function openAddVehicle(existing){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const ex=existing||{};
   sheet(existing?"Edit vehicle":"Add vehicle", `
-    <div class="field"><label>Nickname (optional)</label><input id="vNick" placeholder="e.g. Wife's CR-V" value="${esc(ex.nick||"").replace(/"/g,'&quot;')}"></div>
-    <div class="field"><label>VIN (17 characters)</label><input id="vVin" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="1HGRW2H50JL000000" value="${esc(ex.vin||"")}"></div>
+    <div class="field"><label for="vNick">Nickname (optional)</label><input id="vNick" placeholder="e.g. Wife's CR-V" value="${esc(ex.nick||"").replace(/"/g,'&quot;')}"></div>
+    <div class="field"><label for="vVin">VIN (17 characters)</label><input id="vVin" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="1HGRW2H50JL000000" value="${esc(ex.vin||"")}"></div>
     <div class="btnrow" style="margin-top:0"><button class="btn" id="vScan">📷 Scan / read VIN</button><button class="btn" id="vDecode">🔎 Decode with Claude</button></div>
     <div id="vStatus" class="vinstat" style="margin:8px 0">${vinStatusHtml(ex.vin||"")}</div>
-    <div class="row3"><div class="field"><label>Year</label><input id="vYear" inputmode="numeric" placeholder="2018" value="${esc(ex.year||"")}"></div>
-      <div class="field"><label>Make</label><input id="vMake" placeholder="Honda" value="${esc(ex.make||"").replace(/"/g,'&quot;')}"></div>
-      <div class="field"><label>Model</label><input id="vModel" placeholder="CR-V" value="${esc(ex.model||"").replace(/"/g,'&quot;')}"></div></div>
+    <div class="row3"><div class="field"><label for="vYear">Year</label><input id="vYear" inputmode="numeric" placeholder="2018" value="${esc(ex.year||"")}"></div>
+      <div class="field"><label for="vMake">Make</label><input id="vMake" placeholder="Honda" value="${esc(ex.make||"").replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label for="vModel">Model</label><input id="vModel" placeholder="CR-V" value="${esc(ex.model||"").replace(/"/g,'&quot;')}"></div></div>
     <p class="fine">Scan the <b>barcode</b> on the door-jamb sticker (offline where supported), <b>📷</b> read a stamped VIN, or type it. <b>🔎 Decode</b> fills year/make/model from the VIN (uses Claude) — these power <b>marketplace guide discovery for your car</b>. Stored on-device.</p>
     <div class="btnrow"><button class="btn" id="vCancel">Cancel</button><button class="btn pri" id="vSave">Save vehicle</button></div>`,
   (b)=>{
@@ -1253,7 +1307,7 @@ function setUserReview(id,patch){ const o=reviewsStore(); o[id]=Object.assign({}
 function entryMeta(e){ if(e.builtinRef){ const g=guideById(e.builtinRef); return Object.assign({title:g.title,subtitle:g.subtitle,region:g.region,env:g.env,fits:g.fits}, e.meta||{}); } const g=e.guide||{}; return {title:g.title,subtitle:g.subtitle,region:g.region,env:g.env,fits:g.fits}; }
 function entryGuideJSON(e){ return e.builtinRef?exportGuide(guideById(e.builtinRef)):e.guide; }
 function aggRating(e){ const base=e.rating||{avg:0,count:0}; const ur=userReview(e.id); if(ur&&ur.stars){ const count=(base.count||0)+1; return {avg:((base.avg||0)*(base.count||0)+ur.stars)/count, count}; } return {avg:base.avg||0, count:base.count||0}; }
-function starHtml(v){ v=Math.round(v||0); let s=""; for(let i=1;i<=5;i++) s+=`<span class="st${i<=v?' on':''}">★</span>`; return `<span class="stars">${s}</span>`; }
+function starHtml(v){ v=Math.round(v||0); let s=""; for(let i=1;i<=5;i++) s+=`<span class="st${i<=v?' on':''}" aria-hidden="true">${i<=v?'★':'☆'}</span>`; return `<span class="stars" role="img" aria-label="${v} out of 5 stars">${s}</span>`; }
 function installMarketGuide(e){ if(e.builtinRef){ setActive(e.builtinRef); return guideById(e.builtinRef); }
   const existing=allGuides().find(g=>g.title===e.guide.title); if(existing){ setActive(existing.id); return existing; }
   const g=createGuide(e.guide); setActive(g.id); return g; }
@@ -1266,7 +1320,7 @@ async function openMarket(){
     if(!cat||!Array.isArray(cat.guides)){ box.innerHTML=`<p class="fine">Couldn't load the catalog and no offline copy is cached. Reconnect and reopen.</p>`; return; }
     const entries=cat.guides;
     const card=(e)=>{ const m=entryMeta(e), r=aggRating(e), fit=fitLabel(cleanFits(m.fits)), matches=veh&&fitScore(m.fits,veh)>0;
-      return `<div class="mkt" data-id="${esc(e.id)}"><div class="top"><div style="min-width:0"><b>${esc(m.title)}</b><br><small>${esc(m.subtitle||"")}</small></div><div class="rate">${starHtml(r.avg)}<span>${r.avg?r.avg.toFixed(1):"—"} (${r.count})</span></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${matches?`<span class="fitpill">Fits your ${esc(vehDesc(veh)||"vehicle")}</span>`:""}${fit?`<small>${esc(fit)}</small>`:""}${guideChips(m)}</div></div>`; };
+      return `<button type="button" class="mkt" data-id="${esc(e.id)}"><div class="top"><div style="min-width:0"><b>${esc(m.title)}</b><br><small>${esc(m.subtitle||"")}</small></div><div class="rate">${starHtml(r.avg)}<span>${r.avg?r.avg.toFixed(1):"—"} (${r.count})</span></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${matches?`<span class="fitpill">Fits your ${esc(vehDesc(veh)||"vehicle")}</span>`:""}${fit?`<small>${esc(fit)}</small>`:""}${guideChips(m)}</div></button>`; };
     let html="";
     if(veh){ const forYou=entries.map(e=>({e,s:fitScore(entryMeta(e).fits,veh)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
       html+=`<h3 style="margin:.2em 0">🚗 For your ${esc(vehDesc(veh)||"vehicle")}</h3>`+(forYou.length?forYou.map(x=>card(x.e)).join(""):`<p class="fine">No guides yet for ${esc(vehDesc(veh)||"your vehicle")}. Make one with ＋ New Repair, or 🚀 Submit to the community catalog.</p>`);
@@ -1296,29 +1350,33 @@ function openMarketGuide(e){
     <div class="btnrow"><button class="btn pri" id="mInstall">${installed?"✓ In your library — open":"⬇ Install guide"}</button></div>
     <h3 style="margin:.7em 0 .2em">Your rating</h3>
     <div id="myStars" class="stars" style="font-size:1.7em"></div>
-    <div class="field" style="margin-top:10px"><label>Write a review</label><textarea id="revText" rows="3" placeholder="What worked, what to watch for…">${esc((ur.review&&ur.review.text)||"")}</textarea></div>
-    <div id="revStatus"></div>
+    <div class="field" style="margin-top:10px"><label for="revText">Write a review</label><textarea id="revText" rows="3" placeholder="What worked, what to watch for…">${esc((ur.review&&ur.review.text)||"")}</textarea></div>
+    <div id="revStatus" role="status" aria-live="polite"></div>
     <div class="btnrow"><button class="btn" id="revPR">🚀 Submit review</button><button class="btn pri" id="revSubmit">Save review</button></div>
     <h3 style="margin:.7em 0 .2em">Reviews</h3>
     <div id="revList">${revHtml||'<p class="fine">No reviews yet — be the first.</p>'}</div>`,
   (b)=>{
-    const sp=b.querySelector("#myStars"); let picked=ur.stars||0;
-    const paint=()=>{ sp.innerHTML=""; for(let i=1;i<=5;i++){ const s=document.createElement("span"); s.className="st"+(i<=picked?" on":""); s.textContent="★"; s.onclick=()=>{ picked=i; setUserReview(e.id,{stars:i}); paint(); }; sp.appendChild(s); } };
+    // Keyboard-operable rating: an ARIA radiogroup with roving tabindex + Arrow/Enter/Space.
+    const sp=b.querySelector("#myStars"); sp.setAttribute("role","radiogroup"); sp.setAttribute("aria-label","Your rating"); let picked=ur.stars||0;
+    const setPicked=(v)=>{ picked=Math.max(1,Math.min(5,v)); setUserReview(e.id,{stars:picked}); paint(); const cur=sp.querySelector('[data-v="'+picked+'"]'); if(cur) cur.focus(); };
+    const paint=()=>{ sp.innerHTML=""; const tab=picked||1; for(let i=1;i<=5;i++){ const s=document.createElement("span"); s.className="st"+(i<=picked?" on":""); s.dataset.v=i; s.setAttribute("role","radio"); s.setAttribute("aria-checked", i===picked?"true":"false"); s.setAttribute("aria-label", i+(i===1?" star":" stars")); s.tabIndex=(i===tab?0:-1); s.textContent="★"; s.onclick=()=>setPicked(i); s.onkeydown=(ev)=>{ if(ev.key==="ArrowRight"||ev.key==="ArrowUp"){ ev.preventDefault(); setPicked((picked||0)+1); } else if(ev.key==="ArrowLeft"||ev.key==="ArrowDown"){ ev.preventDefault(); setPicked((picked||1)-1); } else if(ev.key===" "||ev.key==="Enter"){ ev.preventDefault(); setPicked(i); } }; sp.appendChild(s); } };
     paint();
     b.querySelector("#mInstall").onclick=()=>{ installMarketGuide(e); closeSheet(); goGuide(); };
+    const revError=(st,msg)=>{ st.setAttribute("role","alert"); st.setAttribute("aria-live","assertive"); st.innerHTML=`<div class="modverdict no">${msg}</div>`; b.querySelector("#revText").focus(); };
+    const revStatusOk=(st,html)=>{ st.setAttribute("role","status"); st.setAttribute("aria-live","polite"); st.innerHTML=html; };
     b.querySelector("#revPR").onclick=()=>{
       const txt=(b.querySelector("#revText").value||"").trim(); const st=b.querySelector("#revStatus");
-      if(picked<1){ st.innerHTML=`<div class="modverdict no">Pick a star rating first.</div>`; return; }
-      if(!txt){ st.innerHTML=`<div class="modverdict no">Write a review to submit.</div>`; return; }
+      if(picked<1){ revError(st,"Pick a star rating first."); return; }
+      if(!txt){ revError(st,"Write a review to submit."); return; }
       setUserReview(e.id,{stars:picked, review:{text:txt, ts:Date.now(), status:"saved"}});
       openSubmitReview(e, m.title, picked, txt);  // the backend moderates the PR with Claude
     };
     b.querySelector("#revSubmit").onclick=()=>{
       const txt=(b.querySelector("#revText").value||"").trim(); const st=b.querySelector("#revStatus");
-      if(picked<1){ st.innerHTML=`<div class="modverdict no">Pick a star rating first.</div>`; return; }
+      if(picked<1){ revError(st,"Pick a star rating first."); return; }
       const patch={stars:picked}; if(txt) patch.review={text:txt, ts:Date.now(), status:"saved"};
       setUserReview(e.id, patch);
-      st.innerHTML=`<div class="modverdict ok">✓ Saved on this device.</div>`;
+      revStatusOk(st,`<div class="modverdict ok">✓ Saved on this device.</div>`);
     };
   });
 }
@@ -1396,7 +1454,7 @@ async function pollSubmissions(){
     try{ if("Notification" in window && Notification.permission==="granted") new Notification("Repairs", {body:msg}); }catch(e){} });
 }
 function toast(msg, url){
-  let t=document.getElementById("toaster"); if(!t){ t=document.createElement("div"); t.id="toaster"; document.body.appendChild(t); }
+  let t=document.getElementById("toaster"); if(!t){ t=document.createElement("div"); t.id="toaster"; t.setAttribute("role","status"); t.setAttribute("aria-live","polite"); document.body.appendChild(t); }
   const item=document.createElement("div"); item.className="toastitem";
   item.innerHTML=`<span>${String(msg).replace(/&/g,"&amp;").replace(/</g,"&lt;")}</span>${url?` <a href="${url}" target="_blank" rel="noopener">view ↗</a>`:""}<button aria-label="dismiss">✕</button>`;
   item.querySelector("button").onclick=()=>item.remove(); t.appendChild(item);
@@ -1410,7 +1468,7 @@ function submitSheet(title, previewHtml, rpc, payload, meta, back){
   sheet(title, `${previewHtml}
     <p class="fine">Submitting shares this with the community catalog. Make sure it's safe and accurate, and don't include anything private.</p>
     <div id="gsi" style="margin:10px 0;min-height:44px"></div>
-    <div id="subStatus" class="fine"></div>
+    <div id="subStatus" class="fine" role="status" aria-live="polite"></div>
     <div class="btnrow"><button class="btn" id="subCancel">Cancel</button><button class="btn pri" id="subGo" disabled>🚀 Submit</button></div>`,
   (b)=>{
     // Keep Google sign-in from being torn down by a stray backdrop tap. Removing
@@ -1439,7 +1497,7 @@ function openSubmitReview(entry, title, stars, text){
 function openSubmitRepair(g){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const json=JSON.stringify(exportGuide(g),null,2);
-  submitSheet("🚀 Submit repair", `<p class="fine">Contribute this guide to the public marketplace. Make sure it's safe and accurate.</p><div class="field"><label>Guide</label><input value="${esc(g.title)}" readonly></div><details class="fmtd"><summary>JSON being submitted</summary><pre class="fmt">${esc(json)}</pre></details>`,
+  submitSheet("🚀 Submit repair", `<p class="fine">Contribute this guide to the public marketplace. Make sure it's safe and accurate.</p><div class="field"><label for="expGuideTitle">Guide</label><input id="expGuideTitle" value="${esc(g.title)}" readonly></div><details class="fmtd"><summary>JSON being submitted</summary><pre class="fmt">${esc(json)}</pre></details>`,
     "SubmitRepair", {guideJson:json}, {title:g.title, kind:"repair"}, ()=>openExport(g));
 }
 
@@ -1455,10 +1513,10 @@ function fileToScaledDataUrl(file, max=1280){ return new Promise((res,rej)=>{
 function openChat(attachImg){
   if(attachImg) pendingImage=attachImg;
   const ctx = route==="step" ? `Current step: "${STEPS[cur].t}" (${STEPS[cur].phase.name}).` : "";
-  sheet("💬 Ask Claude", `<div id="chatlog"></div><div class="typing hidden" id="typing">Claude is thinking…</div>`,
+  sheet("💬 Ask Claude", `<div id="chatlog" role="log" aria-live="polite" aria-relevant="additions"></div><div class="typing hidden" id="typing" role="status">Claude is thinking…</div>`,
   (body,panel)=>{
     const foot=document.createElement("div");
-    foot.innerHTML=`<div class="attachchip hidden" id="attach"></div><div class="chatinput"><button class="cataux" id="chatCam" title="Take a photo">📷</button><button class="cataux" id="chatPhoto" title="Add a photo">🖼️</button><input type="file" accept="image/*" id="chatFile" hidden><textarea id="chatIn" rows="1" placeholder="Ask about this step…"></textarea><button class="send" id="chatSend">➤</button></div>`;
+    foot.innerHTML=`<div class="attachchip hidden" id="attach"></div><div class="chatinput"><button class="cataux" id="chatCam" title="Take a photo">📷</button><button class="cataux" id="chatPhoto" title="Add a photo">🖼️</button><input type="file" accept="image/*" id="chatFile" hidden><textarea id="chatIn" rows="1" placeholder="Ask about this step…" aria-label="Ask about this step"></textarea><button class="send" id="chatSend" aria-label="Send">➤</button></div>`;
     panel.appendChild(foot);
     // Chat panel fills the space from the toolbar down (consume full available height).
     const tw=document.getElementById("topwrap")||document.getElementById("top");
@@ -1479,7 +1537,7 @@ function openChat(attachImg){
   }, true);
 }
 function showAttach(foot){ const c=foot.querySelector("#attach"); if(pendingImage){ c.classList.remove("hidden"); c.innerHTML=`<img src="${pendingImage}" alt="attached photo"><button class="rm" id="ua" title="Remove photo">✕</button>`; c.querySelector("#ua").onclick=()=>{ pendingImage=null; c.classList.add("hidden"); }; } else c.classList.add("hidden"); }
-function msgHtml(role,text,img){ const r=(role==="u"?"u":"a"); const s=(text||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>"); return `<div class="msg ${r}">${img?`<img src="${(img||"").replace(/"/g,"&quot;")}">`:""}${s}</div>`; }
+function msgHtml(role,text,img){ const r=(role==="u"?"u":"a"); const s=(text||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>"); return `<div class="msg ${r}">${img?`<img src="${(img||"").replace(/"/g,"&quot;")}" alt="attached photo">`:""}${s}</div>`; }
 function renderChat(log){ log.innerHTML=""; chatHistory.forEach(m=>{ const t=m.content.filter(b=>b.type==="text").map(b=>b.text).join(""); log.insertAdjacentHTML("beforeend", msgHtml(m.role==="user"?"u":"a", t, m._img||null)); }); }
 
 function pushUser(text,img){
@@ -1508,17 +1566,35 @@ async function sendToClaude(text,ctx,log,typing,foot){
 }
 
 /* ================= SHEET ================= */
+// Every modal in the app funnels through here: dialog semantics, focus moved in on open,
+// Tab trapped within the panel, Escape closes, and focus restored to the opener on close.
+let _sheetOpener=null;
+function sheetFocusables(panel){ return [...panel.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled && el.offsetParent!==null); }
 function sheet(title,bodyHtml,wire,chat){
   closeSheet();
+  _sheetOpener=document.activeElement;
   const s=document.createElement("div"); s.className="sheet"; s.id="sheet";
-  s.innerHTML=`<div class="panel"><div class="head"><b>${title}</b><button class="cl">✕</button></div><div class="body">${bodyHtml}</div></div>`;
+  s.innerHTML=`<div class="panel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"><div class="head"><h2 id="sheetTitle">${title}</h2><button class="cl" aria-label="Close">✕</button></div><div class="body">${bodyHtml}</div></div>`;
   document.body.appendChild(s);
   const panel=s.querySelector(".panel"), body=s.querySelector(".body");
   s.querySelector(".cl").onclick=closeSheet; s.onclick=e=>{ if(e.target===s) closeSheet(); };
   if(chat){ body.style.flex="1"; }
   wire&&wire(body,panel);
+  const f=sheetFocusables(panel); if(f.length) f[0].focus(); else { panel.tabIndex=-1; panel.focus(); }
+  panel.onkeydown=(ev)=>{
+    if(ev.key==="Escape"){ ev.preventDefault(); closeSheet(); return; }
+    if(ev.key!=="Tab") return;
+    const list=sheetFocusables(panel); if(!list.length) return;
+    const first=list[0], last=list[list.length-1];
+    if(ev.shiftKey && document.activeElement===first){ ev.preventDefault(); last.focus(); }
+    else if(!ev.shiftKey && document.activeElement===last){ ev.preventDefault(); first.focus(); }
+  };
 }
-function closeSheet(){ const s=document.getElementById("sheet"); if(s) s.remove(); }
+function closeSheet(){
+  const s=document.getElementById("sheet"); if(s) s.remove();
+  if(_sheetOpener && document.contains(_sheetOpener)) _sheetOpener.focus();
+  _sheetOpener=null;
+}
 function resetProgress(){ sheet("Reset progress?", `<p>Clears all checkmarks and step progress on this device. Your saved photos, voice notes, and videos are kept. Continue?</p><div class="btnrow"><button class="btn" id="rc">Cancel</button><button class="btn dgr" id="ry">Reset</button></div>`,
   (b)=>{ b.querySelector("#rc").onclick=closeSheet; b.querySelector("#ry").onclick=()=>{ state.checks={};state.done={}; saveState(); closeSheet(); render(); }; }); }
 
@@ -1669,9 +1745,9 @@ function openNew(){
   const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   sheet("＋ New Repair Guide", `
     <p class="fine">Describe the vehicle and the job — Claude drafts a phased, safety-first guide in this app's format and you can start following it right away. Uses your Anthropic API key (same one as the helper).</p>
-    <div class="field"><label>Getting-started prompt (edit freely)</label><textarea id="genPrompt" rows="11">${esc(BOILERPLATE)}</textarea></div>
+    <div class="field"><label for="genPrompt">Getting-started prompt (edit freely)</label><textarea id="genPrompt" rows="11">${esc(BOILERPLATE)}</textarea></div>
     <details class="fmtd"><summary>Data format Claude fills in</summary><pre class="fmt">${esc(SCHEMA_EXAMPLE)}</pre></details>
-    <div id="genStatus" class="fine" style="margin-top:8px"></div>
+    <div id="genStatus" class="fine" style="margin-top:8px" role="status" aria-live="polite"></div>
     <div class="btnrow"><button class="btn" id="gCancel">Cancel</button><button class="btn pri" id="gGo">✨ Generate</button></div>`,
   (b)=>{
     b.querySelector("#gCancel").onclick=closeSheet;
@@ -1695,8 +1771,8 @@ function openMerge(){
   sheet("⤵ Merge guides", `
     <p class="fine">Pick <b>two or more</b> guides and Claude combines them into one — doing shared teardown/drain steps once, ordering the work, and merging the tools &amp; parts. Ideal for jobs done together (like the CR-V's A/C + ECT2 + HG-1). The originals are kept; a new merged guide is added. Uses your API key.</p>
     ${rows}
-    <div class="field"><label>Extra instructions (optional)</label><textarea id="mNote" rows="3" placeholder="e.g. drain coolant once; keep all A/C steps before the ECT2 swap"></textarea></div>
-    <div id="mStatus" class="fine" style="margin-top:8px"></div>
+    <div class="field"><label for="mNote">Extra instructions (optional)</label><textarea id="mNote" rows="3" placeholder="e.g. drain coolant once; keep all A/C steps before the ECT2 swap"></textarea></div>
+    <div id="mStatus" class="fine" style="margin-top:8px" role="status" aria-live="polite"></div>
     <div class="btnrow"><button class="btn" id="mCancel">Cancel</button><button class="btn pri" id="mGo">✨ Merge</button></div>`,
   (b)=>{
     b.querySelector("#mCancel").onclick=closeSheet;
@@ -1752,7 +1828,7 @@ function openExport(g){
 function openAdd(){
   sheet("Add a guide", `
     <p class="fine">Paste a guide's JSON — exported from this app (Guides → ⧉) or written in the New Repair <a href="#" id="loadEx">data format</a> — to add it to your library.</p>
-    <div class="field"><label>Guide JSON</label><textarea id="impJson" rows="12" placeholder='{ "title": "…", "phases": [ … ] }'></textarea></div>
+    <div class="field"><label for="impJson">Guide JSON</label><textarea id="impJson" rows="12" placeholder='{ "title": "…", "phases": [ … ] }'></textarea></div>
     <div id="impStatus" class="fine"></div>
     <div class="btnrow"><button class="btn" id="iCancel">Cancel</button><button class="btn pri" id="iGo">Add guide</button></div>`,
   (b)=>{
@@ -1894,7 +1970,7 @@ function openVoiceSettings(){
   const w=(state.wakeWord||"hey claude");
   sheet("Hands-free voice", `
     <p class="fine">Say your wake word, then ask — Claude answers out loud. Built for busy, dirty hands. Answers use your API key; speech recognition needs Chrome/Edge (Android or desktop) and internet; the spoken replies work offline. Keep the app open; the screen is kept awake while it's on.</p>
-    <div class="field"><label>Wake word / phrase</label><input id="vw" value="${String(w).replace(/"/g,'&quot;')}"></div>
+    <div class="field"><label for="vw">Wake word / phrase</label><input id="vw" value="${String(w).replace(/"/g,'&quot;')}"></div>
     <label class="grow" style="cursor:pointer"><input type="checkbox" id="vtts" ${state.voiceReplies===false?"":"checked"}><span><b>Speak answers aloud</b><small>Text-to-speech replies</small></span></label>
     <div class="call tip"><span class="ic">🎙️</span><div><b>Voice commands</b> (after the wake word):<br><small>“next step” · “previous step” · “go to step 5” · “read step” · “reword step” · “I need help” · “repeat” · “go home” · “end chat” — or just ask a question.</small></div></div>
     ${Voice.supported()?"":'<div class="call crit"><span class="ic">⚠️</span><div>This browser can\'t do speech recognition. Spoken answers still work; asking must be typed.</div></div>'}

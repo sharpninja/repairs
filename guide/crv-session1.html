@@ -145,7 +145,7 @@
 </head>
 <body>
 <div id="bar"></div>
-<div id="count"></div>
+<div id="count" role="status" aria-live="polite"></div>
 <main id="deck">
 
 <!-- ============ COVER ============ -->
@@ -494,6 +494,9 @@
     count.textContent=(i+1)+' / '+slides.length;
     prev.disabled=(i===0); next.textContent=(i===slides.length-1)?'Done ✓':'Next ›';
     window.scrollTo(0,0);
+    // Move focus to the new active slide so keyboard/screen-reader users land on the
+    // content that just became visible, not wherever focus happened to be before.
+    var active=slides[i]; active.tabIndex=-1; active.focus();
     try{location.hash=i+1}catch(e){}
   }
   prev.onclick=function(){show(i-1)}; next.onclick=function(){show(i+1)};

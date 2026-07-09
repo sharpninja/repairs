@@ -34,6 +34,9 @@ console.log("admin.js — dashboard auth + rendering");
   t("dashboard shows the ban", /banned@example.com/.test(r.body));
   t("stored <script> is HTML-escaped (no raw injection)", /&lt;script&gt;/.test(r.body) && !/<script>alert/.test(r.body));
   t("renders despite no GitHub creds (best-effort PR section)", r.statusCode === 200);
+  t("page declares a language (WCAG 3.1.1)", /<html[^>]*\blang="en"/.test(r.body));
+  t("table headers use scope=\"col\" (WCAG 1.3.1)", /<th scope="col">/.test(r.body));
+  t("no forced auto-refresh interrupting a screen-reader/magnifier read (WCAG 2.2.1)", !/http-equiv="refresh"/i.test(r.body));
 }
 { const r = await call({ method: "GET", url: "/admin", headers: { "x-admin-token": "s3cret" } }); t("X-Admin-Token header also authorizes", r.statusCode === 200); }
 

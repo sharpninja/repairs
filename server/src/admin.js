@@ -18,20 +18,19 @@ function tokenFrom(req) {
 
 function table(cols, rows, getters, empty) {
   if (!rows || !rows.length) return `<p class="empty">${esc(empty)}</p>`;
-  const head = cols.map((c) => `<th>${esc(c)}</th>`).join("");
+  const head = cols.map((c) => `<th scope="col">${esc(c)}</th>`).join("");
   const body = rows.slice().reverse().map((r) => `<tr>${getters.map((g) => cell(g(r))).join("")}</tr>`).join("");
   return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
-function renderHtml({ prs, mod, errs, bans, token }) {
+function renderHtml({ prs, mod, errs, bans }) {
   const prSection = prs === null
     ? `<p class="empty">Live GitHub PR status unavailable (no credentials or API error). Persisted moderation log is below.</p>`
     : table(["PR", "Title", "State", "Verdict", "Injection"], prs,
         [(r) => `#${r.number}`, (r) => r.title, (r) => r.state, (r) => r.verdict, (r) => (r.injection ? "yes" : "")],
         "No open submission PRs.");
-  return `<!doctype html><html><head><meta charset="utf-8"><title>AI Auto Repairman - admin</title>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>AI Auto Repairman - admin</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="refresh" content="20;url=/admin?token=${encodeURIComponent(token)}">
 <style>
   body{font:14px/1.4 system-ui,Segoe UI,sans-serif;margin:0;background:#0f1115;color:#e8e6e3}
   header{padding:14px 18px;background:#17191d;border-bottom:1px solid #2a2d33;position:sticky;top:0}
@@ -68,5 +67,5 @@ export async function adminHandler(req, res) {
   let prs = null;
   try { prs = await listOpenSubmissionPRs(); } catch (e) { prs = null; }
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-  res.end(renderHtml({ prs, mod, errs, bans, token: ADMIN_TOKEN }));
+  res.end(renderHtml({ prs, mod, errs, bans }));
 }
