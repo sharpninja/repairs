@@ -25,7 +25,6 @@ index-screenshot.png
 
 # MCP Server storage (off-limits; not app data)
 docs/todo.yaml
-docs/Project/
 
 # local tooling
 .claude/
