@@ -1,0 +1,64 @@
+vehicle: 
+  make: "Ford"
+  model: "Escape"
+  model_years: [2013, 2014, 2015, 2016, 2017, 2018, 2019]
+  trim: "various"
+  engine: "1.6L/2.0L EcoBoost I4"
+  drivetrain: "FWD/AWD"
+  platform: "C346 (3rd gen compact crossover)"
+repairs:
+  - description: "Turbocharger/coolant intrusion issues"
+    guide:
+      title: "Ford Escape 2013-2019 Turbo/Coolant Intrusion Repair Guide"
+      subtitle: "Fix EcoBoost coolant leaks and turbo failure"
+      safety: "Work on cool engine. Monitor coolant level."
+      region: "US"
+      env: "garage"
+      phases:
+        - name: "Diagnosis"
+          color: "blue"
+          steps:
+            - type: "step"
+              content: "Check for coolant loss or white smoke."
+            - type: "check"
+              content: "Inspect turbo area for leaks."
+        - name: "Coolant Intrusion Fix"
+          color: "red"
+          steps:
+            - type: "step"
+              content: "Replace turbo and repair head gasket if needed."
+            - type: "video"
+              content: "https://www.youtube.com/watch?v=u5Z5v7Bje4s"
+      tools:
+        - "Jack and jack stands"
+        - "Coolant pressure tester"
+      parts:
+        - "Turbocharger assembly"
+        - "Head gasket and coolant lines"
+  - description: "Transmission failure (Powershift/DCT)"
+    guide:
+      title: "Ford Escape 2013-2019 Transmission Repair Guide"
+      subtitle: "Fix Powershift shudder or slipping"
+      safety: "Use jack stands. Transmission fluid is hot."
+      region: "US"
+      env: "garage"
+      phases:
+        - name: "Diagnosis"
+          color: "blue"
+          steps:
+            - type: "step"
+              content: "Test drive for shudder or delayed shifts."
+            - type: "check"
+              content: "Scan for transmission codes."
+        - name: "Full Replacement"
+          color: "red"
+          steps:
+            - type: "step"
+              content: "Drop transmission for replacement."
+      tools:
+        - "Jack and jack stands"
+        - "Drain pan"
+        - "Torque wrench"
+      parts:
+        - "Replacement transmission"
+        - "Fluid and filter"

@@ -1,0 +1,72 @@
+vehicle: 
+  make: "Ford"
+  model: "Explorer"
+  model_years: [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
+  trim: "various"
+  engine: "3.5L V6"
+  drivetrain: "FWD/AWD"
+  platform: "CDX (5th gen midsize SUV)"
+repairs:
+  - description: "Transmission issues (shudder/hesitation)"
+    guide:
+      title: "Ford Explorer 2012-2019 Transmission Repair Guide"
+      subtitle: "Fix shudder, hesitation, or failure in 6-speed transmission"
+      safety: "Work on cool transmission. Use jack stands."
+      region: "US"
+      env: "garage"
+      phases:
+        - name: "Diagnosis"
+          color: "blue"
+          steps:
+            - type: "step"
+              content: "Test drive for shudder or delayed shifts."
+            - type: "check"
+              content: "Scan for transmission codes."
+        - name: "Fluid Service"
+          color: "green"
+          steps:
+            - type: "step"
+              content: "Drain and refill with Mercon LV fluid."
+        - name: "Full Repair"
+          color: "red"
+          steps:
+            - type: "step"
+              content: "Drop transmission for rebuild or replacement."
+            - type: "video"
+              content: "https://www.youtube.com/watch?v=AJuchvaqcuc"
+      tools:
+        - "OBD-II scanner"
+        - "Jack and jack stands"
+        - "Drain pan"
+        - "Torque wrench"
+      parts:
+        - "Mercon LV transmission fluid"
+        - "Transmission filter"
+        - "Gaskets"
+  - description: "Throttle body/purge valve failure"
+    guide:
+      title: "Ford Explorer 2012-2019 Throttle Body/Purge Valve Repair Guide"
+      subtitle: "Fix stalling, rough idle, or check engine light"
+      safety: "Disconnect battery. Work on cool engine." 
+      region: "US"
+      env: "garage"
+      phases:
+        - name: "Diagnosis"
+          color: "blue"
+          steps:
+            - type: "step"
+              content: "Scan for throttle or EVAP codes."
+            - type: "check"
+              content: "Test for rough idle or hesitation."
+        - name: "Replacement"
+          color: "green"
+          steps:
+            - type: "step"
+              content: "Remove and replace throttle body or purge valve."
+      tools:
+        - "Socket set"
+        - "OBD-II scanner"
+      parts:
+        - "Throttle body"
+        - "Purge valve"
+        - "Gaskets"
