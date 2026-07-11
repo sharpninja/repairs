@@ -9,7 +9,8 @@
     "start": "node src/server.js",
     "monitor": "node src/monitor.js",
     "mint-token": "node scripts/mint-token.mjs",
-    "bans": "node scripts/bans.mjs"
+    "bans": "node scripts/bans.mjs",
+    "submit-direct": "node scripts/direct-submit-guides.mjs"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.2.3",

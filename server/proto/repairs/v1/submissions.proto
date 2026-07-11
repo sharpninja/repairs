@@ -12,6 +12,8 @@ service SubmissionService {
   // Append a star rating + review to an existing catalog guide via PR.
   rpc SubmitReview(SubmitReviewRequest) returns (SubmitResponse) {}
   // Add a full repair guide (the app's guide JSON) to the catalog via PR.
+  // Normal browser submissions use session_key. Trusted server-side operator
+  // scripts may instead send Authorization: Bearer <DIRECT_SUBMIT_BEARER_TOKEN>.
   rpc SubmitRepair(SubmitRepairRequest) returns (SubmitResponse) {}
   // Poll the state of previously-submitted PRs (open / merged / closed) so the
   // app can tell the user when their submission goes live. Public PR data.
