@@ -35,6 +35,10 @@ Write-Host "`n== backend redirect sign-in unit tests =="
 node tests/redirect.test.mjs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "`n== backend direct submit auth unit tests =="
+node tests/direct-submit-auth.test.mjs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "`n== client<->server integration tests =="
 node tests/integration.test.mjs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

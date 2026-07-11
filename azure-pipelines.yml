@@ -40,6 +40,8 @@ stages:
       displayName: store unit tests
     - script: node tests/admin.test.mjs
       displayName: admin dashboard unit tests
+    - script: node tests/direct-submit-auth.test.mjs
+      displayName: direct submit auth unit tests
 
 - stage: PublishApp
   displayName: Publish app to GitHub Pages

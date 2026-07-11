@@ -4,6 +4,7 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { getStrategy } from "./auth/index.js";
 import { appendFileSync, mkdirSync, statSync } from "node:fs";
 import { dirname } from "node:path";
+import { timingSafeEqual } from "node:crypto";
 import { openReviewPR, openRepairPR, getStatuses } from "./github.js";
 import { createSession, rotateSession, resolveSession } from "./session.js";
 import { isBlocked, tryConsumeRate } from "./store.js";
@@ -17,6 +18,28 @@ function requireSession(sessionKey) {
   return s;
 }
 function wrap(e) { return e instanceof ConnectError ? e : new ConnectError(String(e && e.message ? e.message : e), Code.Internal); }
+function tokenEqual(a, b) {
+  const ab = Buffer.from(String(a || ""));
+  const bb = Buffer.from(String(b || ""));
+  return ab.length === bb.length && ab.length > 0 && timingSafeEqual(ab, bb);
+}
+function bearerFrom(context) {
+  const h = context && context.requestHeader;
+  const raw = h && typeof h.get === "function" ? h.get("authorization") : "";
+  const m = String(raw || "").trim().match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : "";
+}
+export function directSubmitUser(context, env = process.env) {
+  const supplied = bearerFrom(context);
+  if (!supplied) return null;
+  const expected = String(env.DIRECT_SUBMIT_BEARER_TOKEN || "").trim();
+  if (!expected) throw new ConnectError("Direct guide submit bearer token is not configured", Code.FailedPrecondition);
+  if (expected.length < 32) throw new ConnectError("DIRECT_SUBMIT_BEARER_TOKEN must be at least 32 characters", Code.FailedPrecondition);
+  if (!tokenEqual(supplied, expected)) throw new ConnectError("Invalid direct guide submit bearer token", Code.Unauthenticated);
+  const email = String(env.DIRECT_SUBMIT_AUTHOR_EMAIL || "").trim();
+  if (!email) throw new ConnectError("DIRECT_SUBMIT_AUTHOR_EMAIL is required for direct guide submit audit identity", Code.FailedPrecondition);
+  return { email, name: String(env.DIRECT_SUBMIT_AUTHOR_NAME || "").trim() };
+}
 
 export async function startSession(req) {
   const provider = req.provider || "google";
@@ -56,8 +79,9 @@ export async function submitReview(req) {
   } catch (e) { throw wrap(e); }
 }
 
-export async function submitRepair(req) {
-  const { user, silent } = guard(req.sessionKey);
+export async function submitRepair(req, context) {
+  const directUser = directSubmitUser(context);
+  const { user, silent } = directUser ? { user: directUser, silent: false } : guard(req.sessionKey);
   let guide;
   try { guide = JSON.parse(req.guideJson || ""); }
   catch (e) { throw new ConnectError("guideJson is not valid JSON", Code.InvalidArgument); }

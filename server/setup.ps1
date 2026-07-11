@@ -45,6 +45,11 @@ function Prompt-Value([string]$key, [string]$label, [switch]$Secret) {
   $val = if ($Secret) { Read-Secret $label } else { Read-Host $label }
   if ($val) { Set-EnvVal $key $val }
 }
+function New-HexToken([int]$bytes = 32) {
+  $buf = [byte[]]::new($bytes)
+  [System.Security.Cryptography.RandomNumberGenerator]::Fill($buf)
+  return [Convert]::ToHexString($buf).ToLowerInvariant()
+}
 
 # ---- prerequisites ----
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { Err "docker is required."; exit 1 }
@@ -118,11 +123,30 @@ Say "== Optional =="
 $origin = Read-Host "App origin for CORS [$(Get-EnvVal 'ALLOWED_ORIGIN')]"
 if ($origin) { Set-EnvVal "ALLOWED_ORIGIN" $origin }
 
+Say "== Direct operator guide submission =="
+if (Test-Needs "DIRECT_SUBMIT_BEARER_TOKEN") {
+  Set-EnvVal "DIRECT_SUBMIT_BEARER_TOKEN" (New-HexToken)
+  Say "✓ Generated DIRECT_SUBMIT_BEARER_TOKEN."
+} else { Say "✓ DIRECT_SUBMIT_BEARER_TOKEN already set." }
+if (Test-Needs "DIRECT_SUBMIT_AUTHOR_EMAIL") {
+  $defaultEmail = (& git config user.email 2>$null)
+  $email = Read-Host "Direct submit audit email [$defaultEmail]"
+  if (-not $email) { $email = $defaultEmail }
+  if ($email) { Set-EnvVal "DIRECT_SUBMIT_AUTHOR_EMAIL" $email }
+}
+if (Test-Needs "DIRECT_SUBMIT_AUTHOR_NAME") {
+  $defaultName = (& git config user.name 2>$null)
+  $name = Read-Host "Direct submit audit name [$defaultName]"
+  if (-not $name) { $name = $defaultName }
+  if ($name) { Set-EnvVal "DIRECT_SUBMIT_AUTHOR_NAME" $name }
+}
+
 # ---- verify required values ----
 $missing = @()
 if (Test-Needs "GOOGLE_CLIENT_ID") { $missing += "GOOGLE_CLIENT_ID" }
 if (Test-Needs "CLAUDE_CODE_OAUTH_TOKEN") { $missing += "CLAUDE_CODE_OAUTH_TOKEN" }
 if ((Test-Needs "GITHUB_TOKEN") -and (Test-Needs "GITHUB_APP_ID")) { $missing += "GITHUB_TOKEN (or a GitHub App)" }
+if (Test-Needs "DIRECT_SUBMIT_AUTHOR_EMAIL") { $missing += "DIRECT_SUBMIT_AUTHOR_EMAIL" }
 if ($missing.Count -gt 0) { Err "Still unset: $($missing -join ', '). Edit $EnvFile and re-run."; exit 1 }
 Say "✓ $EnvFile is ready."
 

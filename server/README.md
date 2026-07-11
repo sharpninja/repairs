@@ -162,6 +162,30 @@ curl -sS http://localhost:8080/repairs.v1.SubmissionService/SubmitReview \
 
 A successful call returns `{"ok":true,"prUrl":"https://github.com/.../pull/123","prNumber":123,"message":"Review PR opened"}`.
 
+### Direct operator guide submit
+
+For trusted server-side automation, `SubmitRepair` also accepts a bearer token
+instead of a Google session key. Set these only in the server/container
+environment; never put the token in the PWA or browser settings:
+
+```bash
+DIRECT_SUBMIT_BEARER_TOKEN=$(openssl rand -hex 32)
+DIRECT_SUBMIT_AUTHOR_EMAIL=you@example.com
+DIRECT_SUBMIT_AUTHOR_NAME="Your Name"
+```
+
+Then submit a guide JSON payload directly:
+
+```bash
+curl -sS http://localhost:8788/repairs.v1.SubmissionService/SubmitRepair \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer $DIRECT_SUBMIT_BEARER_TOKEN" \
+  -d '{"guideJson":"{\"title\":\"Example\",\"phases\":[{\"name\":\"Phase 1\",\"steps\":[]}]}"}'
+```
+
+The direct bearer path is intentionally limited to guide submission
+(`SubmitRepair`). Reviews still require a user session.
+
 ## Security notes
 
 - The Google ID token audience is checked against `GOOGLE_CLIENT_ID`, and
@@ -169,6 +193,8 @@ A successful call returns `{"ok":true,"prUrl":"https://github.com/.../pull/123",
 - **Trust + rate limiting** are built in: submissions from users with a bad
   moderation record are silently dropped, and each user is capped at one submission
   per minute (see `store.js`).
+- Direct operator guide submission requires a long bearer token and explicit audit
+  identity in `DIRECT_SUBMIT_AUTHOR_EMAIL` / `DIRECT_SUBMIT_AUTHOR_NAME`.
 - The server credential is the only thing that can write to the repo; prefer a
   **GitHub App** (least-privilege, auto-refreshing) and keep it scoped to the data repo.
 - Submissions are **Claude-moderated** and still go through **human PR review** before

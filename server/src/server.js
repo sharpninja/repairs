@@ -23,7 +23,7 @@ const server = http.createServer((req, res) => {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Connect-Protocol-Version, Connect-Timeout-Ms, X-Grpc-Web, X-User-Agent, Grpc-Timeout"
+    "Content-Type, Authorization, Connect-Protocol-Version, Connect-Timeout-Ms, X-Grpc-Web, X-User-Agent, Grpc-Timeout"
   );
   res.setHeader("Access-Control-Expose-Headers", "Grpc-Status, Grpc-Message");
   res.setHeader("Access-Control-Max-Age", "86400");

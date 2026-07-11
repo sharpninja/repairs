@@ -1,0 +1,536 @@
+{
+  "version": 3,
+  "note": "Vehicle selection retained after deleting the rejected generated guide batch. This file now captures researched roadside/driveway guide opportunities, not completed repair guides.",
+  "reviewedAtUtc": "2026-07-11T00:00:00Z",
+  "researchBasis": [
+    {
+      "source": "NHTSA TireWise",
+      "url": "https://www.nhtsa.gov/vehicle-safety/tires",
+      "usedFor": "Tire pressure, spare-tire readiness, TPMS, blowout safety, and tire-related crash risk."
+    },
+    {
+      "source": "AAA roadside assistance reporting via TIME",
+      "url": "https://time.com/6556242/electric-vehicle-aaa-roadside-calls/",
+      "usedFor": "Roadside-call reality check: tire damage and 12V battery issues dominate practical roadside assistance."
+    },
+    {
+      "source": "NHTSA recalls API sample",
+      "url": "https://api.nhtsa.gov/recalls/recallsByVehicle?make=Ford&model=Focus&modelYear=2014",
+      "usedFor": "Reminder to check VIN/recall status before turning a known defect into a DIY repair."
+    }
+  ],
+  "roadsideGuideRules": [
+    "A roadside guide must start with scene safety: get out of traffic, hazards on, visibility gear, passenger-side exit when needed, and call emergency services for crash, injury, fire, or unsafe shoulder.",
+    "The fix must require only common carried gear: phone, flashlight, gloves, reflective marker, tire gauge/inflator, spare/sealant kit, jump pack/cables, pliers, screwdriver, small socket/wrench set, fuses, tape, zip ties, water/coolant, washer fluid, and basic bulbs/blades.",
+    "The guide should get the driver to a safer place, home, or a shop. It should not pretend a roadside fix is a permanent repair.",
+    "Any fuel leak, brake hydraulic issue, steering loss, engine knock, oil-pressure warning, active fire risk, repeated stalling in traffic, or unsafe work location is a tow/shop decision."
+  ],
+  "roadsideProblemTypes": [
+    {
+      "id": "tire-low-or-slow-leak",
+      "title": "Low tire pressure or slow tread leak",
+      "roadsideFit": "excellent",
+      "driverCanDo": [
+        "Read the door-jamb PSI and check all tires including the spare.",
+        "Inflate a low tire with a 12V compressor.",
+        "Use sealant or a plug kit only for a small tread puncture when the vehicle is safely parked.",
+        "Drive slowly to a tire shop and recheck pressure."
+      ],
+      "doNotDo": [
+        "Do not plug sidewall damage.",
+        "Do not keep driving on a visibly flat tire.",
+        "Do not work beside fast traffic."
+      ],
+      "gear": [
+        "Tire gauge",
+        "12V inflator",
+        "Plug kit or OEM sealant kit",
+        "Gloves",
+        "Reflective triangle or flare"
+      ]
+    },
+    {
+      "id": "flat-tire-spare-change",
+      "title": "Flat tire spare install or OEM inflator-kit use",
+      "roadsideFit": "excellent if the shoulder is safe",
+      "driverCanDo": [
+        "Find the spare, jack points, wheel lock key, and lug wrench.",
+        "Chock the opposite wheel if available.",
+        "Loosen lugs before lifting, jack only at the approved point, install spare, and snug lugs in a star pattern.",
+        "Observe temporary spare speed and distance limits."
+      ],
+      "doNotDo": [
+        "Do not change a traffic-side tire on a narrow shoulder.",
+        "Do not crawl under a vehicle supported only by its jack.",
+        "Do not use a temporary spare for normal driving."
+      ],
+      "gear": [
+        "Spare or OEM tire repair kit",
+        "Jack",
+        "Lug wrench",
+        "Wheel lock key",
+        "Reflective marker",
+        "Gloves"
+      ]
+    },
+    {
+      "id": "dead-12v-battery",
+      "title": "Dead 12V battery, loose terminal, or left-lights-on discharge",
+      "roadsideFit": "excellent",
+      "driverCanDo": [
+        "Confirm symptoms: clicks, dim lights, no crank, or accessories work but engine will not crank.",
+        "Inspect battery terminals for looseness or corrosion.",
+        "Tighten a loose terminal if the cable is accessible.",
+        "Jump-start with a portable jump pack or another vehicle using the owner-manual jump points."
+      ],
+      "doNotDo": [
+        "Do not jump a cracked, frozen, leaking, swollen, or hot battery.",
+        "Do not guess on polarity.",
+        "Do not keep driving if the charging light remains on."
+      ],
+      "gear": [
+        "Jump pack or jumper cables",
+        "Safety glasses",
+        "Gloves",
+        "10mm wrench or small adjustable wrench",
+        "Battery terminal brush"
+      ]
+    },
+    {
+      "id": "fuse-or-relay-quick-check",
+      "title": "Blown fuse for lights, power outlet, wipers, washer pump, or trailer lights",
+      "roadsideFit": "good",
+      "driverCanDo": [
+        "Use the owner manual or fuse-box cover map.",
+        "Pull and inspect only the suspect fuse.",
+        "Replace with the same amperage rating.",
+        "Use the repair only to restore a safety-critical function long enough to get home or to a shop."
+      ],
+      "doNotDo": [
+        "Do not install a higher-amp fuse.",
+        "Do not wrap foil around a fuse.",
+        "Do not keep replacing a fuse that blows again immediately."
+      ],
+      "gear": [
+        "Fuse puller or needle-nose pliers",
+        "Mini and low-profile fuse assortment",
+        "Flashlight",
+        "Owner manual"
+      ]
+    },
+    {
+      "id": "visibility-wipers-washer-lights",
+      "title": "Visibility failure: wiper blade, washer fluid, headlight, brake light, or turn signal",
+      "roadsideFit": "good",
+      "driverCanDo": [
+        "Replace a torn snap-on wiper blade.",
+        "Refill washer fluid and clear clogged nozzles if accessible.",
+        "Replace an accessible exterior bulb or restore it with the correct fuse.",
+        "Clean headlight, camera, radar, and windshield surfaces before continuing."
+      ],
+      "doNotDo": [
+        "Do not drive in rain or darkness without working lights and wipers.",
+        "Do not disassemble bumper or sealed LED modules roadside.",
+        "Do not use plain water in freezing weather."
+      ],
+      "gear": [
+        "Spare wiper blade",
+        "Washer fluid",
+        "Microfiber towel",
+        "Basic bulb kit",
+        "Fuse assortment"
+      ]
+    },
+    {
+      "id": "overheat-coolant-triage",
+      "title": "Mild overheating or low coolant triage",
+      "roadsideFit": "limited but important",
+      "driverCanDo": [
+        "Turn off A/C, turn heat on if safe, and pull over.",
+        "Shut down and let the engine cool completely.",
+        "Check the coolant reservoir only when safe.",
+        "Top off the reservoir with premix coolant or water only as a temporary get-to-safety action."
+      ],
+      "doNotDo": [
+        "Do not open a hot radiator or pressure cap.",
+        "Do not drive with the temperature gauge in the red.",
+        "Do not continue if coolant pours out, steam is visible, or the belt is missing."
+      ],
+      "gear": [
+        "Premix coolant or water",
+        "Gloves",
+        "Flashlight",
+        "Towels",
+        "Phone for tow decision"
+      ]
+    },
+    {
+      "id": "minor-underbody-or-loose-trim",
+      "title": "Dragging splash shield, loose liner, or hanging trim",
+      "roadsideFit": "good if safely reachable",
+      "driverCanDo": [
+        "Stop before the part tears off or contacts the tire.",
+        "Secure loose plastic with zip ties or tape.",
+        "Remove only loose plastic that can be reached without crawling under the vehicle.",
+        "Drive slowly to a better repair location."
+      ],
+      "doNotDo": [
+        "Do not reach near hot exhaust.",
+        "Do not work under a vehicle on a shoulder.",
+        "Do not touch brake, fuel, steering, or suspension parts."
+      ],
+      "gear": [
+        "Zip ties",
+        "Duct tape",
+        "Pocket knife or snips",
+        "Flashlight",
+        "Gloves"
+      ]
+    },
+    {
+      "id": "light-traction-recovery",
+      "title": "Light snow, mud, gravel, or ice traction recovery",
+      "roadsideFit": "good if not high-centered or in traffic",
+      "driverCanDo": [
+        "Clear around tires and tailpipe.",
+        "Use traction mats, sand, kitty litter, or floor mats as a last resort.",
+        "Rock gently only if the owner manual allows it.",
+        "Stop before overheating the transmission or digging deeper."
+      ],
+      "doNotDo": [
+        "Do not stand in front of or behind a spinning tire.",
+        "Do not use tow straps without rated recovery points.",
+        "Do not continue if the vehicle is high-centered, near a ditch, or unstable."
+      ],
+      "gear": [
+        "Small shovel",
+        "Traction mat or sand",
+        "Gloves",
+        "Flashlight",
+        "Tow service contact"
+      ]
+    }
+  ],
+  "vehicles": [
+    {
+      "make": "Chevrolet",
+      "model": "Equinox",
+      "yearFrom": 2012,
+      "yearTo": 2017,
+      "engine": "2.4L I4 Ecotec LEA/LAF",
+      "drivetrain": "FWD/AWD",
+      "platform": "Theta crossover",
+      "primaryRoadsideGuide": "tire-low-or-slow-leak",
+      "alternateRoadsideGuides": [
+        "dead-12v-battery",
+        "overheat-coolant-triage",
+        "visibility-wipers-washer-lights"
+      ],
+      "vehicleNotes": "Crossover audience benefits from tire-pressure, inflator, spare-location, and jump-start guidance more than engine-internal work."
+    },
+    {
+      "make": "Chevrolet",
+      "model": "Malibu",
+      "yearFrom": 2016,
+      "yearTo": 2022,
+      "engine": "1.5L Turbo I4",
+      "drivetrain": "FWD",
+      "platform": "E2XX midsize sedan",
+      "primaryRoadsideGuide": "dead-12v-battery",
+      "alternateRoadsideGuides": [
+        "tire-low-or-slow-leak",
+        "visibility-wipers-washer-lights",
+        "fuse-or-relay-quick-check"
+      ],
+      "vehicleNotes": "Sedan guide should focus on no-crank triage, jump points, terminal access, and safe battery decisions."
+    },
+    {
+      "make": "Chevrolet",
+      "model": "Silverado 1500",
+      "yearFrom": 2014,
+      "yearTo": 2018,
+      "engine": "5.3L V8 L83",
+      "drivetrain": "4WD",
+      "platform": "K2XX full-size pickup",
+      "primaryRoadsideGuide": "flat-tire-spare-change",
+      "alternateRoadsideGuides": [
+        "dead-12v-battery",
+        "fuse-or-relay-quick-check",
+        "minor-underbody-or-loose-trim"
+      ],
+      "vehicleNotes": "Pickup-specific guide should cover under-bed spare lowering, wheel lock/key, heavy wheel handling, and trailer-light fuses."
+    },
+    {
+      "make": "Chevrolet",
+      "model": "Traverse",
+      "yearFrom": 2012,
+      "yearTo": 2017,
+      "engine": "3.6L V6 LLT/LFX",
+      "drivetrain": "FWD/AWD",
+      "platform": "Lambda full-size crossover",
+      "primaryRoadsideGuide": "flat-tire-spare-change",
+      "alternateRoadsideGuides": [
+        "dead-12v-battery",
+        "overheat-coolant-triage",
+        "visibility-wipers-washer-lights"
+      ],
+      "vehicleNotes": "Family-crossover roadside guide should emphasize passenger safety, shoulder choice, and spare/jack storage."
+    },
+    {
+      "make": "Dodge",
+      "model": "Journey",
+      "yearFrom": 2012,
+      "yearTo": 2020,
+      "engine": "3.6L Pentastar V6",
+      "drivetrain": "FWD/AWD",
+      "platform": "JC crossover",
+      "primaryRoadsideGuide": "dead-12v-battery",
+      "alternateRoadsideGuides": [
+        "flat-tire-spare-change",
+        "visibility-wipers-washer-lights",
+        "minor-underbody-or-loose-trim"
+      ],
+      "vehicleNotes": "Guide should cover jump-start access and battery/terminal triage without implying throttle or heater-core work is roadside."
+    },
+    {
+      "make": "Ford",
+      "model": "Edge",
+      "yearFrom": 2015,
+      "yearTo": 2022,
+      "engine": "2.0L EcoBoost I4 / 2.7L EcoBoost V6",
+      "drivetrain": "FWD/AWD",
+      "platform": "CD539 midsize crossover",
+      "primaryRoadsideGuide": "tire-low-or-slow-leak",
+      "alternateRoadsideGuides": [
+        "dead-12v-battery",
+        "visibility-wipers-washer-lights",
+        "minor-underbody-or-loose-trim"
+      ],
+      "vehicleNotes": "Modern crossover guide should verify whether the vehicle has a spare, run-flat, or sealant/inflator kit before giving tire steps."
+    },
+    {
+      "make": "Ford",
+      "model": "Escape",
+      "yearFrom": 2013,
+      "yearTo": 2019,
+      "engine": "1.6L/2.0L EcoBoost I4",
+      "drivetrain": "FWD/AWD",
+      "platform": "C520 compact crossover",
+      "primaryRoadsideGuide": "overheat-coolant-triage",
+      "alternateRoadsideGuides": [
+        "tire-low-or-slow-leak",
+        "dead-12v-battery",
+        "visibility-wipers-washer-lights"
+      ],
+      "vehicleNotes": "This must be a triage-and-tow-aware guide, not a cooling-system repair guide. Steam, red gauge, fast coolant loss, or fire risk means stop and tow."
+    },
+    {
+      "make": "Ford",
+      "model": "Explorer",
+      "yearFrom": 2012,
+      "yearTo": 2019,
+      "engine": "3.5L V6 / 3.5L EcoBoost V6",
+      "drivetrain": "FWD/AWD",
+      "platform": "D4 unibody SUV",
+      "primaryRoadsideGuide": "flat-tire-spare-change",
+      "alternateRoadsideGuides": [
+        "dead-12v-battery",
+        "overheat-coolant-triage",
+        "minor-underbody-or-loose-trim"
+      ],
+      "vehicleNotes": "Large SUV guide should focus on vehicle stability while jacking, heavy-wheel handling, and when the shoulder is too unsafe."
+    },
+    {
+      "make": "Ford",
+      "model": "F-150",
+      "yearFrom": 2012,
+      "yearTo": 2022,
+      "engine": "3.5L EcoBoost V6 / 5.0L V8",
+      "drivetrain": "4WD",
+      "platform": "P415/P552/P702 full-size pickup",
+      "primaryRoadsideGuide": "flat-tire-spare-change",
+      "alternateRoadsideGuides": [
+        "dead-12v-battery",
+        "fuse-or-relay-quick-check",
+        "light-traction-recovery"
+      ],
+      "vehicleNotes": "Truck guide should cover spare lowering, safe jack placement, tire weight, trailer-light fuse checks, and gentle traction recovery."
+    },
+    {
+      "make": "Ford",
+      "model": "Focus",
+      "yearFrom": 2012,
+      "yearTo": 2018,
+      "engine": "2.0L I4",
+      "drivetrain": "FWD",
+      "platform": "C346 compact car",
+      "primaryRoadsideGuide": "tire-low-or-slow-leak",
+      "alternateRoadsideGuides": [
+        "dead-12v-battery",
+        "fuse-or-relay-quick-check",
+        "visibility-wipers-washer-lights"
+      ],
+      "vehicleNotes": "Despite known purge-valve recalls, the roadside guide should prioritize tire and battery self-rescue plus VIN recall lookup for stalling."
+    },
+    {
+      "make": "Ford",
+      "model": "Fusion",
+      "yearFrom": 2013,
+      "yearTo": 2020,
+      "engine": "2.5L I4 / 2.0L EcoBoost I4",
+      "drivetrain": "FWD/AWD",
+      "platform": "CD4 midsize sedan",
+      "primaryRoadsideGuide": "dead-12v-battery",
+      "alternateRoadsideGuides": [
+        "tire-low-or-slow-leak",
+        "visibility-wipers-washer-lights",
+        "fuse-or-relay-quick-check"
+      ],
+      "vehicleNotes": "Sedan guide should cover jump-starting, battery terminal access, and no-start triage before any part replacement claims."
+    },
+    {
+      "make": "GMC",
+      "model": "Terrain",
+      "yearFrom": 2012,
+      "yearTo": 2017,
+      "engine": "2.4L I4 Ecotec LEA/LAF",
+      "drivetrain": "FWD/AWD",
+      "platform": "Theta crossover",
+      "primaryRoadsideGuide": "tire-low-or-slow-leak",
+      "alternateRoadsideGuides": [
+        "dead-12v-battery",
+        "overheat-coolant-triage",
+        "visibility-wipers-washer-lights"
+      ],
+      "vehicleNotes": "Same practical guide family as Equinox: tire pressure, spare/inflator, jump-start, and coolant triage only."
+    },
+    {
+      "make": "Hyundai",
+      "model": "Sonata",
+      "yearFrom": 2012,
+      "yearTo": 2019,
+      "engine": "2.4L Theta II I4",
+      "drivetrain": "FWD",
+      "platform": "YF/LF midsize sedan",
+      "primaryRoadsideGuide": "visibility-wipers-washer-lights",
+      "alternateRoadsideGuides": [
+        "dead-12v-battery",
+        "tire-low-or-slow-leak",
+        "fuse-or-relay-quick-check"
+      ],
+      "vehicleNotes": "Avoid engine-failure DIY. Good roadside content is visibility, jump-starting, tire inflation, and fuse checks."
+    },
+    {
+      "make": "Jeep",
+      "model": "Grand Cherokee",
+      "yearFrom": 2012,
+      "yearTo": 2022,
+      "engine": "3.6L Pentastar V6 / 5.7L HEMI V8",
+      "drivetrain": "4WD",
+      "platform": "WK2 midsize SUV",
+      "primaryRoadsideGuide": "flat-tire-spare-change",
+      "alternateRoadsideGuides": [
+        "light-traction-recovery",
+        "dead-12v-battery",
+        "minor-underbody-or-loose-trim"
+      ],
+      "vehicleNotes": "Guide should cover tire changes, traction aids, and loose underbody trim, not TIPM or oil-cooler replacement."
+    },
+    {
+      "make": "Jeep",
+      "model": "Wrangler",
+      "yearFrom": 2012,
+      "yearTo": 2022,
+      "engine": "3.6L Pentastar V6",
+      "drivetrain": "4WD",
+      "platform": "JK/JL off-road SUV",
+      "primaryRoadsideGuide": "light-traction-recovery",
+      "alternateRoadsideGuides": [
+        "flat-tire-spare-change",
+        "tire-low-or-slow-leak",
+        "minor-underbody-or-loose-trim"
+      ],
+      "vehicleNotes": "Wrangler-specific roadside guidance can cover safe traction recovery and tire/spare use, with clear warnings against unsafe recovery points."
+    },
+    {
+      "make": "Kia",
+      "model": "Optima",
+      "yearFrom": 2012,
+      "yearTo": 2020,
+      "engine": "2.4L Theta II I4",
+      "drivetrain": "FWD",
+      "platform": "TF/JF midsize sedan",
+      "primaryRoadsideGuide": "visibility-wipers-washer-lights",
+      "alternateRoadsideGuides": [
+        "dead-12v-battery",
+        "tire-low-or-slow-leak",
+        "fuse-or-relay-quick-check"
+      ],
+      "vehicleNotes": "Avoid engine-replacement framing. Roadside guide should focus on visibility, battery, tire, and fuse self-rescue."
+    },
+    {
+      "make": "Kia",
+      "model": "Sorento",
+      "yearFrom": 2012,
+      "yearTo": 2020,
+      "engine": "2.4L Theta II I4",
+      "drivetrain": "FWD/AWD",
+      "platform": "XM/UM midsize SUV",
+      "primaryRoadsideGuide": "flat-tire-spare-change",
+      "alternateRoadsideGuides": [
+        "dead-12v-battery",
+        "visibility-wipers-washer-lights",
+        "overheat-coolant-triage"
+      ],
+      "vehicleNotes": "Family-SUV guide should prioritize passenger safety, spare/jack storage, and tow decisions over powertrain fixes."
+    },
+    {
+      "make": "Nissan",
+      "model": "Altima",
+      "yearFrom": 2013,
+      "yearTo": 2018,
+      "engine": "2.5L I4 QR25DE",
+      "drivetrain": "FWD",
+      "platform": "L33 midsize sedan",
+      "primaryRoadsideGuide": "dead-12v-battery",
+      "alternateRoadsideGuides": [
+        "tire-low-or-slow-leak",
+        "visibility-wipers-washer-lights",
+        "fuse-or-relay-quick-check"
+      ],
+      "vehicleNotes": "Keep the roadside guide to battery/tire/visibility basics; CVT symptoms should route to tow/shop, not roadside repair."
+    },
+    {
+      "make": "Nissan",
+      "model": "Rogue",
+      "yearFrom": 2014,
+      "yearTo": 2020,
+      "engine": "2.5L I4 QR25DE",
+      "drivetrain": "FWD/AWD",
+      "platform": "T32 compact crossover",
+      "primaryRoadsideGuide": "tire-low-or-slow-leak",
+      "alternateRoadsideGuides": [
+        "flat-tire-spare-change",
+        "dead-12v-battery",
+        "visibility-wipers-washer-lights"
+      ],
+      "vehicleNotes": "Best fit is tire pressure/inflator/spare guidance. CVT complaints should be excluded from roadside DIY."
+    },
+    {
+      "make": "Ram",
+      "model": "1500",
+      "yearFrom": 2013,
+      "yearTo": 2022,
+      "engine": "5.7L HEMI V8",
+      "drivetrain": "4WD",
+      "platform": "DS/DT full-size pickup",
+      "primaryRoadsideGuide": "flat-tire-spare-change",
+      "alternateRoadsideGuides": [
+        "dead-12v-battery",
+        "fuse-or-relay-quick-check",
+        "light-traction-recovery"
+      ],
+      "vehicleNotes": "Truck guide should cover heavy wheel handling, spare lowering, trailer-light fuses, and traction recovery boundaries."
+    }
+  ]
+}
