@@ -80,8 +80,59 @@ stages:
     - checkout: none
     - powershell: |
         $ver = "$(Build.BuildNumber)"
+        $octopusUrl = $env:OCTOPUS_URL
+        if ([string]::IsNullOrWhiteSpace($octopusUrl)) { $octopusUrl = "http://payton-desktop:8065" }
+        $octopusUrl = $octopusUrl.TrimEnd("/")
+        $octopusApiKey = $env:OCTOPUS_API_KEY
+        if ([string]::IsNullOrWhiteSpace($octopusApiKey)) { throw "OCTOPUS_API_KEY is not set" }
+        $octopusHeaders = @{ "X-Octopus-ApiKey" = $octopusApiKey }
+        function Invoke-OctopusApi([string]$Path) {
+          $uri = if ($Path.StartsWith("http", [System.StringComparison]::OrdinalIgnoreCase)) { $Path } else { "$octopusUrl$Path" }
+          Invoke-RestMethod -Method Get -Uri $uri -Headers $octopusHeaders
+        }
+        function Get-OctopusNamedItem([array]$Items, [string]$Name, [string]$Kind) {
+          $item = @($Items | Where-Object { $_.Name -eq $Name })[0]
+          if (-not $item) { throw "Octopus $Kind not found: $Name" }
+          $item
+        }
+        function Wait-OctopusDeployment([string]$Version) {
+          $space = Get-OctopusNamedItem (Invoke-OctopusApi "/api/spaces/all") "$(octopusSpace)" "space"
+          $project = Get-OctopusNamedItem (Invoke-OctopusApi "/api/$($space.Id)/projects/all") "$(octopusProject)" "project"
+          $environment = Get-OctopusNamedItem (Invoke-OctopusApi "/api/$($space.Id)/environments/all") "$(octopusEnvironment)" "environment"
+          $release = Invoke-OctopusApi "/api/$($space.Id)/projects/$($project.Id)/releases/$Version"
+          $deadline = (Get-Date).AddMinutes(30)
+          $lastTaskState = ""
+          do {
+            $deployments = Invoke-OctopusApi "/api/$($space.Id)/releases/$($release.Id)/deployments?skip=0&take=20"
+            $deployment = @($deployments.Items |
+              Where-Object { $_.EnvironmentId -eq $environment.Id } |
+              Sort-Object Created -Descending |
+              Select-Object -First 1)
+            if (-not $deployment) {
+              Write-Host "Waiting for Octopus deployment record for release $Version..."
+              Start-Sleep -Seconds 5
+              continue
+            }
+            $task = Invoke-OctopusApi "/api/$($space.Id)/tasks/$($deployment.TaskId)"
+            $state = "$($task.Id): $($task.State)"
+            if ($state -ne $lastTaskState) {
+              Write-Host "Octopus deployment task $state"
+              $lastTaskState = $state
+            }
+            if ($task.IsCompleted) {
+              if (-not $task.FinishedSuccessfully) {
+                throw "Octopus deployment $($deployment.Id) failed: $($task.ErrorMessage)"
+              }
+              Write-Host "Octopus deployment $($deployment.Id) completed successfully."
+              return
+            }
+            Start-Sleep -Seconds 10
+          } while ((Get-Date) -lt $deadline)
+          throw "Timed out waiting for Octopus deployment for release $Version"
+        }
         octopus release create --project "$(octopusProject)" --version $ver --no-prompt
         if ($LASTEXITCODE -ne 0) { throw "octopus release create failed" }
         octopus release deploy --project "$(octopusProject)" --version $ver --environment "$(octopusEnvironment)" --no-prompt
         if ($LASTEXITCODE -ne 0) { throw "octopus release deploy failed" }
+        Wait-OctopusDeployment $ver
       displayName: Create + deploy Octopus release
