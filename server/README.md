@@ -183,8 +183,20 @@ curl -sS http://localhost:8788/repairs.v1.SubmissionService/SubmitRepair \
   -d '{"guideJson":"{\"title\":\"Example\",\"phases\":[{\"name\":\"Phase 1\",\"steps\":[]}]}"}'
 ```
 
+To avoid conflicting PRs when publishing a set of guides, the bearer path also
+accepts `guideJson` as a JSON array of guide objects and opens one PR containing
+the full batch. Session-authenticated browser submissions remain single-guide only.
+
 The direct bearer path is intentionally limited to guide submission
 (`SubmitRepair`). Reviews still require a user session.
+
+To submit one or more guide exports from a server-side script:
+
+```bash
+cd server
+DIRECT_SUBMIT_BEARER_TOKEN=... npm run submit-direct -- guide.json
+DIRECT_SUBMIT_BEARER_TOKEN=... npm run submit-direct -- --catalog ../docs/marketplace.json --filter '^mkt-roadside-'
+```
 
 ## Security notes
 

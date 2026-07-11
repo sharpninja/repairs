@@ -2,7 +2,7 @@
 //   node tests/direct-submit-auth.test.mjs
 import assert from "node:assert/strict";
 
-const { directSubmitUser } = await import("../server/src/impl.js");
+const { directSubmitUser, repairGuidesFromJson } = await import("../server/src/impl.js");
 
 let pass = 0;
 const t = (name, cond) => { assert.ok(cond, name); console.log("  ✓ " + name); pass++; };
@@ -35,6 +35,19 @@ console.log("direct guide submit auth");
   const env = { DIRECT_SUBMIT_BEARER_TOKEN: "a".repeat(64) };
   const err = errOf(() => directSubmitUser(ctx(`Bearer ${"a".repeat(64)}`), env));
   t("audit email is required for direct auth", err && /audit identity/.test(err.message));
+}
+{
+  const guide = { title: "One", phases: [{ name: "P", steps: [] }] };
+  t("single guide JSON parses for normal submit", repairGuidesFromJson(JSON.stringify(guide), false).length === 1);
+}
+{
+  const guides = [
+    { title: "One", phases: [{ name: "P", steps: [] }] },
+    { title: "Two", phases: [{ name: "P", steps: [] }] },
+  ];
+  t("guide array parses for direct submit", repairGuidesFromJson(JSON.stringify(guides), true).length === 2);
+  const err = errOf(() => repairGuidesFromJson(JSON.stringify(guides), false));
+  t("guide array is rejected without direct auth", err && /requires direct bearer auth/.test(err.message));
 }
 
 console.log(`\n${pass} assertions passed.`);

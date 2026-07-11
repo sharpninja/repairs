@@ -120,21 +120,41 @@ export async function getStatuses(numbers) {
   return out;
 }
 
-export async function openRepairPR({ user, guide }) {
+function addGuideEntries(catalog, guides, user) {
+  const used = new Set((catalog.guides || []).map((g) => g.id).filter(Boolean));
+  const now = Date.now();
+  const when = stamp();
+  return guides.map((guide, i) => {
+    const base = `mkt-${slug(guide.title)}-${when}${guides.length > 1 ? "-" + (i + 1) : ""}`;
+    let id = base, n = 2;
+    while (used.has(id)) id = `${base}-${n++}`;
+    used.add(id);
+    catalog.guides.push({ id, guide, rating: { avg: 0, count: 0 }, reviews: [], submittedBy: user.email, submittedAt: now });
+    return { id, guide };
+  });
+}
+
+export async function openGuidesPR({ user, guides }) {
   const kit = octo();
   const branch = await branchFrom(kit);
   const { sha, catalog } = await loadCatalog(kit, branch);
-  const id = `mkt-${slug(guide.title)}-${stamp()}`;
   catalog.guides = catalog.guides || [];
-  catalog.guides.push({ id, guide, rating: { avg: 0, count: 0 }, reviews: [], submittedBy: user.email, submittedAt: Date.now() });
-  await putCatalog(kit, branch, sha, catalog, `Add community guide: ${guide.title} (${user.email})`);
+  const added = addGuideEntries(catalog, guides, user);
+  const one = added.length === 1 ? added[0] : null;
+  await putCatalog(kit, branch, sha, catalog, one ? `Add community guide: ${one.guide.title} (${user.email})` : `Add ${added.length} community guides (${user.email})`);
   const pr = await kit.pulls.create({
     owner: OWNER, repo: REPO, base: BASE, head: branch,
-    title: `New guide: ${guide.title}`,
+    title: one ? `New guide: ${one.guide.title}` : `New guides: ${added.length} roadside guides`,
     body: `Community guide submitted from the app by **${user.name || user.email}** (${user.email}).\n\n` +
-      `Catalog id: \`${id}\`\nPhases: ${(guide.phases || []).map((p) => p.name).join(" · ")}\n\n` +
+      (one
+        ? `Catalog id: \`${one.id}\`\nPhases: ${(one.guide.phases || []).map((p) => p.name).join(" · ")}\n\n`
+        : added.map((x) => `- \`${x.id}\` — ${x.guide.title}`).join("\n") + "\n\n") +
       `⚠️ Review for safety and accuracy before merging.`,
   });
   await afterPR(kit, pr.data.number, user.email);
   return pr.data;
+}
+
+export async function openRepairPR({ user, guide }) {
+  return openGuidesPR({ user, guides: [guide] });
 }

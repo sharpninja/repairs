@@ -5,7 +5,7 @@ import { getStrategy } from "./auth/index.js";
 import { appendFileSync, mkdirSync, statSync } from "node:fs";
 import { dirname } from "node:path";
 import { timingSafeEqual } from "node:crypto";
-import { openReviewPR, openRepairPR, getStatuses } from "./github.js";
+import { openReviewPR, openRepairPR, openGuidesPR, getStatuses } from "./github.js";
 import { createSession, rotateSession, resolveSession } from "./session.js";
 import { isBlocked, tryConsumeRate } from "./store.js";
 
@@ -39,6 +39,20 @@ export function directSubmitUser(context, env = process.env) {
   const email = String(env.DIRECT_SUBMIT_AUTHOR_EMAIL || "").trim();
   if (!email) throw new ConnectError("DIRECT_SUBMIT_AUTHOR_EMAIL is required for direct guide submit audit identity", Code.FailedPrecondition);
   return { email, name: String(env.DIRECT_SUBMIT_AUTHOR_NAME || "").trim() };
+}
+export function repairGuidesFromJson(guideJson, allowBatch = false) {
+  let parsed;
+  try { parsed = JSON.parse(guideJson || ""); }
+  catch (e) { throw new ConnectError("guideJson is not valid JSON", Code.InvalidArgument); }
+  const guides = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.guides) ? parsed.guides : [parsed]);
+  if (guides.length > 1 && !allowBatch) throw new ConnectError("Batch guide submission requires direct bearer auth", Code.PermissionDenied);
+  if (!guides.length) throw new ConnectError("Guide needs a title and at least one phase", Code.InvalidArgument);
+  for (const guide of guides) {
+    if (!guide || typeof guide.title !== "string" || !Array.isArray(guide.phases) || !guide.phases.length) {
+      throw new ConnectError("Guide needs a title and at least one phase", Code.InvalidArgument);
+    }
+  }
+  return guides;
 }
 
 export async function startSession(req) {
@@ -82,16 +96,11 @@ export async function submitReview(req) {
 export async function submitRepair(req, context) {
   const directUser = directSubmitUser(context);
   const { user, silent } = directUser ? { user: directUser, silent: false } : guard(req.sessionKey);
-  let guide;
-  try { guide = JSON.parse(req.guideJson || ""); }
-  catch (e) { throw new ConnectError("guideJson is not valid JSON", Code.InvalidArgument); }
-  if (!guide || typeof guide.title !== "string" || !Array.isArray(guide.phases) || !guide.phases.length) {
-    throw new ConnectError("Guide needs a title and at least one phase", Code.InvalidArgument);
-  }
+  const guides = repairGuidesFromJson(req.guideJson, !!directUser);
   if (silent) { console.warn("silently dropping repair from untrusted user", user.email); return RECEIVED; }
   try {
-    const pr = await openRepairPR({ user, guide });
-    return { ok: true, prUrl: pr.html_url, prNumber: pr.number, message: "Repair PR opened" };
+    const pr = guides.length === 1 ? await openRepairPR({ user, guide: guides[0] }) : await openGuidesPR({ user, guides });
+    return { ok: true, prUrl: pr.html_url, prNumber: pr.number, message: guides.length === 1 ? "Repair PR opened" : "Guide batch PR opened" };
   } catch (e) { throw wrap(e); }
 }
 
