@@ -44,16 +44,32 @@ documents:
   platforms:
   - github
   - azure
+- id: project-readme
+  title: Project README
+  source: README.md
+  target: Project-README.md
+  platforms:
+  - github
+  - azure
+- id: server-submit-service
+  title: Submit Service
+  source: server/README.md
+  target: Submit-Service.md
+  platforms:
+  - github
+  - azure
 navigation:
 - document: home
-  children: &o0 []
+  children:
+  - document: project-readme
+  - document: server-submit-service
 - document: functional
-  children: *o0
+  children: []
 - document: technical
-  children: *o0
+  children: []
 - document: testing
-  children: *o0
+  children: []
 - document: mapping
-  children: *o0
+  children: []
 - document: matrix
-  children: *o0
+  children: []

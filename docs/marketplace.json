@@ -241,8 +241,8 @@
       "id": "mkt-roadside-spare-car-suv",
       "guide": {
         "title": "Flat Tire Spare Install — Cars, Crossovers, and SUVs",
-        "subtitle": "Equinox, Malibu, Traverse, Journey, Edge, Escape, Explorer, Focus, Fusion, Terrain, Sonata, Grand Cherokee, Wrangler, Optima, Sorento, Altima, Rogue",
-        "safety": "Change a tire only on firm, level ground away from traffic. Never crawl under a vehicle supported by the factory jack. If the flat is on the traffic side or the shoulder is narrow, call for roadside assistance.",
+        "subtitle": "Common 2012–2022 cars, crossovers, and SUVs in the selected set; verify the exact trim has a spare, jack, and documented lift points",
+        "safety": "Change a tire only on firm, level ground away from traffic. This is a roadside workflow, not a vehicle-specific lift-point or torque chart. Never crawl under a vehicle supported by the factory jack. If the flat is on the traffic side or the shoulder is narrow, call for roadside assistance.",
         "region": "us",
         "env": ["roadside", "driveway"],
         "fits": { "makes": ["Chevrolet", "Dodge", "Ford", "GMC", "Hyundai", "Jeep", "Kia", "Nissan"], "models": ["Equinox", "Malibu", "Traverse", "Journey", "Edge", "Escape", "Explorer", "Focus", "Fusion", "Terrain", "Sonata", "Grand Cherokee", "Wrangler", "Optima", "Sorento", "Altima", "Rogue"], "yearFrom": 2012, "yearTo": 2022 },
@@ -251,23 +251,24 @@
             "steps": [
               { "t": "Find the spare, jack, lug wrench, and lock key", "allowMedia": true,
                 "body": [
-                  { "type": "steps", "items": ["Check the cargo floor, side compartment, tailgate area, or rear-mounted spare location.", "Find the jack point in the owner manual or stamped pinch-weld mark.", "Set the parking brake and chock a wheel opposite the flat if you have a chock or a solid improvised block."] },
-                  { "type": "crit", "title": "Some trims have no spare", "text": "If the vehicle has only an inflator/sealant kit and the tire is shredded, sidewall-damaged, or off the bead, call for a tow." }
+                  { "type": "steps", "items": ["Check the cargo floor, side compartment, tailgate area, or rear-mounted spare location.", "Open the owner manual jack section for your exact year, model, body style, and trim before lifting.", "Use only the lift point shown in the owner manual or a factory-stamped pinch-weld mark that matches that diagram.", "Set the parking brake and chock a wheel opposite the flat if you have a chock or a solid improvised block."] },
+                  { "type": "crit", "title": "Some trims have no spare", "text": "If the vehicle has only an inflator/sealant kit and the tire is shredded, sidewall-damaged, or off the bead, call for a tow." },
+                  { "type": "note", "title": "Fitment limit", "text": "The listed vehicles share the same basic spare-tire workflow, but spare location, jack storage, lift points, wheel locks, compact-spare limits, and lug torque can vary by trim and wheel package." }
                 ] }
             ] },
           { "name": "Phase 2 · Tool Choice", "color": "#d97757",
             "steps": [
               { "t": "Use the safest lifting tools available", "allowMedia": true,
                 "body": [
-                  { "type": "check", "items": ["Proper tool: factory jack at the correct jack point, wheel chocks, breaker bar, torque wrench, wheel lock key, gloves, and reflective marker.", "Likely-carried tool: OEM scissor jack, OEM lug wrench, spare-tire kit, floor mat as a kneeling pad, phone flashlight, and a passenger watching traffic.", "No-go if: ground is soft, sloped, icy, narrow, or the wheel cannot be safely removed without entering traffic."] },
-                  { "type": "spec", "text": "Lug-nut torque varies by vehicle and wheel.", "verify": "Use the owner manual or service data for the exact VIN; temporary roadside tightening must be rechecked with a torque wrench." }
+                  { "type": "check", "items": ["Proper tool: owner manual or service data for the exact vehicle, factory jack at the verified lift point, wheel chocks, breaker bar, torque wrench, wheel lock key, gloves, and reflective marker.", "Likely-carried tool: OEM scissor jack, OEM lug wrench, spare-tire kit, floor mat as a kneeling pad, phone flashlight, and a passenger watching traffic.", "No-go if: you cannot confirm the lift point, ground is soft, sloped, icy, narrow, or the wheel cannot be safely removed without entering traffic."] },
+                  { "type": "spec", "text": "Lug-nut torque varies by vehicle, wheel, trim, and model year.", "verify": "Use the owner manual or service data for the exact VIN; temporary roadside tightening must be rechecked with a torque wrench before normal driving." }
                 ] }
             ] },
           { "name": "Phase 3 · Change and Verify", "color": "#3f8a49",
             "steps": [
               { "t": "Install the spare and limit speed", "allowMedia": false,
                 "body": [
-                  { "type": "steps", "items": ["Loosen lug nuts 1/2 turn while the tire is on the ground.", "Jack only at the approved point until the tire clears the ground.", "Install the spare, hand-start all lug nuts, snug in a star pattern, lower the vehicle, then tighten again in a star pattern.", "Stow the flat, tools, and jack before driving."] },
+                  { "type": "steps", "items": ["Loosen lug nuts 1/2 turn while the tire is on the ground.", "Jack only at the verified owner-manual or matching stamped lift point until the tire clears the ground.", "Install the spare, hand-start all lug nuts, snug in a star pattern, lower the vehicle, then tighten again in a star pattern.", "Stow the flat, tools, and jack before driving."] },
                   { "type": "check", "items": ["All lugs hand-started without cross-threading", "Jack removed and tools stowed", "Temporary spare speed and distance limits followed", "Lug torque and tire pressure rechecked at home or shop"] }
                 ] }
             ] }
@@ -295,8 +296,8 @@
       "id": "mkt-roadside-spare-pickup-underbody",
       "guide": {
         "title": "Flat Tire Spare Install — Underbody Pickup Spare",
-        "subtitle": "Silverado 1500, F-150, and Ram 1500 roadside spare workflow",
-        "safety": "Pickup spares are heavy and often stored under the bed. Work only on firm, level ground away from traffic. Do not put any part of your body under the truck while it is supported only by the jack.",
+        "subtitle": "Silverado 1500, F-150, and Ram 1500 roadside spare workflow; verify the exact truck, trim, drivetrain, wheel package, and lift points",
+        "safety": "Pickup spares are heavy and often stored under the bed. This is a roadside workflow, not a vehicle-specific lift-point, spare-hoist, or lug-torque chart. Work only on firm, level ground away from traffic. Do not put any part of your body under the truck while it is supported only by the jack.",
         "region": "us",
         "env": ["roadside", "driveway"],
         "fits": { "makes": ["Chevrolet", "Ford", "Ram"], "models": ["Silverado 1500", "F-150", "1500"], "yearFrom": 2012, "yearTo": 2022 },
@@ -305,23 +306,24 @@
             "steps": [
               { "t": "Assemble the spare-lowering kit", "allowMedia": true,
                 "body": [
-                  { "type": "steps", "items": ["Find the jack, lug wrench, spare crank rods, wheel lock key if equipped, and the spare access hole.", "Use the owner manual diagram; pickup crank rods often assemble in a specific order.", "Lower the spare fully, slide it out, and confirm it is inflated and not rust-stuck or cable-damaged."] },
-                  { "type": "crit", "title": "Do not improvise the hoist drive", "text": "If the spare hoist, key, or cable is seized, roadside force can strand the truck worse. Call assistance." }
+                  { "type": "steps", "items": ["Find the jack, lug wrench, spare crank rods, wheel lock key if equipped, and the spare access hole.", "Use the owner manual diagram for the exact truck; pickup crank rods, access locks, and hoist routing vary by cab, bed, trim, and model year.", "Before lifting, open the owner manual jack section and identify the exact axle, frame, or control-point location shown for that wheel.", "Lower the spare fully, slide it out, and confirm it is inflated and not rust-stuck or cable-damaged."] },
+                  { "type": "crit", "title": "Do not improvise the hoist drive", "text": "If the spare hoist, key, or cable is seized, roadside force can strand the truck worse. Call assistance." },
+                  { "type": "note", "title": "Fitment limit", "text": "Silverado 1500, F-150, and Ram 1500 trucks share the same underbody-spare workflow, but lift points, hoist keys, jack placement, wheel locks, load rating, and lug torque vary by exact year, trim, drivetrain, wheel package, and bed/cab configuration." }
                 ] }
             ] },
           { "name": "Phase 2 · Tool Choice", "color": "#d97757",
             "steps": [
               { "t": "Use pickup-rated lifting and lug tools", "allowMedia": true,
                 "body": [
-                  { "type": "check", "items": ["Proper tool: OEM spare-lowering kit, rated bottle/factory jack at the correct axle/frame point, wheel chocks, breaker bar, torque wrench, gloves, and kneeling pad.", "Likely-carried tool: factory jack, crank rods, OEM lug wrench, hitch-area access tools, phone flashlight, and work gloves.", "No-go if: loaded trailer, unstable cargo, soft shoulder, seized spare hoist, missing lock key, or traffic-side work."] },
-                  { "type": "spec", "text": "Pickup lug torque is high and varies by truck and wheel.", "verify": "Use the exact owner manual torque and recheck with a torque wrench as soon as practical." }
+                  { "type": "check", "items": ["Proper tool: owner manual or service data for the exact truck, OEM spare-lowering kit, rated bottle/factory jack at the verified axle/frame lift point, wheel chocks, breaker bar, torque wrench, gloves, and kneeling pad.", "Likely-carried tool: factory jack, crank rods, OEM lug wrench, hitch-area access tools, phone flashlight, and work gloves.", "No-go if: you cannot confirm the lift point, loaded trailer, unstable cargo, soft shoulder, seized spare hoist, missing lock key, or traffic-side work."] },
+                  { "type": "spec", "text": "Pickup lug torque is high and varies by truck, wheel, trim, and model year.", "verify": "Use the exact owner manual or service-data torque for the VIN and recheck with a torque wrench before normal driving or towing." }
                 ] }
             ] },
           { "name": "Phase 3 · Install and Recheck", "color": "#3f8a49",
             "steps": [
               { "t": "Mount the spare and secure the flat", "allowMedia": false,
                 "body": [
-                  { "type": "steps", "items": ["Break lug nuts loose before lifting.", "Lift at the approved point; keep the truck as low as possible while clearing the tire.", "Hand-start all lug nuts, snug in a star pattern, lower, then tighten in stages.", "Secure the flat tire in the bed or underbody carrier only if the hoist and cable are working correctly."] },
+                  { "type": "steps", "items": ["Break lug nuts loose before lifting.", "Lift only at the owner-manual verified axle/frame point for that wheel; keep the truck as low as possible while clearing the tire.", "Hand-start all lug nuts, snug in a star pattern, lower, then tighten in stages.", "Secure the flat tire in the bed or underbody carrier only if the hoist and cable are working correctly."] },
                   { "type": "check", "items": ["Spare seated flat on hub", "All lugs snugged in pattern", "Flat tire and tools secured", "Trailer towing paused until tire, torque, and load rating are verified"] }
                 ] }
             ] }

@@ -96,6 +96,10 @@ Set **`ADMIN_TOKEN`** (e.g. `openssl rand -hex 32`) and open **`/admin?token=<AD
 and the **ban** audit log. With `ADMIN_TOKEN` unset the `/admin` route is disabled (404); a
 missing/invalid token returns 401.
 
+Rows that reference a GitHub PR render the PR number as a link, so maintainers can jump from
+the live status, moderation-log, or ban tables directly to the submitted PR. The dashboard
+contains no client-side JavaScript and escapes stored log content before rendering.
+
 ### Store listing URLs
 
 Google Play Console and Apple App Store Connect require **public URLs** for the privacy policy

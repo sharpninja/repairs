@@ -38,7 +38,9 @@ on demand.
   an active vehicle a **"For your 2018 Honda CR-V"** section surfaces the guides that match —
   install any with one tap. The catalog is read from a **separate data repo's published
   branch** (see [Code/data split](#codedata-split)) and cached for **offline** browsing,
-  with [`docs/marketplace.json`](docs/marketplace.json) as the bundled seed/fallback.
+  with [`docs/marketplace.json`](docs/marketplace.json) as the bundled seed/fallback. The
+  current seed includes practical roadside/driveway guides for the selected 2012-2022
+  vehicles, with exact-trim manual checks for lift points and torque where needed.
 - **Ratings & reviews** — rate a guide with **stars** and write a review. Ratings shown
   combine the community seed with your own, stored **on-device**.
 - **Submit to the catalog by PR (optional)** — with the [submit service](server/) running,
@@ -52,6 +54,9 @@ on demand.
   dropping submissions from users with a bad record), **rate-limits** to one submission per
   minute, mints a **session key** on Google sign-in that every submission is tagged with, and
   the app **polls your open PRs on startup and notifies you when one goes live**.
+- **Operator submit + admin dashboard** — trusted maintainers can submit guide exports directly
+  with a server-side bearer token, and the token-gated `/admin` dashboard shows open PR verdicts,
+  moderation history, client-error logs, bans, and clickable PR links for review.
 - **Vehicles by VIN** — save your cars by **VIN** in **🚗 My vehicles**. Read the VIN three
   ways: **scan the barcode** on the driver's door-jamb sticker (offline, via the browser's
   `BarcodeDetector`), **📷 read a stamped VIN** (dashboard plate or sticker) with Claude
@@ -136,7 +141,7 @@ relative, so it runs correctly under the `/<repo>/` subpath.
 | [`scripts/package-apps.ps1`](scripts/package-apps.ps1) · [`package-android.ps1`](scripts/package-android.ps1) · [`package-ios.ps1`](scripts/package-ios.ps1) | Package the PWA for the stores. **Android**: Bubblewrap TWA → signed `.aab` + `docs/.well-known/assetlinks.json`. **iOS**: PWABuilder Xcode project (build/upload on a Mac). `package-apps.ps1` orchestrates both; outputs to `dist/`. |
 | `docs/manifest.webmanifest` · `docs/sw.js` · `docs/icon-*.png` · [`docs/favicon.svg`](docs/favicon.svg) | PWA manifest, offline service worker, app icons and favicon. |
 | [`guide/`](guide/) | The built-in CR-V guide as a standalone **slideshow + printable PDF** (see [below](#also-available-as-a-slideshow--pdf)). |
-| [`server/`](server/) | **Optional** Dockerized **gRPC / Connect** submit service — Google sign-in → session key → GitHub PRs, with Claude moderation, per-user trust, and rate limiting. The app works fully without it. |
+| [`server/`](server/) | **Optional** Dockerized **gRPC / Connect** submit service — Google sign-in → session key → GitHub PRs, direct operator guide submit, Claude moderation, admin dashboard, per-user trust, and rate limiting. The app works fully without it. |
 | [`tests/`](tests/) | Backend unit tests (trust / rate limit / sessions) + headless **client↔server integration tests** covering every interaction. Run with [`tests/run.ps1`](tests/run.ps1). |
 
 The **app** itself is one static folder — nothing to build or install. The **submit
@@ -154,6 +159,10 @@ for you, using the optional [`server/`](server/) service:
    **Google client ID**.
 3. Sign in with Google and hit **🚀 Submit** — the service verifies your Google identity,
    commits to a branch, and opens a PR crediting you. A maintainer reviews and merges.
+
+Maintainers can also use the server-side direct guide submit path for trusted imports. That
+path requires `DIRECT_SUBMIT_BEARER_TOKEN` plus an explicit audit identity in the service
+environment and is documented in [`server/README.md`](server/README.md#direct-operator-guide-submit).
 
 Because GitHub write access can't come from a Google login alone (and browsers can't call
 GitHub's token endpoints directly), this one feature needs a tiny backend — everything else
@@ -304,6 +313,6 @@ directly from your browser to `api.anthropic.com` using **your own** API key (st
 in your browser, via the `anthropic-dangerous-direct-browser-access` header), plus reading
 the guide catalog from GitHub and the optional community-submission backend. **YouTube**
 videos in a guide load only when tapped (from `youtube-nocookie.com`). **Amazon** links may
-carry an affiliate tag if you set one in Settings (as an Amazon Associate we earn from
+carry a backend-provided affiliate tag (as an Amazon Associate we earn from
 qualifying purchases). The app also ships in-app **Privacy** and **Terms** pages, linked in
 the Home and Guide footers. No secrets are in this repo.

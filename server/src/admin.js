@@ -6,9 +6,28 @@ import { listOpenSubmissionPRs } from "./github.js";
 
 // Read the SAME file the client-error RPC writes (impl.js CLIENT_ERRORS_STORE).
 const CLIENT_ERRORS_STORE = process.env.CLIENT_ERRORS_STORE || "/app/data/client-errors.jsonl";
+const GITHUB_OWNER = process.env.GITHUB_OWNER || "sharpninja";
+const GITHUB_REPO = process.env.GITHUB_REPO || "repairs-data";
 
 const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const cell = (v) => `<td>${esc(Array.isArray(v) ? v.join(", ") : v)}</td>`;
+const raw = (html) => ({ html });
+const cell = (v) => `<td>${v && typeof v === "object" && typeof v.html === "string" ? v.html : esc(Array.isArray(v) ? v.join(", ") : v)}</td>`;
+
+function githubPrUrl(url) {
+  try {
+    const u = new URL(String(url || ""));
+    if (u.protocol !== "https:" || u.hostname !== "github.com" || !/\/pull\/\d+\/?$/.test(u.pathname)) return "";
+    return u.href;
+  } catch (e) { return ""; }
+}
+
+function prLink(row) {
+  const number = Number(row && (row.number || row.prNumber));
+  const label = Number.isInteger(number) && number > 0 ? `#${number}` : "PR";
+  const href = githubPrUrl(row && (row.url || row.prUrl)) ||
+    (Number.isInteger(number) && number > 0 ? `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/pull/${number}` : "");
+  return href ? raw(`<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`) : "";
+}
 
 function tokenFrom(req) {
   const h = req.headers && req.headers["x-admin-token"];
@@ -27,7 +46,7 @@ function renderHtml({ prs, mod, errs, bans }) {
   const prSection = prs === null
     ? `<p class="empty">Live GitHub PR status unavailable (no credentials or API error). Persisted moderation log is below.</p>`
     : table(["PR", "Title", "State", "Verdict", "Injection"], prs,
-        [(r) => `#${r.number}`, (r) => r.title, (r) => r.state, (r) => r.verdict, (r) => (r.injection ? "yes" : "")],
+        [(r) => prLink(r), (r) => r.title, (r) => r.state, (r) => r.verdict, (r) => (r.injection ? "yes" : "")],
         "No open submission PRs.");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>AI Auto Repairman - admin</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -44,13 +63,13 @@ function renderHtml({ prs, mod, errs, bans }) {
 <main>
   <h2>Moderation status (open submission PRs)</h2>${prSection}
   <h2>Moderation log (${mod.length})</h2>${table(["When", "PR", "Submitter", "Decision", "Sev", "Categories", "Summary"], mod,
-    [(r) => r.ts, (r) => (r.prNumber ? `#${r.prNumber}` : ""), (r) => r.submitter, (r) => (r.injection ? "reject (injection)" : r.decision), (r) => r.severity, (r) => r.categories, (r) => r.summary],
+    [(r) => r.ts, (r) => prLink(r), (r) => r.submitter, (r) => (r.injection ? "reject (injection)" : r.decision), (r) => r.severity, (r) => r.categories, (r) => r.summary],
     "No moderation recorded yet.")}
   <h2>Error logs (${errs.length}, deidentified)</h2>${table(["When", "Context", "Route", "App", "Message", "Stack"], errs,
     [(r) => new Date(r.receivedAt || r.ts || 0).toISOString(), (r) => r.context, (r) => r.route, (r) => r.appVersion, (r) => r.message, (r) => (r.stack || "").slice(0, 300)],
     "No client errors reported.")}
   <h2>Bans (${bans.length})</h2>${table(["When", "Email", "Reason", "PR", "Verdict summary"], bans,
-    [(r) => r.ts, (r) => r.email, (r) => r.reason, (r) => (r.prNumber ? `#${r.prNumber}` : ""), (r) => (r.verdict && r.verdict.summary) || ""],
+    [(r) => r.ts, (r) => r.email, (r) => r.reason, (r) => prLink(r), (r) => (r.verdict && r.verdict.summary) || ""],
     "No bans recorded.")}
 </main></body></html>`;
 }
