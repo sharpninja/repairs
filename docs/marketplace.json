@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "note": "Community guide catalog. Ratings/reviews here are curated seeds; your own ratings and AI-moderated reviews are stored on your device and can be exported to contribute.",
   "guides": [
     {
@@ -130,6 +130,544 @@
       "reviews": [
         { "author": "firsttimer", "stars": 5, "text": "Clear enough that I did my first oil change with zero drama. The crush-washer warning is gold.", "ts": 1715000000000 }
       ]
+    },
+    {
+      "id": "mkt-roadside-safety-first",
+      "guide": {
+        "title": "Roadside Safety First — 20 Vehicle Set",
+        "subtitle": "Stop, position, decide: fix, limp, tow, or call 911",
+        "safety": "Your first repair is getting out of danger. Do not work in a live lane, on a blind curve, on soft ground, or beside fast traffic. Injury, fire, crash damage, fuel smell, smoke, brake failure, steering failure, oil-pressure warning, or unsafe shoulder means call emergency help or a tow.",
+        "region": "us",
+        "env": ["roadside", "driveway"],
+        "fits": { "makes": ["Chevrolet", "Dodge", "Ford", "GMC", "Hyundai", "Jeep", "Kia", "Nissan", "Ram"], "models": ["Equinox", "Malibu", "Silverado 1500", "Traverse", "Journey", "Edge", "Escape", "Explorer", "F-150", "Focus", "Fusion", "Terrain", "Sonata", "Grand Cherokee", "Wrangler", "Optima", "Sorento", "Altima", "Rogue", "1500"], "yearFrom": 2012, "yearTo": 2022 },
+        "phases": [
+          { "name": "Phase 1 · Get Safe", "color": "#b91c1c",
+            "steps": [
+              { "t": "Move out of traffic before diagnosing", "allowMedia": false,
+                "body": [
+                  { "type": "steps", "items": ["Signal early, slow smoothly, and aim for the widest shoulder, parking lot, side street, or ramp gore you can reach safely.", "Turn on **hazard lights**, set the parking brake, and keep passengers away from traffic.", "Exit on the passenger side when the driver door opens toward traffic. If you cannot exit safely, stay belted and call for help."] },
+                  { "type": "danger", "title": "No shoulder, no repair", "text": "A narrow shoulder on a fast road is not a work area. Call roadside assistance or 911 depending on the danger." }
+                ] }
+            ] },
+          { "name": "Phase 2 · Tool Choice", "color": "#4a86c5",
+            "steps": [
+              { "t": "Pick the visibility tools first", "allowMedia": true,
+                "body": [
+                  { "type": "check", "items": ["Proper tool: reflective triangles, LED flare, high-visibility vest, gloves, and a headlamp.", "Likely-carried tool: hazard lights, phone flashlight, bright clothing, a passenger with a phone, and the vehicle manual.", "No-go if: traffic-side work is required, the vehicle is unstable, weather makes you hard to see, or you feel rushed by passing traffic."] },
+                  { "type": "tip", "title": "Use the phone early", "text": "Share your location before starting. If the repair fails, help is already in motion." }
+                ] }
+            ] },
+          { "name": "Phase 3 · Fix-or-Tow Decision", "color": "#3f8a49",
+            "steps": [
+              { "t": "Choose the safest next move", "allowMedia": false,
+                "body": [
+                  { "type": "check", "items": ["Tow: crash damage, fire/smoke, fuel smell, brake or steering loss, red oil-pressure warning, severe overheating, wheel damage, sidewall tire damage, or no safe workspace.", "Roadside fix: low tire, dead 12V battery, blown accessory fuse, loose splash shield, washer/wiper issue, or mild coolant top-off with the engine cooled.", "Driveway follow-up: recheck torque, pressure, coolant level, battery terminals, fuse cause, and temporary repairs before normal driving."] }
+                ] }
+            ] }
+        ],
+        "tools": [
+          { "n": "Reflective triangles or LED flares", "d": "Warn approaching traffic", "q": "roadside emergency triangles LED flare" },
+          { "n": "High-visibility vest", "d": "Make the driver visible", "q": "ANSI reflective safety vest" },
+          { "id": "work-light", "d": "Headlamp or work light for night work" },
+          { "id": "gloves-glasses", "d": "Hand and eye protection" },
+          { "n": "Phone with charger", "d": "Location sharing and emergency calls", "q": "12v usb car charger" }
+        ],
+        "parts": [
+          { "g": "Roadside kit", "items": [
+            { "n": "Roadside emergency marker kit", "d": "Triangles, flare, or beacon", "q": "roadside emergency kit reflective triangles" },
+            { "n": "Printed owner manual or saved PDF", "d": "Jack points, fuse maps, tow limits", "q": "vehicle owner manual PDF" }
+          ] }
+        ]
+      },
+      "addedAt": 1714000000000,
+      "rating": { "avg": 0, "count": 0 },
+      "reviews": []
+    },
+    {
+      "id": "mkt-roadside-tire-inflate-plug",
+      "guide": {
+        "title": "Low Tire or Slow Tread Leak — Inflate, Seal, or Plug",
+        "subtitle": "Applies to the 20 selected 2012–2022 vehicles",
+        "safety": "Only work where the vehicle is fully out of traffic and parked on firm, level ground. Do not repair sidewall damage, shoulder damage, a shredded tire, a bent wheel, or a tire driven flat long enough to overheat.",
+        "region": "us",
+        "env": ["roadside", "driveway"],
+        "fits": { "makes": ["Chevrolet", "Dodge", "Ford", "GMC", "Hyundai", "Jeep", "Kia", "Nissan", "Ram"], "models": ["Equinox", "Malibu", "Silverado 1500", "Traverse", "Journey", "Edge", "Escape", "Explorer", "F-150", "Focus", "Fusion", "Terrain", "Sonata", "Grand Cherokee", "Wrangler", "Optima", "Sorento", "Altima", "Rogue", "1500"], "yearFrom": 2012, "yearTo": 2022 },
+        "phases": [
+          { "name": "Phase 1 · Inspect", "color": "#4a86c5",
+            "steps": [
+              { "t": "Confirm it is a slow tread leak", "allowMedia": true,
+                "body": [
+                  { "type": "steps", "items": ["Read the cold PSI target on the driver-door placard, not the tire sidewall maximum.", "Check all four tires and the spare if equipped.", "Look for a nail or screw in the tread area, a leaking valve stem, bead leak, wheel damage, sidewall bubble, or split sidewall."] },
+                  { "type": "danger", "title": "Sidewall damage means stop", "text": "Do not plug or seal a sidewall. Install the spare or call for a tow." }
+                ] }
+            ] },
+          { "name": "Phase 2 · Tool Choice", "color": "#d97757",
+            "steps": [
+              { "t": "Use the best tire tool available", "allowMedia": true,
+                "body": [
+                  { "type": "check", "items": ["Proper tool: tire pressure gauge, 12V inflator, tread-only plug kit with reamer/plug tool, soapy water, pliers, and valve-core tool.", "Likely-carried tool: OEM inflator/sealant kit, gas-station air pump, phone flashlight, gloves, and the door-jamb placard.", "No-go if: the tire loses air quickly, the puncture is larger than about 1/4 inch, the wheel is bent, or the car must be jacked on an unsafe shoulder."] },
+                  { "type": "crit", "title": "Sealant is temporary", "text": "OEM sealant can damage TPMS sensors and is meant to get you to a tire shop, not to avoid a proper repair." }
+                ] }
+            ] },
+          { "name": "Phase 3 · Inflate and Verify", "color": "#3f8a49",
+            "steps": [
+              { "t": "Get to a safe repair location", "allowMedia": false,
+                "body": [
+                  { "type": "steps", "items": ["Inflate to the placard PSI and wait a few minutes.", "If pressure holds, drive slowly to a tire shop or home and recheck pressure.", "If using a plug kit, plug only a small tread puncture and trim the plug flush after reinflating.", "If pressure falls again, stop and use the spare or tow."] },
+                  { "type": "check", "items": ["Pressure matches door placard", "TPMS warning understood and monitored", "No sidewall or shoulder repair attempted", "Tire shop follow-up planned for internal patch/plug inspection"] }
+                ] }
+            ] }
+        ],
+        "tools": [
+          { "n": "Tire pressure gauge", "d": "Read actual PSI", "q": "digital tire pressure gauge" },
+          { "n": "12V tire inflator", "d": "Roadside inflation", "q": "12v portable tire inflator" },
+          { "n": "Tire plug kit", "d": "Temporary tread puncture repair", "q": "tubeless tire plug kit" },
+          { "id": "pliers-set", "d": "Pull nail or screw from tread" },
+          { "id": "gloves-glasses", "d": "PPE" },
+          { "id": "work-light", "d": "Night inspection" }
+        ],
+        "parts": [
+          { "g": "Temporary tire repair", "items": [
+            { "n": "Tire plugs or OEM sealant cartridge", "d": "Use only as directed", "q": "tire repair plugs OEM tire sealant" },
+            { "n": "Valve stem caps", "d": "Keep dirt out after inflation", "q": "tire valve stem caps" }
+          ] }
+        ]
+      },
+      "addedAt": 1714000000000,
+      "rating": { "avg": 0, "count": 0 },
+      "reviews": []
+    },
+    {
+      "id": "mkt-roadside-spare-car-suv",
+      "guide": {
+        "title": "Flat Tire Spare Install — Cars, Crossovers, and SUVs",
+        "subtitle": "Equinox, Malibu, Traverse, Journey, Edge, Escape, Explorer, Focus, Fusion, Terrain, Sonata, Grand Cherokee, Wrangler, Optima, Sorento, Altima, Rogue",
+        "safety": "Change a tire only on firm, level ground away from traffic. Never crawl under a vehicle supported by the factory jack. If the flat is on the traffic side or the shoulder is narrow, call for roadside assistance.",
+        "region": "us",
+        "env": ["roadside", "driveway"],
+        "fits": { "makes": ["Chevrolet", "Dodge", "Ford", "GMC", "Hyundai", "Jeep", "Kia", "Nissan"], "models": ["Equinox", "Malibu", "Traverse", "Journey", "Edge", "Escape", "Explorer", "Focus", "Fusion", "Terrain", "Sonata", "Grand Cherokee", "Wrangler", "Optima", "Sorento", "Altima", "Rogue"], "yearFrom": 2012, "yearTo": 2022 },
+        "phases": [
+          { "name": "Phase 1 · Locate and Stage", "color": "#4a86c5",
+            "steps": [
+              { "t": "Find the spare, jack, lug wrench, and lock key", "allowMedia": true,
+                "body": [
+                  { "type": "steps", "items": ["Check the cargo floor, side compartment, tailgate area, or rear-mounted spare location.", "Find the jack point in the owner manual or stamped pinch-weld mark.", "Set the parking brake and chock a wheel opposite the flat if you have a chock or a solid improvised block."] },
+                  { "type": "crit", "title": "Some trims have no spare", "text": "If the vehicle has only an inflator/sealant kit and the tire is shredded, sidewall-damaged, or off the bead, call for a tow." }
+                ] }
+            ] },
+          { "name": "Phase 2 · Tool Choice", "color": "#d97757",
+            "steps": [
+              { "t": "Use the safest lifting tools available", "allowMedia": true,
+                "body": [
+                  { "type": "check", "items": ["Proper tool: factory jack at the correct jack point, wheel chocks, breaker bar, torque wrench, wheel lock key, gloves, and reflective marker.", "Likely-carried tool: OEM scissor jack, OEM lug wrench, spare-tire kit, floor mat as a kneeling pad, phone flashlight, and a passenger watching traffic.", "No-go if: ground is soft, sloped, icy, narrow, or the wheel cannot be safely removed without entering traffic."] },
+                  { "type": "spec", "text": "Lug-nut torque varies by vehicle and wheel.", "verify": "Use the owner manual or service data for the exact VIN; temporary roadside tightening must be rechecked with a torque wrench." }
+                ] }
+            ] },
+          { "name": "Phase 3 · Change and Verify", "color": "#3f8a49",
+            "steps": [
+              { "t": "Install the spare and limit speed", "allowMedia": false,
+                "body": [
+                  { "type": "steps", "items": ["Loosen lug nuts 1/2 turn while the tire is on the ground.", "Jack only at the approved point until the tire clears the ground.", "Install the spare, hand-start all lug nuts, snug in a star pattern, lower the vehicle, then tighten again in a star pattern.", "Stow the flat, tools, and jack before driving."] },
+                  { "type": "check", "items": ["All lugs hand-started without cross-threading", "Jack removed and tools stowed", "Temporary spare speed and distance limits followed", "Lug torque and tire pressure rechecked at home or shop"] }
+                ] }
+            ] }
+        ],
+        "tools": [
+          { "id": "jack-and-stands", "d": "Driveway proper support; roadside factory jack only for wheel change" },
+          { "id": "wheel-chocks", "d": "Prevent rolling" },
+          { "id": "breaker-bar", "d": "Break stuck lug nuts loose in driveway" },
+          { "id": "torque-wrench-half", "d": "Final lug torque at home or shop" },
+          { "n": "Factory jack and lug wrench", "d": "Likely carried roadside tools", "q": "vehicle factory jack lug wrench kit" },
+          { "n": "Wheel lock key", "d": "Required if locking lug nuts are installed", "q": "wheel lock key set" }
+        ],
+        "parts": [
+          { "g": "Spare tire support", "items": [
+            { "n": "Inflated spare tire or tire repair kit", "d": "Verify before a trip", "q": "compact spare tire inflator kit" },
+            { "n": "Replacement lug nuts", "d": "For damaged or swollen lugs", "q": "replacement lug nuts vehicle specific" }
+          ] }
+        ]
+      },
+      "addedAt": 1714000000000,
+      "rating": { "avg": 0, "count": 0 },
+      "reviews": []
+    },
+    {
+      "id": "mkt-roadside-spare-pickup-underbody",
+      "guide": {
+        "title": "Flat Tire Spare Install — Underbody Pickup Spare",
+        "subtitle": "Silverado 1500, F-150, and Ram 1500 roadside spare workflow",
+        "safety": "Pickup spares are heavy and often stored under the bed. Work only on firm, level ground away from traffic. Do not put any part of your body under the truck while it is supported only by the jack.",
+        "region": "us",
+        "env": ["roadside", "driveway"],
+        "fits": { "makes": ["Chevrolet", "Ford", "Ram"], "models": ["Silverado 1500", "F-150", "1500"], "yearFrom": 2012, "yearTo": 2022 },
+        "phases": [
+          { "name": "Phase 1 · Lower the Spare", "color": "#4a86c5",
+            "steps": [
+              { "t": "Assemble the spare-lowering kit", "allowMedia": true,
+                "body": [
+                  { "type": "steps", "items": ["Find the jack, lug wrench, spare crank rods, wheel lock key if equipped, and the spare access hole.", "Use the owner manual diagram; pickup crank rods often assemble in a specific order.", "Lower the spare fully, slide it out, and confirm it is inflated and not rust-stuck or cable-damaged."] },
+                  { "type": "crit", "title": "Do not improvise the hoist drive", "text": "If the spare hoist, key, or cable is seized, roadside force can strand the truck worse. Call assistance." }
+                ] }
+            ] },
+          { "name": "Phase 2 · Tool Choice", "color": "#d97757",
+            "steps": [
+              { "t": "Use pickup-rated lifting and lug tools", "allowMedia": true,
+                "body": [
+                  { "type": "check", "items": ["Proper tool: OEM spare-lowering kit, rated bottle/factory jack at the correct axle/frame point, wheel chocks, breaker bar, torque wrench, gloves, and kneeling pad.", "Likely-carried tool: factory jack, crank rods, OEM lug wrench, hitch-area access tools, phone flashlight, and work gloves.", "No-go if: loaded trailer, unstable cargo, soft shoulder, seized spare hoist, missing lock key, or traffic-side work."] },
+                  { "type": "spec", "text": "Pickup lug torque is high and varies by truck and wheel.", "verify": "Use the exact owner manual torque and recheck with a torque wrench as soon as practical." }
+                ] }
+            ] },
+          { "name": "Phase 3 · Install and Recheck", "color": "#3f8a49",
+            "steps": [
+              { "t": "Mount the spare and secure the flat", "allowMedia": false,
+                "body": [
+                  { "type": "steps", "items": ["Break lug nuts loose before lifting.", "Lift at the approved point; keep the truck as low as possible while clearing the tire.", "Hand-start all lug nuts, snug in a star pattern, lower, then tighten in stages.", "Secure the flat tire in the bed or underbody carrier only if the hoist and cable are working correctly."] },
+                  { "type": "check", "items": ["Spare seated flat on hub", "All lugs snugged in pattern", "Flat tire and tools secured", "Trailer towing paused until tire, torque, and load rating are verified"] }
+                ] }
+            ] }
+        ],
+        "tools": [
+          { "n": "Pickup spare-lowering crank kit", "d": "Lower underbody spare", "q": "F-150 Silverado Ram spare tire tool kit" },
+          { "id": "wheel-chocks", "d": "Chock opposite wheels" },
+          { "id": "breaker-bar", "d": "Loosen high-torque lugs" },
+          { "id": "torque-wrench-half", "d": "Final lug torque" },
+          { "id": "gloves-glasses", "d": "PPE" },
+          { "id": "work-light", "d": "See underbody hoist and lugs" }
+        ],
+        "parts": [
+          { "g": "Pickup spare support", "items": [
+            { "n": "Full-size spare or temporary spare", "d": "Must match load needs", "q": "truck spare tire vehicle specific" },
+            { "n": "Spare hoist access key", "d": "Required on some trucks", "q": "pickup spare tire lock key replacement" }
+          ] }
+        ]
+      },
+      "addedAt": 1714000000000,
+      "rating": { "avg": 0, "count": 0 },
+      "reviews": []
+    },
+    {
+      "id": "mkt-roadside-dead-battery",
+      "guide": {
+        "title": "Dead 12V Battery — Jump, Terminal Check, and Driveway Follow-up",
+        "subtitle": "Applies to all 20 selected vehicles",
+        "safety": "Do not jump a frozen, cracked, leaking, swollen, or rotten-egg-smelling battery. Keep sparks away from the battery. Hybrid and start-stop vehicles may have special jump posts; use the owner manual.",
+        "region": "us",
+        "env": ["roadside", "driveway"],
+        "fits": { "makes": ["Chevrolet", "Dodge", "Ford", "GMC", "Hyundai", "Jeep", "Kia", "Nissan", "Ram"], "models": ["Equinox", "Malibu", "Silverado 1500", "Traverse", "Journey", "Edge", "Escape", "Explorer", "F-150", "Focus", "Fusion", "Terrain", "Sonata", "Grand Cherokee", "Wrangler", "Optima", "Sorento", "Altima", "Rogue", "1500"], "yearFrom": 2012, "yearTo": 2022 },
+        "phases": [
+          { "name": "Phase 1 · Confirm the Symptom", "color": "#4a86c5",
+            "steps": [
+              { "t": "Separate battery failure from other no-starts", "allowMedia": true,
+                "body": [
+                  { "type": "steps", "items": ["Listen for rapid clicking, weak dash lights, or no crank after lights were left on.", "Check that the gear selector is in Park or Neutral and the brake pedal is pressed.", "Inspect battery terminals for looseness, heavy corrosion, or a clamp that rotates by hand."] },
+                  { "type": "danger", "title": "Tow instead", "text": "Tow or get professional help if there is smoke, melted wiring, fuel smell, crash damage, or repeated stalling after a jump." }
+                ] }
+            ] },
+          { "name": "Phase 2 · Tool Choice", "color": "#d97757",
+            "steps": [
+              { "t": "Jump with the safest available gear", "allowMedia": true,
+                "body": [
+                  { "type": "check", "items": ["Proper tool: lithium jump pack with reverse-polarity protection, safety glasses, 10mm wrench, terminal brush, and multimeter.", "Likely-carried tool: jumper cables and a helper vehicle, adjustable wrench, bottled water for light corrosion cleanup, and phone flashlight.", "No-go if: terminals are damaged, battery case is compromised, cables get hot, or the vehicle dies again immediately after removing the jump source."] },
+                  { "type": "crit", "title": "Use the marked jump points", "text": "Many vehicles route negative clamps to a remote ground point. Follow the owner manual instead of guessing at hidden batteries." }
+                ] }
+            ] },
+          { "name": "Phase 3 · Start and Follow Up", "color": "#3f8a49",
+            "steps": [
+              { "t": "Start, remove clamps, and plan the real fix", "allowMedia": false,
+                "body": [
+                  { "type": "steps", "items": ["Connect positive to positive, then negative to the specified ground point.", "Start the disabled vehicle and remove clamps in reverse order without letting clamps touch.", "Let the vehicle run long enough to reach a safer place, then test battery and charging voltage in the driveway or at a parts store."] },
+                  { "type": "check", "items": ["Correct polarity used", "Terminals tight enough that they do not rotate", "Charging/battery test planned", "Radio/window/idle relearn handled if the vehicle requires it"] }
+                ] }
+            ] }
+        ],
+        "tools": [
+          { "n": "Portable jump starter", "d": "Best roadside jump source", "q": "portable lithium jump starter" },
+          { "n": "Jumper cables", "d": "Likely carried fallback", "q": "heavy duty jumper cables" },
+          { "id": "combo-wrench-metric", "d": "Tighten common 10mm battery clamps" },
+          { "id": "multimeter", "d": "Driveway battery and charging check" },
+          { "id": "gloves-glasses", "d": "PPE" },
+          { "id": "work-light", "d": "Night terminal work" }
+        ],
+        "parts": [
+          { "g": "Battery support", "items": [
+            { "n": "Battery terminal brush", "d": "Clean corrosion", "q": "battery terminal cleaning brush" },
+            { "n": "Battery terminal protectant", "d": "Driveway follow-up after cleaning", "q": "battery terminal protector spray" }
+          ] }
+        ]
+      },
+      "addedAt": 1714000000000,
+      "rating": { "avg": 0, "count": 0 },
+      "reviews": []
+    },
+    {
+      "id": "mkt-roadside-fuse-quick-check",
+      "guide": {
+        "title": "Blown Fuse Quick Check — Lights, Wipers, Outlet, Trailer",
+        "subtitle": "Safe roadside electrical triage for all 20 selected vehicles",
+        "safety": "Replace a fuse only with the same amp rating. If the replacement blows immediately, stop. A blown fuse is a symptom; repeatedly replacing it can overheat wiring.",
+        "region": "us",
+        "env": ["roadside", "driveway"],
+        "fits": { "makes": ["Chevrolet", "Dodge", "Ford", "GMC", "Hyundai", "Jeep", "Kia", "Nissan", "Ram"], "models": ["Equinox", "Malibu", "Silverado 1500", "Traverse", "Journey", "Edge", "Escape", "Explorer", "F-150", "Focus", "Fusion", "Terrain", "Sonata", "Grand Cherokee", "Wrangler", "Optima", "Sorento", "Altima", "Rogue", "1500"], "yearFrom": 2012, "yearTo": 2022 },
+        "phases": [
+          { "name": "Phase 1 · Identify the Circuit", "color": "#4a86c5",
+            "steps": [
+              { "t": "Find the correct fuse box and label", "allowMedia": true,
+                "body": [
+                  { "type": "steps", "items": ["Use the owner manual, fuse-box cover, or phone photo of the fuse map.", "Target only low-risk accessories such as power outlet, washer pump, wipers, horn, lamps, or trailer lights.", "Turn the vehicle off before pulling a fuse unless the manual says otherwise."] },
+                  { "type": "danger", "title": "Do not bypass a fuse", "text": "Foil, wire, oversized fuses, and jumper hacks can start a fire." }
+                ] }
+            ] },
+          { "name": "Phase 2 · Tool Choice", "color": "#d97757",
+            "steps": [
+              { "t": "Pull and test without damaging the panel", "allowMedia": true,
+                "body": [
+                  { "type": "check", "items": ["Proper tool: fuse puller, same-amp mini/low-profile fuse assortment, test light or multimeter, and owner manual.", "Likely-carried tool: spare fuse from the panel, needle-nose pliers, phone camera zoom, and the fuse-box cover diagram.", "No-go if: the fuse blows again, there is melted plastic, a burning smell, wet electronics, or the circuit is safety-critical and still dead."] },
+                  { "type": "tip", "title": "One spare only", "text": "A single same-amp replacement is a diagnostic step. A second blown fuse means the fault is still present." }
+                ] }
+            ] },
+          { "name": "Phase 3 · Replace and Verify", "color": "#3f8a49",
+            "steps": [
+              { "t": "Restore the circuit or stop safely", "allowMedia": false,
+                "body": [
+                  { "type": "steps", "items": ["Compare the suspect fuse to a known-good same-size fuse or test continuity.", "Install only the same amp rating.", "Operate the circuit once while watching for immediate failure.", "If it fails again, leave it off and plan a wiring diagnosis."] },
+                  { "type": "check", "items": ["Same amp rating installed", "Fuse seated fully", "Fuse-box cover reinstalled", "Cause recorded for driveway diagnosis"] }
+                ] }
+            ] }
+        ],
+        "tools": [
+          { "n": "Fuse puller", "d": "Remove small blade fuses", "q": "automotive fuse puller" },
+          { "n": "Automotive fuse assortment", "d": "Same-amp replacement", "q": "mini low profile automotive fuse assortment" },
+          { "id": "multimeter", "d": "Continuity or voltage check" },
+          { "id": "pliers-set", "d": "Likely fallback for fuse removal" },
+          { "id": "work-light", "d": "See panel labels" }
+        ],
+        "parts": [
+          { "g": "Electrical", "items": [
+            { "n": "Same-amp blade fuse", "d": "Never upsize", "q": "automotive blade fuse same amp" },
+            { "n": "Owner manual fuse chart", "d": "Use exact circuit map", "q": "vehicle owner manual fuse chart" }
+          ] }
+        ]
+      },
+      "addedAt": 1714000000000,
+      "rating": { "avg": 0, "count": 0 },
+      "reviews": []
+    },
+    {
+      "id": "mkt-roadside-visibility-wiper-light",
+      "guide": {
+        "title": "Visibility Roadside Fixes — Wipers, Washer Fluid, and Bulbs",
+        "subtitle": "Get safe visibility back before continuing",
+        "safety": "Poor visibility is a stop-now condition in rain, snow, fog, or darkness. Do not continue at highway speed with failed wipers, empty washer fluid during road spray, or missing required lights at night.",
+        "region": "us",
+        "env": ["roadside", "driveway"],
+        "fits": { "makes": ["Chevrolet", "Dodge", "Ford", "GMC", "Hyundai", "Jeep", "Kia", "Nissan", "Ram"], "models": ["Equinox", "Malibu", "Silverado 1500", "Traverse", "Journey", "Edge", "Escape", "Explorer", "F-150", "Focus", "Fusion", "Terrain", "Sonata", "Grand Cherokee", "Wrangler", "Optima", "Sorento", "Altima", "Rogue", "1500"], "yearFrom": 2012, "yearTo": 2022 },
+        "phases": [
+          { "name": "Phase 1 · Decide What Failed", "color": "#4a86c5",
+            "steps": [
+              { "t": "Separate fluid, blade, fuse, and bulb faults", "allowMedia": true,
+                "body": [
+                  { "type": "steps", "items": ["If the windshield is dirty and the pump runs, add washer fluid.", "If the blade smears, chatters, splits, or leaves an arc, replace the blade.", "If wipers or washer pump are dead, check the related fuse only if the location is safe.", "If a bulb is out, replace only an accessible bulb you can reach without removing major parts roadside."] },
+                  { "type": "danger", "title": "Night and rain change the decision", "text": "If you cannot see or cannot be seen, stop somewhere safe and fix it, wait it out, or tow." }
+                ] }
+            ] },
+          { "name": "Phase 2 · Tool Choice", "color": "#d97757",
+            "steps": [
+              { "t": "Use a simple visibility kit", "allowMedia": true,
+                "body": [
+                  { "type": "check", "items": ["Proper tool: correct-length wiper blades, washer fluid rated for the temperature, bulb gloves, correct bulb, trim tool, and screwdriver set.", "Likely-carried tool: gas-station universal blade, gas-station washer fluid, paper towel, spare fuse, phone flashlight, and gloves.", "No-go if: the wiper arm spring is broken, linkage is loose, headlight housing must be removed beside traffic, or wiring is melted."] },
+                  { "type": "crit", "title": "Do not touch halogen glass", "text": "Skin oil can shorten bulb life. Use gloves or a clean towel." }
+                ] }
+            ] },
+          { "name": "Phase 3 · Restore and Check", "color": "#3f8a49",
+            "steps": [
+              { "t": "Verify visibility before driving", "allowMedia": false,
+                "body": [
+                  { "type": "steps", "items": ["Fill washer fluid and run the spray briefly.", "Install the blade until the latch clicks, then gently lower the arm onto the glass.", "Replace accessible bulbs with the correct part number and confirm function.", "Clean glass, mirrors, lights, and camera lenses before leaving."] },
+                  { "type": "check", "items": ["Wipers sweep without metal-on-glass contact", "Washer fluid sprays both sides", "Headlights, brake lights, turn signals, and hazards checked", "Temporary bulb or blade fix replaced with correct part if needed"] }
+                ] }
+            ] }
+        ],
+        "tools": [
+          { "id": "screwdriver-set", "d": "Lamp access panels and retainers" },
+          { "id": "trim-tools", "d": "Plastic clips without breakage" },
+          { "id": "gloves-glasses", "d": "PPE and bulb handling" },
+          { "id": "work-light", "d": "Night bulb and blade work" },
+          { "n": "Correct wiper blades", "d": "Best fix for smearing or split rubber", "q": "wiper blades vehicle specific" },
+          { "n": "Washer fluid", "d": "Road spray visibility", "q": "all season windshield washer fluid" }
+        ],
+        "parts": [
+          { "g": "Visibility", "items": [
+            { "n": "Wiper blade pair", "d": "Match driver and passenger lengths", "q": "wiper blades for my vehicle" },
+            { "n": "Washer fluid", "d": "Use freeze-rated fluid in winter", "q": "windshield washer fluid deicer" },
+            { "n": "Exterior bulb", "d": "Match bulb number for VIN/trim", "q": "vehicle headlight brake turn signal bulb" }
+          ] }
+        ]
+      },
+      "addedAt": 1714000000000,
+      "rating": { "avg": 0, "count": 0 },
+      "reviews": []
+    },
+    {
+      "id": "mkt-roadside-overheat-triage",
+      "guide": {
+        "title": "Mild Overheat or Low Coolant — Roadside Triage Only",
+        "subtitle": "Cool down, top off if safe, then get to a shop or driveway diagnosis",
+        "safety": "Never open a hot radiator or pressurized coolant cap. Steam, red temperature warning, fast coolant loss, oil/coolant mixing, belt failure, or repeated overheating means tow.",
+        "region": "us",
+        "env": ["roadside", "driveway"],
+        "fits": { "makes": ["Chevrolet", "Dodge", "Ford", "GMC", "Hyundai", "Jeep", "Kia", "Nissan", "Ram"], "models": ["Equinox", "Malibu", "Silverado 1500", "Traverse", "Journey", "Edge", "Escape", "Explorer", "F-150", "Focus", "Fusion", "Terrain", "Sonata", "Grand Cherokee", "Wrangler", "Optima", "Sorento", "Altima", "Rogue", "1500"], "yearFrom": 2012, "yearTo": 2022 },
+        "phases": [
+          { "name": "Phase 1 · Cool Down", "color": "#b91c1c",
+            "steps": [
+              { "t": "Stop heat damage before adding fluid", "allowMedia": false,
+                "body": [
+                  { "type": "steps", "items": ["Turn off A/C, turn heat to hot if you must limp a short distance to safety, then park and shut down.", "Open the hood from the cabin release and wait at least 30 minutes before touching caps or hoses.", "Look from a distance for steam, coolant pouring out, broken belt, or electric fan damage."] },
+                  { "type": "danger", "title": "Hot coolant can blind or burn", "text": "Do not loosen a hot cap. Waiting is part of the repair." }
+                ] }
+            ] },
+          { "name": "Phase 2 · Tool Choice", "color": "#d97757",
+            "steps": [
+              { "t": "Top off only when the system is cool", "allowMedia": true,
+                "body": [
+                  { "type": "check", "items": ["Proper tool: correct premixed coolant, spill-free funnel, gloves, rags, flashlight, and OBD2 scanner for temperature data.", "Likely-carried tool: bottled water as a temporary top-off, towel, phone flashlight, and heater controls.", "No-go if: temperature warning is red, coolant pours out, there is steam, oil pressure warning appears, or the engine knocks."] },
+                  { "type": "crit", "title": "Water is only a get-safe measure", "text": "Plain water reduces freeze and corrosion protection. Replace with the correct coolant mix after the emergency." }
+                ] }
+            ] },
+          { "name": "Phase 3 · Limp or Tow", "color": "#3f8a49",
+            "steps": [
+              { "t": "Verify it stays cool before moving", "allowMedia": false,
+                "body": [
+                  { "type": "steps", "items": ["When cool, check the overflow bottle first; add premix to the marked level if low.", "If the system has a safe degas bottle cap and is fully cool, top off slowly.", "Restart and watch the gauge for a few minutes before moving.", "Drive only to a nearby safe location if the gauge stays normal."] },
+                  { "type": "check", "items": ["Cap left closed until cool", "Coolant level visible in reservoir", "Gauge stable before moving", "Driveway leak check or shop visit planned"] }
+                ] }
+            ] }
+        ],
+        "tools": [
+          { "id": "coolant-funnel", "d": "Clean coolant top-off at home" },
+          { "id": "funnel-set", "d": "Roadside controlled pour" },
+          { "id": "obd2-scanner", "d": "Read coolant temperature in driveway" },
+          { "id": "gloves-glasses", "d": "PPE" },
+          { "id": "shop-rags", "d": "Cleanup and cap handling" },
+          { "id": "work-light", "d": "Leak inspection" }
+        ],
+        "parts": [
+          { "g": "Cooling", "items": [
+            { "n": "Correct premixed coolant", "d": "Match vehicle spec and color chemistry", "q": "premixed coolant vehicle specific" },
+            { "n": "Distilled water", "d": "Temporary dilution or emergency top-off", "q": "distilled water gallon" }
+          ] }
+        ]
+      },
+      "addedAt": 1714000000000,
+      "rating": { "avg": 0, "count": 0 },
+      "reviews": []
+    },
+    {
+      "id": "mkt-roadside-loose-trim-splash-shield",
+      "guide": {
+        "title": "Dragging Splash Shield or Loose Trim — Temporary Roadside Secure",
+        "subtitle": "Stop scraping without crawling under the vehicle",
+        "safety": "Do not crawl under a vehicle at the roadside. Do not reach near hot exhaust, moving belts, rotating fans, or traffic. If the loose part contacts a tire, brake line, fuel line, or exhaust, tow.",
+        "region": "us",
+        "env": ["roadside", "driveway"],
+        "fits": { "makes": ["Chevrolet", "Dodge", "Ford", "GMC", "Hyundai", "Jeep", "Kia", "Nissan", "Ram"], "models": ["Equinox", "Malibu", "Silverado 1500", "Traverse", "Journey", "Edge", "Escape", "Explorer", "F-150", "Focus", "Fusion", "Terrain", "Sonata", "Grand Cherokee", "Wrangler", "Optima", "Sorento", "Altima", "Rogue", "1500"], "yearFrom": 2012, "yearTo": 2022 },
+        "phases": [
+          { "name": "Phase 1 · Inspect from the Edge", "color": "#4a86c5",
+            "steps": [
+              { "t": "Identify what is dragging", "allowMedia": true,
+                "body": [
+                  { "type": "steps", "items": ["Park safely, set the brake, and let hot parts cool.", "Look from the side, front, or wheel well; use the phone camera rather than putting your head under the vehicle.", "Confirm the loose item is plastic splash shield, fender liner, bumper trim, or heat shield edge, not a brake, fuel, steering, suspension, or exhaust part."] },
+                  { "type": "danger", "title": "Structural or fluid parts are not trim", "text": "If a line, cable, metal arm, exhaust hanger, or wheel-area part is loose, stop and tow." }
+                ] }
+            ] },
+          { "name": "Phase 2 · Tool Choice", "color": "#d97757",
+            "steps": [
+              { "t": "Secure it for a short limp only", "allowMedia": true,
+                "body": [
+                  { "type": "check", "items": ["Proper tool: trim-clip assortment, trim tools, zip ties, side cutters, screwdriver set, gloves, and work light.", "Likely-carried tool: duct tape, zip ties, shoelace, pocket knife, phone flashlight, and gloves.", "No-go if: the part can touch a tire, driveshaft, axle, belt, fan, hot exhaust, or the repair requires getting under the vehicle."] },
+                  { "type": "crit", "title": "Tape is not enough near heat", "text": "Tape can melt or let go. Keep temporary supports away from exhaust and moving parts." }
+                ] }
+            ] },
+          { "name": "Phase 3 · Secure and Recheck", "color": "#3f8a49",
+            "steps": [
+              { "t": "Tie upward, then inspect after a short roll", "allowMedia": false,
+                "body": [
+                  { "type": "steps", "items": ["Use existing holes or solid plastic edges to zip-tie the loose panel upward.", "Trim zip-tie tails and verify nothing can rub the tire at full steering lock.", "Drive slowly around a parking lot, stop, and recheck.", "Replace broken clips or damaged panels in the driveway."] },
+                  { "type": "check", "items": ["No part contacts tire, brake, belt, fan, axle, or exhaust", "Temporary tie cannot drag loose", "Noise gone at low speed", "Permanent clips or panel repair planned"] }
+                ] }
+            ] }
+        ],
+        "tools": [
+          { "id": "trim-tools", "d": "Remove and reseat plastic clips" },
+          { "id": "screwdriver-set", "d": "Loose screws or retainers" },
+          { "id": "pliers-set", "d": "Pull damaged clips and tension zip ties" },
+          { "id": "work-light", "d": "Inspect from wheel well" },
+          { "id": "gloves-glasses", "d": "PPE" },
+          { "n": "Zip ties and side cutters", "d": "Temporary securement", "q": "heavy duty zip ties flush cutters" }
+        ],
+        "parts": [
+          { "g": "Temporary trim repair", "items": [
+            { "n": "Automotive trim clip assortment", "d": "Driveway permanent reattachment", "q": "automotive push retainer clip assortment" },
+            { "n": "Heavy-duty zip ties", "d": "Roadside temporary support", "q": "heavy duty black zip ties" }
+          ] }
+        ]
+      },
+      "addedAt": 1714000000000,
+      "rating": { "avg": 0, "count": 0 },
+      "reviews": []
+    },
+    {
+      "id": "mkt-roadside-light-traction-recovery",
+      "guide": {
+        "title": "Light Traction Recovery — Snow, Mud, Sand, or Grass",
+        "subtitle": "SUVs, trucks, and crossovers in the 20-vehicle set",
+        "safety": "This is for low-speed self-recovery only. Do not stand near spinning tires or tow straps. Do not use non-rated bumper, hitch ball, suspension, or tie-down points for pulling.",
+        "region": "us",
+        "env": ["roadside", "driveway"],
+        "fits": { "makes": ["Chevrolet", "Dodge", "Ford", "GMC", "Jeep", "Kia", "Nissan", "Ram"], "models": ["Equinox", "Silverado 1500", "Traverse", "Journey", "Edge", "Escape", "Explorer", "F-150", "Terrain", "Grand Cherokee", "Wrangler", "Sorento", "Rogue", "1500"], "yearFrom": 2012, "yearTo": 2022 },
+        "phases": [
+          { "name": "Phase 1 · Stop Digging", "color": "#4a86c5",
+            "steps": [
+              { "t": "Prevent the vehicle from sinking deeper", "allowMedia": true,
+                "body": [
+                  { "type": "steps", "items": ["Stop spinning tires as soon as forward motion stops.", "Clear snow, mud, sand, or grass from in front of the drive tires and under low-hanging panels.", "Turn traction control to the mode recommended by the owner manual for snow, sand, mud, or low-speed rocking."] },
+                  { "type": "danger", "title": "No strap heroics", "text": "Recovery straps and kinetic ropes require rated recovery points and training. A hitch ball can become a projectile." }
+                ] }
+            ] },
+          { "name": "Phase 2 · Tool Choice", "color": "#d97757",
+            "steps": [
+              { "t": "Add traction without damaging the vehicle", "allowMedia": true,
+                "body": [
+                  { "type": "check", "items": ["Proper tool: traction boards, shovel, tire gauge, gloves, and rated recovery point knowledge from the owner manual.", "Likely-carried tool: floor mats as a last-resort traction surface, cardboard, sand or kitty litter, small shovel, and phone flashlight.", "No-go if: water is rising, the vehicle is high-centered, a wheel is hanging, traffic is close, or a pull requires unrated attachment points."] },
+                  { "type": "crit", "title": "Floor mats are sacrificial", "text": "They can shoot out or be destroyed. Keep people clear and use them only to get to a safer surface." }
+                ] }
+            ] },
+          { "name": "Phase 3 · Recover Slowly", "color": "#3f8a49",
+            "steps": [
+              { "t": "Rock gently and stop if it worsens", "allowMedia": false,
+                "body": [
+                  { "type": "steps", "items": ["Place traction material tight against the drive tires in the direction of travel.", "Use light throttle only; rocking between reverse and drive should be gentle and brief.", "Once moving, keep momentum to firm ground without hard steering or high speed.", "Recheck for damaged splash shields, tires, and warning lights."] },
+                  { "type": "check", "items": ["No one stood in front of or behind spinning tires", "Vehicle reached firm ground", "Undercarriage and tires checked", "Professional recovery called if the first careful attempts failed"] }
+                ] }
+            ] }
+        ],
+        "tools": [
+          { "n": "Traction boards", "d": "Best self-recovery aid", "q": "vehicle traction boards snow mud sand" },
+          { "n": "Compact shovel", "d": "Clear packed material", "q": "folding vehicle recovery shovel" },
+          { "n": "Sand or kitty litter", "d": "Likely traction material", "q": "traction sand kitty litter vehicle" },
+          { "id": "gloves-glasses", "d": "PPE" },
+          { "id": "work-light", "d": "Night recovery" },
+          { "n": "Tire pressure gauge", "d": "Check pressure after recovery", "q": "digital tire pressure gauge" }
+        ],
+        "parts": [
+          { "g": "Recovery supplies", "items": [
+            { "n": "Traction board pair", "d": "Reusable recovery surface", "q": "off road traction boards pair" },
+            { "n": "Compact shovel", "d": "Dig out tires and underbody", "q": "folding snow mud shovel car" }
+          ] }
+        ]
+      },
+      "addedAt": 1714000000000,
+      "rating": { "avg": 0, "count": 0 },
+      "reviews": []
     }
   ]
 }
