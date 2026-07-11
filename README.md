@@ -48,7 +48,8 @@ on demand.
   marketplace** (on a guide, via *Guides → Share/export*) to open a **GitHub pull request**
   adding your rating/review or full repair to the shared catalog. The backend **moderates
   every submission PR with Claude** (via the Claude Code CLI on a subscription — no API key),
-  posting an `approve`/`flag`/`reject` verdict and label before a maintainer merges. Without
+  posting an `approve`/`flag`/`reject` verdict and label; approved PRs are merged automatically
+  while flagged or rejected PRs remain for maintainer attention. Without
   the service configured, everything stays on-device (a **⧉ Contribute** action still copies
   your JSON and opens a prefilled issue). The service also **tracks per-user trust** (silently
   dropping submissions from users with a bad record), **rate-limits** to one submission per
@@ -158,7 +159,8 @@ for you, using the optional [`server/`](server/) service:
 2. In the app, **⚙️ → Community submissions**, set the **Backend URL** and the same
    **Google client ID**.
 3. Sign in with Google and hit **🚀 Submit** — the service verifies your Google identity,
-   commits to a branch, and opens a PR crediting you. A maintainer reviews and merges.
+   commits to a branch, opens a PR crediting you, and moderates it. Approved PRs merge
+   automatically; flagged or rejected PRs remain for maintainer attention.
 
 Maintainers can also use the server-side direct guide submit path for trusted imports. That
 path requires `DIRECT_SUBMIT_BEARER_TOKEN` plus an explicit audit identity in the service
@@ -183,8 +185,9 @@ Code and data live in **two repos**:
   (override in **⚙️ → Community submissions → Catalog data URL**).
 
 **Publishing flow:** community submissions open **pull requests against `approved`** in the
-data repo; the submit service opens and Claude-moderates them; **merging a PR publishes** the
-change to what every app reads. No app redeploy needed to update data.
+data repo; the submit service opens and Claude-moderates them; an `approve` verdict attempts
+to merge the PR automatically, and **merging a PR publishes** the change to what every app
+reads. No app redeploy needed to update data.
 
 **Bootstrap the data repo** (needs the GitHub CLI, `gh auth login`):
 

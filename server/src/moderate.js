@@ -70,6 +70,31 @@ async function ensureLabel(kit, owner, repo, name, color) {
   catch (e) { try { await kit.issues.createLabel({ owner, repo, name, color }); } catch (_) {} }
 }
 
+const errText = (e) => String(e && (e.message || e.response?.data?.message) || e || "unknown error").slice(0, 500);
+
+async function commentAutoMergeFailed(kit, owner, repo, prNumber, error) {
+  try {
+    await kit.issues.createComment({
+      owner, repo, issue_number: prNumber,
+      body: `${MARK}\n### ⚠️ Auto-merge failed\n\nClaude approved this PR, but the server could not merge it automatically: ${error}\n\nA maintainer should resolve the merge failure and merge manually if appropriate.`,
+    });
+  } catch (_) {}
+}
+
+async function mergeApprovedPR(kit, owner, repo, prNumber) {
+  try {
+    const r = await kit.pulls.merge({ owner, repo, pull_number: prNumber });
+    if (r.data?.merged) return { status: "merged" };
+    const error = r.data?.message || "GitHub did not report the PR as merged.";
+    await commentAutoMergeFailed(kit, owner, repo, prNumber, error);
+    return { status: "failed", error };
+  } catch (e) {
+    const error = errText(e);
+    await commentAutoMergeFailed(kit, owner, repo, prNumber, error);
+    return { status: "failed", error };
+  }
+}
+
 // Moderate one open PR. Idempotent: skips PRs already carrying the marker comment
 // unless opts.force. Returns the verdict, or null if skipped.
 export async function moderatePullRequest(kit, owner, repo, prNumber, opts = {}) {
@@ -83,7 +108,7 @@ export async function moderatePullRequest(kit, owner, repo, prNumber, opts = {})
 
   let v;
   try {
-    v = await runClaude(PROMPT({ title: pr.title, body: pr.body, patch }));
+    v = opts.moderationVerdict || await runClaude(PROMPT({ title: pr.title, body: pr.body, patch }));
   } catch (e) {
     v = { decision: "flag", severity: "low", categories: ["moderation-error"], summary: "Automated moderation could not complete: " + String(e.message || e) + ". A human should review." };
   }
@@ -121,15 +146,19 @@ export async function moderatePullRequest(kit, owner, repo, prNumber, opts = {})
     try { await kit.issues.addLabels({ owner, repo, issue_number: prNumber, labels: ["prompt-injection"] }); } catch (e) {}
   }
 
+  let autoMerge = { status: "not-attempted" };
+  if (dec === "approve") autoMerge = await mergeApprovedPR(kit, owner, repo, prNumber);
+
   // Persist a structured verdict record for the admin dashboard (append-only).
   appendModerationLog({
     ts: new Date().toISOString(), prNumber, prUrl: pr.html_url, prTitle: pr.title,
     submitter: email, decision: dec, injection, severity: v.severity, categories: v.categories, summary: v.summary,
+    autoMerge: autoMerge.status, autoMergeError: autoMerge.error || "",
   });
 
   // Close on injection always; on a plain reject only when configured.
   if (injection || (dec === "reject" && String(process.env.AUTO_CLOSE_REJECT || "") === "true")) {
     try { await kit.pulls.update({ owner, repo, pull_number: prNumber, state: "closed" }); } catch (e) {}
   }
-  return { decision: dec, verdict: v, injection, banned };
+  return { decision: dec, verdict: v, injection, banned, autoMerge };
 }

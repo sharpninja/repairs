@@ -17,7 +17,8 @@ requests** against the guide catalog in the **data repo** (`sharpninja/repairs-d
 - The service uses a **server-held GitHub credential** (a bot PAT or GitHub App) to
   branch, edit `marketplace.json`, and open a PR — attributing the submission to the
   Google user in the PR body.
-- Users never see or hold a GitHub credential; a maintainer reviews and merges.
+- Users never see or hold a GitHub credential; approved PRs are merged automatically,
+  while flagged or rejected PRs stay visible for maintainer attention.
 
 > Google Cloud Console for the redirect flow: on the same Web OAuth client, add the app
 > origin to **Authorized JavaScript origins** *and* the exact callback
@@ -42,9 +43,10 @@ by a **Claude subscription** (a `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-tok
   that don't yet carry an `ai:*` label and moderates any it finds — the backstop.
 
 Moderation reads the PR's diff/title/body, asks Claude for an `approve` / `flag` / `reject`
-verdict with a summary, then **posts a comment and an `ai:<verdict>` label**. Set
-`AUTO_CLOSE_REJECT=true` to auto-close rejected PRs (otherwise they're just labeled). A
-maintainer always makes the final merge decision.
+verdict with a summary, then **posts a comment and an `ai:<verdict>` label**. An `approve`
+verdict attempts to merge the PR immediately; a successful merge closes it. If auto-merge
+fails, the server comments with the failure and leaves the PR open. Set `AUTO_CLOSE_REJECT=true`
+to auto-close rejected PRs (otherwise they're just labeled).
 
 It serves **Connect, gRPC, and gRPC-Web** on the same port, with a CORS shim so
 the browser can call it cross-origin. The app calls the Connect JSON protocol
@@ -213,5 +215,5 @@ DIRECT_SUBMIT_BEARER_TOKEN=... npm run submit-direct -- --catalog ../docs/market
   identity in `DIRECT_SUBMIT_AUTHOR_EMAIL` / `DIRECT_SUBMIT_AUTHOR_NAME`.
 - The server credential is the only thing that can write to the repo; prefer a
   **GitHub App** (least-privilege, auto-refreshing) and keep it scoped to the data repo.
-- Submissions are **Claude-moderated** and still go through **human PR review** before
-  they reach the catalog.
+- Submissions are **Claude-moderated**; approved PRs auto-merge, while flagged/rejected
+  submissions remain available for human review.

@@ -24,7 +24,7 @@ const privateKey = keyFile ? readFileSync(keyFile, "utf8") : keyInline.replace(/
 
 // The exact least-privilege set:
 //   contents:write       - commit the marketplace.json change (submit)
-//   pull_requests:write  - open PRs, comment, close on reject (submit + moderation)
+//   pull_requests:write  - open PRs, merge approved PRs, close rejected PRs (submit + moderation)
 //   issues:write         - labels + moderation comments (moderation)
 //   metadata:read        - required baseline
 const permissions = { contents: "write", pull_requests: "write", issues: "write", metadata: "read" };
