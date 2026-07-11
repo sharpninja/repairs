@@ -21,12 +21,32 @@ function githubPrUrl(url) {
   } catch (e) { return ""; }
 }
 
-function prLink(row) {
+function prNumber(row) {
   const number = Number(row && (row.number || row.prNumber));
+  return Number.isInteger(number) && number > 0 ? number : 0;
+}
+
+function prHref(row) {
+  const number = prNumber(row);
+  return githubPrUrl(row && (row.url || row.prUrl || row.html_url)) ||
+    (number ? `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/pull/${number}` : "");
+}
+
+function prAnchor(row, label) {
+  const href = prHref(row);
+  if (!href) return "";
+  return raw(`<a class="pr-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`);
+}
+
+function prLink(row) {
+  const number = prNumber(row);
   const label = Number.isInteger(number) && number > 0 ? `#${number}` : "PR";
-  const href = githubPrUrl(row && (row.url || row.prUrl)) ||
-    (Number.isInteger(number) && number > 0 ? `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/pull/${number}` : "");
-  return href ? raw(`<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`) : "";
+  return prAnchor(row, label);
+}
+
+function prTitle(row) {
+  const title = row && row.title ? row.title : "";
+  return prHref(row) ? prAnchor(row, title || "Open PR") : title;
 }
 
 function tokenFrom(req) {
@@ -42,11 +62,11 @@ function table(cols, rows, getters, empty) {
   return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
-function renderHtml({ prs, mod, errs, bans }) {
+export function renderHtml({ prs, mod, errs, bans }) {
   const prSection = prs === null
     ? `<p class="empty">Live GitHub PR status unavailable (no credentials or API error). Persisted moderation log is below.</p>`
     : table(["PR", "Title", "State", "Verdict", "Injection"], prs,
-        [(r) => prLink(r), (r) => r.title, (r) => r.state, (r) => r.verdict, (r) => (r.injection ? "yes" : "")],
+        [(r) => prLink(r), (r) => prTitle(r), (r) => r.state, (r) => r.verdict, (r) => (r.injection ? "yes" : "")],
         "No open submission PRs.");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>AI Auto Repairman - admin</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -57,6 +77,7 @@ function renderHtml({ prs, mod, errs, bans }) {
   main{padding:0 18px 40px} .empty{color:#8a8d93}
   table{border-collapse:collapse;width:100%;font-size:12.5px} th,td{border:1px solid #2a2d33;padding:6px 8px;text-align:left;vertical-align:top}
   th{background:#1c1f24} td{max-width:520px;overflow-wrap:anywhere} tr:nth-child(even) td{background:#141619}
+  a.pr-link{color:#8bd3ff;font-weight:650;text-decoration:underline;text-underline-offset:2px} a.pr-link:visited{color:#c7b8ff}
   code{white-space:pre-wrap}
 </style></head><body>
 <header><h1>AI Auto Repairman - admin dashboard</h1></header>
