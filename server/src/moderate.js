@@ -81,7 +81,7 @@ async function commentAutoMergeFailed(kit, owner, repo, prNumber, error) {
   } catch (_) {}
 }
 
-async function mergeApprovedPR(kit, owner, repo, prNumber) {
+export async function mergeApprovedPR(kit, owner, repo, prNumber) {
   try {
     const r = await kit.pulls.merge({ owner, repo, pull_number: prNumber });
     if (r.data?.merged) return { status: "merged" };

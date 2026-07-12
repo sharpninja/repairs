@@ -15,7 +15,7 @@ writeFileSync(process.env.MODERATION_LOG_STORE, JSON.stringify({ ts: "2026-01-01
 writeFileSync(process.env.CLIENT_ERRORS_STORE, JSON.stringify({ ts: 1, context: "render", message: "boom <script>alert(1)</script>", route: "home" }) + "\n");
 writeFileSync(process.env.BANS_STORE, JSON.stringify([{ email: "banned@example.com", ts: "2026-01-01", reason: "prompt-injection", prNumber: 9, prUrl: "https://github.com/sharpninja/repairs-data/pull/9" }]));
 
-const { adminHandler, renderHtml } = await import("../server/src/admin.js");
+const { adminHandler, mergeApprovedHandler, renderHtml } = await import("../server/src/admin.js");
 
 let pass = 0;
 const t = (name, cond) => { assert.ok(cond, name); console.log("  ✓ " + name); pass++; };
@@ -39,8 +39,28 @@ console.log("admin.js — dashboard auth + rendering");
   t("page declares a language (WCAG 3.1.1)", /<html[^>]*\blang="en"/.test(r.body));
   t("table headers use scope=\"col\" (WCAG 1.3.1)", /<th scope="col">/.test(r.body));
   t("no forced auto-refresh interrupting a screen-reader/magnifier read (WCAG 2.2.1)", !/http-equiv="refresh"/i.test(r.body));
+  t("dashboard has a merge approved button", /<form method="post" action="\/admin\/merge-approved\?token=s3cret"><button type="submit">Merge approved PRs<\/button><\/form>/.test(r.body));
 }
 { const r = await call({ method: "GET", url: "/admin", headers: { "x-admin-token": "s3cret" } }); t("X-Admin-Token header also authorizes", r.statusCode === 200); }
+{
+  let called = false;
+  const res = mockRes();
+  await mergeApprovedHandler({ method: "POST", url: "/admin/merge-approved?token=s3cret", headers: {} }, res, async () => {
+    called = true;
+    return [{ status: "merged" }, { status: "failed" }];
+  });
+  t("merge-approved endpoint calls the merger", called);
+  t("merge-approved redirects with counts", res.statusCode === 303 && /\/admin\?token=s3cret&mergeChecked=2&mergeMerged=1&mergeFailed=1/.test(res.headers.location || ""));
+}
+{
+  let called = false;
+  const res = mockRes();
+  await mergeApprovedHandler({ method: "POST", url: "/admin/merge-approved?token=wrong", headers: {} }, res, async () => {
+    called = true;
+    return [];
+  });
+  t("merge-approved rejects bad token", res.statusCode === 401 && !called);
+}
 {
   const html = renderHtml({
     prs: [{ number: 12, title: "New guide: Clickable", state: "open", verdict: "approve", injection: false }],

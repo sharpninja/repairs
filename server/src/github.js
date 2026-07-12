@@ -5,7 +5,7 @@
 import { Octokit } from "@octokit/rest";
 import { createAppAuth } from "@octokit/auth-app";
 import { readFileSync } from "node:fs";
-import { moderatePullRequest } from "./moderate.js";
+import { mergeApprovedPR, moderatePullRequest } from "./moderate.js";
 
 // Data lives in a separate repo, published on its "approved" branch. Submissions
 // open PRs against that branch; merging publishes to what the app reads.
@@ -62,6 +62,27 @@ export async function listOpenSubmissionPRs() {
         injection: labels.includes("prompt-injection"),
       };
     });
+}
+
+export async function mergeApprovedSubmissionPRs() {
+  const kit = octo();
+  const prs = await kit.pulls.list({ owner: OWNER, repo: REPO, state: "open", per_page: 50, sort: "created", direction: "desc" });
+  const approved = prs.data.filter((pr) => {
+    const labels = (pr.labels || []).map((l) => l.name);
+    return labels.includes(SUBMISSION_LABEL) && labels.includes("ai:approve");
+  });
+  const results = [];
+  for (const pr of approved) {
+    const result = await mergeApprovedPR(kit, OWNER, REPO, pr.number);
+    results.push({
+      number: pr.number,
+      title: pr.title,
+      url: pr.html_url,
+      status: result.status,
+      error: result.error || "",
+    });
+  }
+  return results;
 }
 const slug = (s) => String(s || "guide").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "guide";
 const stamp = () => new Date().toISOString().replace(/[^0-9]/g, "").slice(0, 14);
