@@ -81,6 +81,15 @@ export function mergeCatalogDelta(baseCatalog, proposedCatalog) {
 function mergeConflictError(error) {
   return /merge conflicts/i.test(String(error || ""));
 }
+async function waitForMergeability(kit, owner, repo, prNumber) {
+  let latest = null;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    latest = (await kit.pulls.get({ owner, repo, pull_number: prNumber })).data;
+    if (latest.state !== "open" || latest.mergeable !== null) return latest;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  return latest;
+}
 
 async function commentBatchMergeFailed(kit, owner, repo, prNumber, error) {
   try {
@@ -114,6 +123,7 @@ export async function resolveGeneratedCatalogConflict(kit, owner, repo, pr, firs
     const baseRef = await kit.git.getRef({ owner, repo, ref: `heads/${detail.base?.ref || BASE}` });
     await kit.git.updateRef({ owner, repo, ref: `heads/${detail.head.ref}`, sha: baseRef.data.object.sha, force: true });
     await putCatalog(kit, detail.head.ref, base.sha, merged.catalog, `Resolve generated catalog conflict for PR #${pr.number}`);
+    await waitForMergeability(kit, owner, repo, pr.number);
     const retry = await mergeApprovedPR(kit, owner, repo, pr.number);
     if (retry.status === "merged") {
       return { ...retry, mode: "catalog-conflict-resolved", changed: merged.changed, commented: false };
