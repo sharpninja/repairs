@@ -99,7 +99,10 @@ and the **ban** audit log. With `ADMIN_TOKEN` unset the `/admin` route is disabl
 missing/invalid token returns 401.
 
 Rows that reference a GitHub PR render the PR number as a link, so maintainers can jump from
-the live status, moderation-log, or ban tables directly to the submitted PR. The dashboard
+the live status, moderation-log, or ban tables directly to the submitted PR. The dashboard also
+has a **Merge approved PRs** form that posts to **`POST /admin/merge-approved`**. It batches
+open `app-submission` PRs labeled `ai:approve`, attempts the same auto-merge path used by
+moderation, and redirects back to `/admin` with checked/merged/failed counts. The dashboard
 contains no client-side JavaScript and escapes stored log content before rendering.
 
 ### Store listing URLs
@@ -134,7 +137,7 @@ Service only:
 ```bash
 cd server
 docker build -t repairs-submit-service .
-docker run --rm -p 8080:8080 --env-file .env repairs-submit-service
+docker run --rm -p 8788:8788 -e PORT=8788 --env-file .env repairs-submit-service
 ```
 
 Service **+ moderation monitor** together:
@@ -152,16 +155,28 @@ to the value above. The **🚀 Submit** buttons in the Marketplace and in
 > The build generates protobuf code with `buf` (remote plugins, needs network at
 > build time). The runtime image contains only production deps + generated code.
 
+## Deployment
+
+Octopus deploys the service directly from GitHub. The **AI Auto Repairman Service** project has
+a **GitHub main auto deploy** Git trigger that watches `https://github.com/sharpninja/repairs.git`
+on `main` through the `repairs` Git dependency on the `Redeploy docker service` step. The trigger
+creates and deploys a new release to `Production`; the deployment script resets `C:\deploy\repairs`
+to `origin/main`, preserves `server/.env` and `server/data/`, writes operator secret env values
+from Octopus variables, and runs `docker compose up -d --build`.
+
+Azure no longer creates or deploys Octopus releases for this service. `azure-pipelines.yml` runs
+tests and publishes the PWA docs only.
+
 ## Local smoke test (no browser)
 
 Every submission is tagged with a **session key**. First exchange a Google ID token
 (`$IDTOKEN`) for one, then submit with it:
 
 ```bash
-KEY=$(curl -sS http://localhost:8080/repairs.v1.SubmissionService/StartSession \
+KEY=$(curl -sS http://localhost:8788/repairs.v1.SubmissionService/StartSession \
   -H 'content-type: application/json' -d '{"googleIdToken":"'"$IDTOKEN"'"}' | jq -r .sessionKey)
 
-curl -sS http://localhost:8080/repairs.v1.SubmissionService/SubmitReview \
+curl -sS http://localhost:8788/repairs.v1.SubmissionService/SubmitReview \
   -H 'content-type: application/json' \
   -d '{"sessionKey":"'"$KEY"'","guideId":"mkt-crv-s1","guideTitle":"CR-V","stars":5,"reviewText":"Clear and safe."}'
 ```

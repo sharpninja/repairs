@@ -57,7 +57,8 @@ on demand.
   the app **polls your open PRs on startup and notifies you when one goes live**.
 - **Operator submit + admin dashboard** — trusted maintainers can submit guide exports directly
   with a server-side bearer token, and the token-gated `/admin` dashboard shows open PR verdicts,
-  moderation history, client-error logs, bans, and clickable PR links for review.
+  moderation history, client-error logs, bans, clickable PR links, and a **Merge approved PRs**
+  action for approved catalog submissions.
 - **Vehicles by VIN** — save your cars by **VIN** in **🚗 My vehicles**. Read the VIN three
   ways: **scan the barcode** on the driver's door-jamb sticker (offline, via the browser's
   `BarcodeDetector`), **📷 read a stamped VIN** (dashboard plate or sticker) with Claude
@@ -188,6 +189,10 @@ Code and data live in **two repos**:
 data repo; the submit service opens and Claude-moderates them; an `approve` verdict attempts
 to merge the PR automatically, and **merging a PR publishes** the change to what every app
 reads. No app redeploy needed to update data.
+
+**Service deployment:** Octopus monitors this GitHub repo directly on `main` and redeploys
+the Docker service to Production. Azure no longer deploys the service; its pipeline runs tests
+and publishes the PWA docs only.
 
 **Bootstrap the data repo** (needs the GitHub CLI, `gh auth login`):
 
