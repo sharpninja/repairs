@@ -23,6 +23,10 @@ Write-Host "`n== backend admin dashboard unit tests =="
 node tests/admin.test.mjs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host "`n== backend GitHub merge helper unit tests =="
+node tests/github-merge.test.mjs
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "`n== backend moderation unit tests =="
 node tests/moderate.test.mjs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

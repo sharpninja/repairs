@@ -15,6 +15,119 @@ const BASE = process.env.GITHUB_BASE || "approved";
 const FILE = process.env.MARKETPLACE_PATH || "marketplace.json";
 const SUBMISSION_LABEL = process.env.SUBMISSION_LABEL || "app-submission";
 
+function cloneJson(value) {
+  return value == null ? {} : JSON.parse(JSON.stringify(value));
+}
+
+function reviewKey(review) {
+  return JSON.stringify({
+    author: (review && review.author) || "",
+    stars: review && review.stars,
+    text: (review && review.text) || "",
+    ts: (review && review.ts) || 0,
+    source: (review && review.source) || "",
+  });
+}
+
+function refreshRating(entry) {
+  const rated = (entry.reviews || []).filter((review) => typeof review.stars === "number");
+  if (rated.length) {
+    entry.rating = {
+      avg: Number((rated.reduce((sum, review) => sum + review.stars, 0) / rated.length).toFixed(2)),
+      count: rated.length,
+    };
+  }
+}
+
+export function mergeCatalogDelta(baseCatalog, proposedCatalog) {
+  const merged = cloneJson(baseCatalog);
+  merged.guides = Array.isArray(merged.guides) ? merged.guides : [];
+  const byId = new Map(merged.guides.filter((guide) => guide && guide.id).map((guide) => [guide.id, guide]));
+  const proposedGuides = Array.isArray(proposedCatalog && proposedCatalog.guides) ? proposedCatalog.guides : [];
+  let changed = 0;
+
+  for (const proposedGuide of proposedGuides) {
+    if (!proposedGuide || !proposedGuide.id) continue;
+    const existing = byId.get(proposedGuide.id);
+    if (!existing) {
+      const copy = cloneJson(proposedGuide);
+      merged.guides.push(copy);
+      byId.set(copy.id, copy);
+      changed++;
+      continue;
+    }
+
+    const existingReviews = Array.isArray(existing.reviews) ? existing.reviews : [];
+    const proposedReviews = Array.isArray(proposedGuide.reviews) ? proposedGuide.reviews : [];
+    const seen = new Set(existingReviews.map(reviewKey));
+    let addedReviews = 0;
+    for (const review of proposedReviews) {
+      const key = reviewKey(review);
+      if (seen.has(key)) continue;
+      existingReviews.push(cloneJson(review));
+      seen.add(key);
+      addedReviews++;
+    }
+    if (addedReviews) {
+      existing.reviews = existingReviews;
+      refreshRating(existing);
+      changed += addedReviews;
+    }
+  }
+
+  return { catalog: merged, changed };
+}
+
+function mergeConflictError(error) {
+  return /merge conflicts/i.test(String(error || ""));
+}
+
+async function commentBatchMergeFailed(kit, owner, repo, prNumber, error) {
+  try {
+    await kit.issues.createComment({
+      owner, repo, issue_number: prNumber,
+      body: `<!-- ai-auto-merge -->\n### ⚠️ Auto-merge failed\n\nThe approved PR could not be merged automatically: ${error}\n\nA maintainer should resolve the merge failure and merge manually if appropriate.`,
+    });
+  } catch (_) {}
+}
+
+async function resolveGeneratedCatalogConflict(kit, owner, repo, pr, firstError) {
+  if (!mergeConflictError(firstError)) {
+    return { status: "failed", error: firstError || "merge failed", commented: false };
+  }
+
+  try {
+    const detail = (await kit.pulls.get({ owner, repo, pull_number: pr.number })).data;
+    const expectedRepo = `${owner}/${repo}`.toLowerCase();
+    const headRepo = String(detail.head?.repo?.full_name || "").toLowerCase();
+    if (headRepo !== expectedRepo) {
+      return { status: "failed", error: "Cannot update conflicted PR branch outside the data repository.", commented: false };
+    }
+
+    const base = await loadCatalog(kit, detail.base?.ref || BASE);
+    const head = await loadCatalog(kit, detail.head.ref);
+    const merged = mergeCatalogDelta(base.catalog, head.catalog);
+    if (!merged.changed) {
+      return { status: "failed", error: "Conflicted PR did not contain new catalog entries or reviews to apply.", commented: false };
+    }
+
+    await putCatalog(kit, detail.head.ref, head.sha, merged.catalog, `Resolve generated catalog conflict for PR #${pr.number}`);
+    const retry = await mergeApprovedPR(kit, owner, repo, pr.number);
+    if (retry.status === "merged") {
+      return { ...retry, mode: "catalog-conflict-resolved", changed: merged.changed, commented: false };
+    }
+    return {
+      ...retry,
+      error: `Resolved generated catalog conflict, but merge still failed: ${retry.error || "unknown error"}`,
+      mode: "catalog-conflict-resolved",
+      changed: merged.changed,
+      commented: true,
+    };
+  } catch (e) {
+    return { status: "failed", error: String((e && e.message) || e || "unknown error").slice(0, 500), commented: false };
+  }
+}
+
 // Label the PR as an app submission and (unless disabled) kick off Claude
 // moderation immediately. Fire-and-forget so the RPC returns fast; the monitor
 // process is the backstop for anything missed.
@@ -73,13 +186,20 @@ export async function mergeApprovedSubmissionPRs() {
   });
   const results = [];
   for (const pr of approved) {
-    const result = await mergeApprovedPR(kit, OWNER, REPO, pr.number);
+    let result = await mergeApprovedPR(kit, OWNER, REPO, pr.number, { comment: false });
+    if (result.status !== "merged") {
+      result = await resolveGeneratedCatalogConflict(kit, OWNER, REPO, pr, result.error);
+    }
+    if (result.status !== "merged" && !result.commented) {
+      await commentBatchMergeFailed(kit, OWNER, REPO, pr.number, result.error || "unknown error");
+    }
     results.push({
       number: pr.number,
       title: pr.title,
       url: pr.html_url,
       status: result.status,
       error: result.error || "",
+      mode: result.mode || "",
     });
   }
   return results;

@@ -154,6 +154,10 @@ export async function mergeApprovedHandler(req, res, mergeApproved = mergeApprov
     checked = results.length;
     merged = results.filter((r) => r.status === "merged").length;
     failed = results.filter((r) => r.status !== "merged").length;
+    const failedResults = results.filter((r) => r.status !== "merged" && r.error);
+    if (failedResults.length) {
+      error = failedResults.map((r) => `#${r.number || "?"}: ${r.error}`).join("; ").slice(0, 300);
+    }
   } catch (e) {
     error = String((e && e.message) || e || "unknown error").slice(0, 300);
   }

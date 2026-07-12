@@ -81,16 +81,16 @@ async function commentAutoMergeFailed(kit, owner, repo, prNumber, error) {
   } catch (_) {}
 }
 
-export async function mergeApprovedPR(kit, owner, repo, prNumber) {
+export async function mergeApprovedPR(kit, owner, repo, prNumber, opts = {}) {
   try {
-    const r = await kit.pulls.merge({ owner, repo, pull_number: prNumber });
-    if (r.data?.merged) return { status: "merged" };
-    const error = r.data?.message || "GitHub did not report the PR as merged.";
-    await commentAutoMergeFailed(kit, owner, repo, prNumber, error);
+    const merge = await kit.pulls.merge({ owner, repo, pull_number: prNumber });
+    if (merge.data?.merged) return { status: "merged" };
+    const error = merge.data?.message || "GitHub did not report the PR as merged.";
+    if (opts.comment !== false) await commentAutoMergeFailed(kit, owner, repo, prNumber, error);
     return { status: "failed", error };
   } catch (e) {
     const error = errText(e);
-    await commentAutoMergeFailed(kit, owner, repo, prNumber, error);
+    if (opts.comment !== false) await commentAutoMergeFailed(kit, owner, repo, prNumber, error);
     return { status: "failed", error };
   }
 }

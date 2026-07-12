@@ -53,6 +53,14 @@ console.log("admin.js — dashboard auth + rendering");
   t("merge-approved redirects with counts", res.statusCode === 303 && /\/admin\?token=s3cret&mergeChecked=2&mergeMerged=1&mergeFailed=1/.test(res.headers.location || ""));
 }
 {
+  const res = mockRes();
+  await mergeApprovedHandler({ method: "POST", url: "/admin/merge-approved?token=s3cret", headers: {} }, res, async () => [
+    { number: 4, status: "failed", error: "Merge conflict" },
+  ]);
+  const params = new URL("http://local" + (res.headers.location || "")).searchParams;
+  t("merge-approved redirects with failure detail", params.get("mergeError") === "#4: Merge conflict");
+}
+{
   let called = false;
   const res = mockRes();
   await mergeApprovedHandler({ method: "POST", url: "/admin/merge-approved?token=wrong", headers: {} }, res, async () => {
