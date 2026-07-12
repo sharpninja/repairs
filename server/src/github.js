@@ -91,7 +91,7 @@ async function commentBatchMergeFailed(kit, owner, repo, prNumber, error) {
   } catch (_) {}
 }
 
-async function resolveGeneratedCatalogConflict(kit, owner, repo, pr, firstError) {
+export async function resolveGeneratedCatalogConflict(kit, owner, repo, pr, firstError) {
   if (!mergeConflictError(firstError)) {
     return { status: "failed", error: firstError || "merge failed", commented: false };
   }
@@ -111,7 +111,9 @@ async function resolveGeneratedCatalogConflict(kit, owner, repo, pr, firstError)
       return { status: "failed", error: "Conflicted PR did not contain new catalog entries or reviews to apply.", commented: false };
     }
 
-    await putCatalog(kit, detail.head.ref, head.sha, merged.catalog, `Resolve generated catalog conflict for PR #${pr.number}`);
+    const baseRef = await kit.git.getRef({ owner, repo, ref: `heads/${detail.base?.ref || BASE}` });
+    await kit.git.updateRef({ owner, repo, ref: `heads/${detail.head.ref}`, sha: baseRef.data.object.sha, force: true });
+    await putCatalog(kit, detail.head.ref, base.sha, merged.catalog, `Resolve generated catalog conflict for PR #${pr.number}`);
     const retry = await mergeApprovedPR(kit, owner, repo, pr.number);
     if (retry.status === "merged") {
       return { ...retry, mode: "catalog-conflict-resolved", changed: merged.changed, commented: false };
