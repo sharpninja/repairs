@@ -11,7 +11,7 @@
 # All prerequisites are provisioned (2026-07-07):
 #   - GITHUB_PAT   : secret pipeline variable (repo:contents write on sharpninja/repairs) for the Pages publish.
 #   - Octopus is licensed; project 'AI Auto Repairman Service' has a 'Production' deployment process that
-#     redeploys the docker service on the PAYTON-DESKTOP target when its GitHub trigger detects repo changes.
+#     redeploys the docker service on the LAB-OMARCHY target when its GitHub trigger detects repo changes.
 
 trigger:
   branches:
@@ -26,7 +26,7 @@ stages:
       name: 'Default'
     steps:
     - checkout: self
-    # node is baked into the PAYTON-DESKTOP host (golden host), so no NodeTool download needed.
+    # node is baked into the LAB-OMARCHY host (golden host), so no NodeTool download needed.
     - script: cd server && npm ci
       displayName: install server deps
     - script: node tests/store.test.mjs
